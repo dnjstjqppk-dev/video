@@ -10,3 +10,4 @@ binding = "ASSETS"
 
 [build]
 command = "pnpm run build"
+

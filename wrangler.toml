@@ -10,3 +10,4 @@ binding = "ASSETS"
 
 [build]
 command = "pnpm --filter @gvp/web build"
+
