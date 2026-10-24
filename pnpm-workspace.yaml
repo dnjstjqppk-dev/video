@@ -1,4 +1,7 @@
 packages:
-  - 'apps/*'
+  - 'apps/web'
+  - 'apps/studio'
+  - 'apps/partners'
+  - 'apps/admin'
   - 'packages/*'
 
