@@ -34,5 +34,8 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
     shim: false
+  },
+  nitro: {
+    preset: process.env.NITRO_PRESET || (process.env.CF_PAGES ? 'cloudflare-pages' : 'cloudflare-module')
   }
 })
