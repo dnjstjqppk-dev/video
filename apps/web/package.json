@@ -1,0 +1,38 @@
+{
+  "name": "@gvp/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --port 3000",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview --port 3000",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gvp/design-tokens": "workspace:*",
+    "@gvp/shared-types": "workspace:*",
+    "@gvp/ts-api-client": "workspace:*",
+    "@nuxtjs/color-mode": "^3.5.2",
+    "@nuxtjs/i18n": "^9.1.1",
+    "@nuxtjs/tailwindcss": "^6.12.2",
+    "@pinia/nuxt": "^0.9.0",
+    "@tanstack/vue-query": "^5.62.0",
+    "nuxt": "^3.15.0",
+    "pinia": "^2.3.0",
+    "shaka-player": "^4.12.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "^1.7.0",
+    "@types/shaka-player": "^4.3.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "vue-tsc": "^2.2.0"
+  }
+}

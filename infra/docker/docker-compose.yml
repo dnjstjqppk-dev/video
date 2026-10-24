@@ -1,0 +1,433 @@
+version: "3.9"
+
+name: global-video-platform
+
+services:
+  # ============================================================================
+  # DATA & STATE INFRASTRUCTURE
+  # ============================================================================
+  postgres:
+    image: postgres:18-alpine
+    container_name: gvp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gvp_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gvp_secret_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-gvp_core}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gvp_admin} -d ${POSTGRES_DB:-gvp_core}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gvp-net
+
+  valkey:
+    image: valkey/valkey:8.0-alpine
+    container_name: gvp-valkey
+    restart: unless-stopped
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory", "1gb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gvp-net
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: gvp-nats
+    restart: unless-stopped
+    command: ["-js", "-sd", "/data/jetstream", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - natsdata:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gvp-net
+
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    container_name: gvp-opensearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearchdata:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gvp-net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    container_name: gvp-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: gvp_analytics
+      CLICKHOUSE_USER: gvp_ch
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-gvp_ch_secret}
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhousedata:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gvp-net
+
+  r2-storage:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    container_name: gvp-r2-storage
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${R2_ACCESS_KEY_ID:-gvp_r2_local_key}
+      MINIO_ROOT_PASSWORD: ${R2_SECRET_ACCESS_KEY:-gvp_r2_local_secret}
+    ports:
+      - "9002:9000"
+      - "9001:9001"
+    volumes:
+      - r2data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gvp-net
+
+  # ============================================================================
+  # GO BACKEND SERVICES (MODULAR MONOLITH + SEPARATED WORKERS)
+  # ============================================================================
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.go
+      args:
+        SERVICE_NAME: api
+        CMD_PATH: ./cmd/server
+    container_name: gvp-api
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      ENV: "staging"
+      DATABASE_URL: "postgres://${POSTGRES_USER:-gvp_admin}:${POSTGRES_PASSWORD:-gvp_secret_dev_password}@postgres:5432/${POSTGRES_DB:-gvp_core}?sslmode=disable"
+      VALKEY_ADDR: "valkey:6379"
+      NATS_URL: "nats://nats:4222"
+      OPENSEARCH_URL: "http://opensearch:9200"
+      CLICKHOUSE_DSN: "http://gvp_ch:${CLICKHOUSE_PASSWORD:-gvp_ch_secret}@clickhouse:8123/gvp_analytics"
+      R2_ENDPOINT: "http://r2-storage:9000"
+      R2_BUCKET_RAW: "gvp-raw-uploads"
+      R2_BUCKET_HLS: "gvp-public-hls"
+      ZITADEL_ISSUER: "https://auth.brand.com"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      r2-storage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - gvp-net
+
+  media-worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.go
+      args:
+        SERVICE_NAME: media-worker
+        CMD_PATH: ./cmd/server
+    container_name: gvp-media-worker
+    restart: unless-stopped
+    environment:
+      WORKER_ROLE: "media-transcoder"
+      NATS_URL: "nats://nats:4222"
+      NATS_STREAM: "MEDIA_JOBS"
+      R2_ENDPOINT: "http://r2-storage:9000"
+      FFMPEG_PROFILES: "1080p,720p,480p,360p"
+      HLS_SEGMENT_DURATION: "4"
+    depends_on:
+      nats:
+        condition: service_healthy
+      r2-storage:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  realtime-chat:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.go
+      args:
+        SERVICE_NAME: realtime-chat
+        CMD_PATH: ./cmd/server
+    container_name: gvp-realtime-chat
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+      WORKER_ROLE: "realtime-chat"
+      VALKEY_ADDR: "valkey:6379"
+      NATS_URL: "nats://nats:4222"
+    ports:
+      - "8081:8081"
+    depends_on:
+      valkey:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  analytics-worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.go
+      args:
+        SERVICE_NAME: analytics-worker
+        CMD_PATH: ./cmd/server
+    container_name: gvp-analytics-worker
+    restart: unless-stopped
+    environment:
+      WORKER_ROLE: "analytics-sink"
+      NATS_URL: "nats://nats:4222"
+      CLICKHOUSE_DSN: "http://gvp_ch:${CLICKHOUSE_PASSWORD:-gvp_ch_secret}@clickhouse:8123/gvp_analytics"
+      BATCH_SIZE: "5000"
+      FLUSH_INTERVAL_MS: "2000"
+    depends_on:
+      nats:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  recommendation-worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.go
+      args:
+        SERVICE_NAME: recommendation-worker
+        CMD_PATH: ./cmd/server
+    container_name: gvp-recommendation-worker
+    restart: unless-stopped
+    environment:
+      WORKER_ROLE: "recommendation-indexer"
+      DATABASE_URL: "postgres://${POSTGRES_USER:-gvp_admin}:${POSTGRES_PASSWORD:-gvp_secret_dev_password}@postgres:5432/${POSTGRES_DB:-gvp_core}?sslmode=disable"
+      VALKEY_ADDR: "valkey:6379"
+      OPENSEARCH_URL: "http://opensearch:9200"
+      NATS_URL: "nats://nats:4222"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.go
+      args:
+        SERVICE_NAME: scheduler
+        CMD_PATH: ./cmd/server
+    container_name: gvp-scheduler
+    restart: unless-stopped
+    environment:
+      WORKER_ROLE: "scheduler-outbox-relay"
+      DATABASE_URL: "postgres://${POSTGRES_USER:-gvp_admin}:${POSTGRES_PASSWORD:-gvp_secret_dev_password}@postgres:5432/${POSTGRES_DB:-gvp_core}?sslmode=disable"
+      NATS_URL: "nats://nats:4222"
+      OUTBOX_POLL_INTERVAL_MS: "500"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  # ============================================================================
+  # NUXT 4 / VUE 3 FRONTEND CONSOLES (4 INDEPENDENT DEPLOYMENTS)
+  # ============================================================================
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nuxt
+      args:
+        APP_NAME: web
+    container_name: gvp-web
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      NUXT_PUBLIC_API_BASE_URL: "http://localhost:8080/v1"
+      NUXT_PUBLIC_SURFACE: "user-portal"
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  studio:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nuxt
+      args:
+        APP_NAME: studio
+    container_name: gvp-studio
+    restart: unless-stopped
+    environment:
+      PORT: "3001"
+      NUXT_PUBLIC_API_BASE_URL: "http://localhost:8080/v1"
+      NUXT_PUBLIC_SURFACE: "creator-studio"
+    ports:
+      - "3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  partners:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nuxt
+      args:
+        APP_NAME: partners
+    container_name: gvp-partners
+    restart: unless-stopped
+    environment:
+      PORT: "3002"
+      NUXT_PUBLIC_API_BASE_URL: "http://localhost:8080/v1"
+      NUXT_PUBLIC_SURFACE: "partner-portal"
+    ports:
+      - "3002:3002"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.nuxt
+      args:
+        APP_NAME: admin
+    container_name: gvp-admin
+    restart: unless-stopped
+    environment:
+      PORT: "3003"
+      NUXT_PUBLIC_API_BASE_URL: "http://localhost:8080/v1"
+      NUXT_PUBLIC_SURFACE: "admin-console"
+    ports:
+      - "3003:3003"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - gvp-net
+
+  # ============================================================================
+  # OBSERVABILITY & TELEMETRY
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: gvp-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - promdata:/prometheus
+    networks:
+      - gvp-net
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: gvp-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-gvp_grafana_admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3005:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - gvp-net
+
+volumes:
+  pgdata:
+  valkeydata:
+  natsdata:
+  opensearchdata:
+  clickhousedata:
+  r2data:
+  promdata:
+  grafanadata:
+
+networks:
+  gvp-net:
+    driver: bridge

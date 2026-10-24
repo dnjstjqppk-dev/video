@@ -1,0 +1,679 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gvp-prod
+  labels:
+    app.kubernetes.io/part-of: global-video-platform
+    argocd.argoproj.io/instance: gvp-production
+---
+# ==============================================================================
+# ZERO-TRUST NETWORK POLICIES
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gvp-default-deny-all
+  namespace: gvp-prod
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gvp-api-network-policy
+  namespace: gvp-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: gvp-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              tier: frontend
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 5432   # PostgreSQL 18
+        - protocol: TCP
+          port: 6379   # Valkey
+        - protocol: TCP
+          port: 4222   # NATS JetStream
+        - protocol: TCP
+          port: 9200   # OpenSearch
+        - protocol: TCP
+          port: 8123   # ClickHouse
+        - protocol: TCP
+          port: 443    # Cloudflare R2 / Stream / ZITADEL OIDC
+        - protocol: UDP
+          port: 53     # CoreDNS
+---
+# ==============================================================================
+# GO MODULAR MONOLITH API DEPLOYMENT, SERVICE & HPA
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-api
+  namespace: gvp-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app: gvp-api
+    tier: backend
+spec:
+  replicas: 4
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: gvp-api
+  template:
+    metadata:
+      labels:
+        app: gvp-api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: api
+          image: ghcr.io/brand/gvp-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: gvp-backend-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gvp-api
+  namespace: gvp-prod
+spec:
+  selector:
+    app: gvp-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gvp-api-hpa
+  namespace: gvp-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gvp-api
+  minReplicas: 4
+  maxReplicas: 24
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# ==============================================================================
+# GO SEPARATED WORKERS (MEDIA, REALTIME-CHAT, ANALYTICS, RECOMMENDATION, SCHEDULER)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-media-worker
+  namespace: gvp-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gvp-media-worker
+  template:
+    metadata:
+      labels:
+        app: gvp-media-worker
+        tier: worker
+    spec:
+      nodeSelector:
+        gvp.io/node-pool: media-transcode
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: media-worker
+          image: ghcr.io/brand/gvp-media-worker:latest
+          env:
+            - name: WORKER_ROLE
+              value: "media-transcoder"
+          envFrom:
+            - secretRef:
+                name: gvp-backend-secrets
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "8000m"
+              memory: "16Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gvp-media-worker-hpa
+  namespace: gvp-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gvp-media-worker
+  minReplicas: 3
+  maxReplicas: 32
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-realtime-chat
+  namespace: gvp-prod
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gvp-realtime-chat
+  template:
+    metadata:
+      labels:
+        app: gvp-realtime-chat
+        tier: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: realtime-chat
+          image: ghcr.io/brand/gvp-realtime-chat:latest
+          ports:
+            - containerPort: 8081
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-analytics-worker
+  namespace: gvp-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gvp-analytics-worker
+  template:
+    metadata:
+      labels:
+        app: gvp-analytics-worker
+        tier: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: analytics-worker
+          image: ghcr.io/brand/gvp-analytics-worker:latest
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-recommendation-worker
+  namespace: gvp-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gvp-recommendation-worker
+  template:
+    metadata:
+      labels:
+        app: gvp-recommendation-worker
+        tier: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: recommendation-worker
+          image: ghcr.io/brand/gvp-recommendation-worker:latest
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-scheduler
+  namespace: gvp-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gvp-scheduler
+  template:
+    metadata:
+      labels:
+        app: gvp-scheduler
+        tier: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: scheduler
+          image: ghcr.io/brand/gvp-scheduler:latest
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+---
+# ==============================================================================
+# 4 INDEPENDENT NUXT 4 WEB CONSOLES (WEB, STUDIO, PARTNERS, ADMIN)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-web
+  namespace: gvp-prod
+  labels:
+    app: gvp-web
+    tier: frontend
+    surface: user-portal
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gvp-web
+  template:
+    metadata:
+      labels:
+        app: gvp-web
+        tier: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: web
+          image: ghcr.io/brand/gvp-web:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NUXT_PUBLIC_API_BASE_URL
+              value: "https://api.brand.com/v1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gvp-web
+  namespace: gvp-prod
+spec:
+  selector:
+    app: gvp-web
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-studio
+  namespace: gvp-prod
+  labels:
+    app: gvp-studio
+    tier: frontend
+    surface: creator-studio
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gvp-studio
+  template:
+    metadata:
+      labels:
+        app: gvp-studio
+        tier: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: studio
+          image: ghcr.io/brand/gvp-studio:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NUXT_PUBLIC_API_BASE_URL
+              value: "https://api.brand.com/v1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gvp-studio
+  namespace: gvp-prod
+spec:
+  selector:
+    app: gvp-studio
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-partners
+  namespace: gvp-prod
+  labels:
+    app: gvp-partners
+    tier: frontend
+    surface: partner-portal
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gvp-partners
+  template:
+    metadata:
+      labels:
+        app: gvp-partners
+        tier: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: partners
+          image: ghcr.io/brand/gvp-partners:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NUXT_PUBLIC_API_BASE_URL
+              value: "https://api.brand.com/v1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gvp-partners
+  namespace: gvp-prod
+spec:
+  selector:
+    app: gvp-partners
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvp-admin
+  namespace: gvp-prod
+  labels:
+    app: gvp-admin
+    tier: frontend
+    surface: admin-console
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gvp-admin
+  template:
+    metadata:
+      labels:
+        app: gvp-admin
+        tier: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: admin
+          image: ghcr.io/brand/gvp-admin:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NUXT_PUBLIC_API_BASE_URL
+              value: "https://api.brand.com/v1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gvp-admin
+  namespace: gvp-prod
+spec:
+  selector:
+    app: gvp-admin
+  ports:
+    - port: 80
+      targetPort: 3000

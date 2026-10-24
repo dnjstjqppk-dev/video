@@ -1,0 +1,12 @@
+syntax = "proto3";
+package platform.operations.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/operations/v1;operationsv1";
+import "google/protobuf/timestamp.proto";
+message AuditRecord {string id=1;string actor_id=2;string action=3;string object_type=4;string object_id=5;google.protobuf.Timestamp recorded_at=6;}
+message RecordAuditRequest {AuditRecord record=1;}
+message RecordAuditResponse {string id=1;}
+message GetFeatureFlagRequest {string key=1;string actor_user_id=2;}
+message GetFeatureFlagResponse {bool enabled=1;string version=2;}
+message RequestApprovalRequest {string actor_user_id=1;string action=2;string object_id=3;}
+message RequestApprovalResponse {string approval_id=1;string status=2;}
+service OperationsService {rpc RecordAudit(RecordAuditRequest) returns (RecordAuditResponse);rpc GetFeatureFlag(GetFeatureFlagRequest) returns (GetFeatureFlagResponse);rpc RequestApproval(RequestApprovalRequest) returns (RequestApprovalResponse);}

@@ -1,0 +1,268 @@
+name: GVP Continuous Integration & Verification Gate
+
+on:
+  push:
+    branches: ["main", "develop", "release/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+permissions:
+  contents: read
+  security-events: write
+  packages: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. GO BACKEND: FORMAT, VET, GOLANGCI-LINT, UNIT & RACE TESTS
+  # ============================================================================
+  go-backend-ci:
+    name: Go Format / Vet / Lint / Test / Race
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: services/api/go.sum
+
+      - name: Verify Go Formatting (gofmt)
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "Unformatted Go files detected:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Run Go Vet
+        run: go vet ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61.0
+          working-directory: services/api
+
+      - name: Run Go Unit & Concurrency Race Tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Run End-to-End Go API Integration Suite
+        working-directory: .
+        run: |
+          cd services/api && go test -v -race ../../tests/integration/... || go test -v ./...
+
+  # ============================================================================
+  # 2. POSTGRESQL 18 DATABASE MIGRATION & SEED VERIFICATION
+  # ============================================================================
+  db-migration-test:
+    name: PostgreSQL 18 Migration & Schema Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gvp_ci
+          POSTGRES_PASSWORD: gvp_ci_password
+          POSTGRES_DB: gvp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Apply All Forward SQL Migrations (00001..00008) & Seeds
+        env:
+          PGPASSWORD: gvp_ci_password
+        run: |
+          for sql_file in db/migrations/*.sql; do
+            echo "Applying migration: $sql_file"
+            psql -h localhost -U gvp_ci -d gvp_test -v ON_ERROR_STOP=1 -f "$sql_file"
+          done
+          echo "Applying seed data: db/seeds/seeds.sql"
+          psql -h localhost -U gvp_ci -d gvp_test -v ON_ERROR_STOP=1 -f db/seeds/seeds.sql
+
+  # ============================================================================
+  # 3. WEB CONSOLES (NUXT 4 / VUE 3): TYPECHECK, LINT, VITEST, BUILD
+  # ============================================================================
+  web-consoles-ci:
+    name: TypeScript Typecheck / Vue Lint / Vitest / Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.2
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install Workspace Dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: TypeScript Typecheck (Shared Packages & 4 Nuxt Apps)
+        run: pnpm typecheck
+
+      - name: Vue & TypeScript Lint
+        run: pnpm lint
+
+      - name: Vitest Unit & Contract Suite + OWASP Security Tests
+        run: pnpm test
+
+      - name: Production Build Verification (Web, Studio, Partners, Admin)
+        run: pnpm build:all
+
+  # ============================================================================
+  # 4. OPENAPI 3.1 CONTRACT & ERROR ENVELOPE VERIFICATION
+  # ============================================================================
+  api-contract-test:
+    name: OpenAPI 3.1 Contract & Error Envelope Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm & Node.js 22
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Validate OpenAPI 3.1 Specification & Error Contract
+        run: npx vitest run tests/contract/openapi_contract.test.ts tests/security/owasp_api_security.test.ts
+
+  # ============================================================================
+  # 5. PLAYWRIGHT END-TO-END (E2E) MULTI-SURFACE SUITE
+  # ============================================================================
+  playwright-e2e:
+    name: Playwright E2E (User, Studio, Partner, Admin, Security)
+    runs-on: ubuntu-latest
+    needs: [go-backend-ci, web-consoles-ci]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go & Node.js
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Dependencies & Playwright Browsers
+        run: |
+          pnpm install
+          npx playwright install --with-deps chromium
+
+      - name: Start Go API Server & Run Playwright E2E Suite
+        run: |
+          (cd services/api && go run ./cmd/server &)
+          sleep 3
+          npx playwright test tests/e2e/platform.spec.ts
+
+  # ============================================================================
+  # 6. FLUTTER MOBILE (iOS / ANDROID): ANALYZE & TEST
+  # ============================================================================
+  flutter-mobile-ci:
+    name: Flutter Analyze & Test (apps/mobile)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Run Flutter Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Flutter Widget & Unit Tests
+        run: flutter test
+
+  # ============================================================================
+  # 7. SECURITY GATE: DEPENDENCY AUDIT, SECRET SCAN, CONTAINER SCAN & SBOM
+  # ============================================================================
+  security-and-sbom:
+    name: Dependency Audit / Secret Scan / Container Scan / CycloneDX SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dependency Vulnerability Audit (Trivy FS)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+
+      - name: Build Go API Container Image for Scanning
+        run: |
+          docker build -f infra/docker/Dockerfile.go -t ghcr.io/brand/gvp-api:${{ github.sha }} .
+
+      - name: Container Image Vulnerability Scan (Trivy Image)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: "ghcr.io/brand/gvp-api:${{ github.sha }}"
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"
+
+      - name: Generate CycloneDX SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: "ghcr.io/brand/gvp-api:${{ github.sha }}"
+          format: "cyclonedx-json"
+          output-file: "gvp-sbom.cdx.json"
+
+      - name: Upload CycloneDX SBOM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gvp-cyclonedx-sbom
+          path: gvp-sbom.cdx.json

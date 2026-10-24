@@ -1,0 +1,11 @@
+syntax = "proto3";
+package platform.moderation.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/moderation/v1;moderationv1";
+message ReportContentRequest {string actor_user_id=1;string object_type=2;string object_id=3;string reason_code=4;string details=5;}
+message ReportContentResponse {string report_id=1;string status=2;}
+message ModerationDecision {string case_id=1;string action=2;string policy_id=3;string reason=4;string actor_id=5;}
+message RecordDecisionRequest {ModerationDecision decision=1;}
+message RecordDecisionResponse {string decision_id=1;}
+message AppealRequest {string actor_user_id=1;string decision_id=2;string reason=3;}
+message AppealResponse {string appeal_id=1;}
+service ModerationService {rpc ReportContent(ReportContentRequest) returns (ReportContentResponse);rpc RecordDecision(RecordDecisionRequest) returns (RecordDecisionResponse);rpc Appeal(AppealRequest) returns (AppealResponse);}

@@ -1,0 +1,20 @@
+{
+  "name": "global-video-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Global Video Platform — Enterprise Video Ecosystem (Vue, Flutter, Go)",
+  "scripts": {
+    "dev:web": "pnpm --filter @gvp/web dev",
+    "dev:studio": "pnpm --filter @gvp/studio dev",
+    "dev:partners": "pnpm --filter @gvp/partners dev",
+    "dev:admin": "pnpm --filter @gvp/admin dev",
+    "build:all": "pnpm -r --filter \"./apps/*\" build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
+

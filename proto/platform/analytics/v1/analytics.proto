@@ -1,0 +1,11 @@
+syntax = "proto3";
+package platform.analytics.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/analytics/v1;analyticsv1";
+import "google/protobuf/timestamp.proto";
+message ClientEvent {string event_id=1;string event_type=2;string playback_session_id=3;string user_id=4;string video_id=5;string device_type=6;int64 watch_ms=7;google.protobuf.Timestamp occurred_at=8;}
+message RecordEventsRequest {repeated ClientEvent events=1;}
+message RecordEventsResponse {int32 accepted=1;int32 rejected=2;}
+message DailyMetric {string date=1;int64 views=2;int64 watch_ms=3;int64 impressions=4;int64 likes=5;}
+message GetVideoAnalyticsRequest {string channel_actor_id=1;string video_id=2;string from_date=3;string to_date=4;}
+message GetVideoAnalyticsResponse {repeated DailyMetric days=1;google.protobuf.Timestamp as_of=2;}
+service AnalyticsService {rpc RecordEvents(RecordEventsRequest) returns (RecordEventsResponse);rpc GetVideoAnalytics(GetVideoAnalyticsRequest) returns (GetVideoAnalyticsResponse);}

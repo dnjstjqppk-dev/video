@@ -1,0 +1,183 @@
+global:
+  environment: production
+  domain: brand.com
+  imageRegistry: ghcr.io/brand
+  imagePullSecrets:
+    - name: ghcr-pull-secret
+  argocd:
+    enabled: true
+    annotations:
+      argocd.argoproj.io/sync-wave: "2"
+      argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+
+ingress:
+  enabled: true
+  className: nginx
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+  hosts:
+    web: www.brand.com
+    studio: studio.brand.com
+    partners: partners.brand.com
+    admin: admin.brand.com
+    api: api.brand.com
+    media: media.brand.com
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "150"
+
+services:
+  api:
+    replicaCount: 4
+    image:
+      repository: ghcr.io/brand/gvp-api
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 4
+      maxReplicas: 24
+      targetCPUUtilizationPercentage: 70
+
+  mediaWorker:
+    replicaCount: 3
+    image:
+      repository: ghcr.io/brand/gvp-media-worker
+      tag: "v1.0.0"
+    nodeSelector:
+      gvp.io/node-pool: media-transcode
+    resources:
+      requests:
+        cpu: 2000m
+        memory: 4Gi
+      limits:
+        cpu: 8000m
+        memory: 16Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 32
+      targetCPUUtilizationPercentage: 65
+
+  realtimeChat:
+    replicaCount: 3
+    image:
+      repository: ghcr.io/brand/gvp-realtime-chat
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+
+  analyticsWorker:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/brand/gvp-analytics-worker
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+  recommendationWorker:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/brand/gvp-recommendation-worker
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+  scheduler:
+    replicaCount: 1
+    image:
+      repository: ghcr.io/brand/gvp-scheduler
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+consoles:
+  web:
+    replicaCount: 3
+    host: www.brand.com
+    image:
+      repository: ghcr.io/brand/gvp-web
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+  studio:
+    replicaCount: 2
+    host: studio.brand.com
+    image:
+      repository: ghcr.io/brand/gvp-studio
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+  partners:
+    replicaCount: 2
+    host: partners.brand.com
+    image:
+      repository: ghcr.io/brand/gvp-partners
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+  admin:
+    replicaCount: 2
+    host: admin.brand.com
+    image:
+      repository: ghcr.io/brand/gvp-admin
+      tag: "v1.0.0"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    ipAllowlist:
+      enabled: true
+      cidrs:
+        - "10.0.0.0/8"
+        - "198.51.100.0/24"

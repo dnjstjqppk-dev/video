@@ -1,0 +1,20 @@
+syntax = "proto3";
+package platform.live.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/live/v1;livev1";
+import "google/protobuf/timestamp.proto";
+message LiveStream {string id=1;string channel_id=2;string title=3;string state=4;string provider=5;google.protobuf.Timestamp started_at=6;}
+message CreateStreamRequest {string actor_user_id=1;string channel_id=2;string title=3;}
+message CreateStreamResponse {LiveStream stream=1;string ingest_url=2;string stream_key_secret_ref=3;}
+message ControlStreamRequest {string actor_user_id=1;string stream_id=2;string operation=3;}
+message ControlStreamResponse {LiveStream stream=1;}
+message GetStreamRequest {string stream_id=1;}
+message GetStreamResponse {LiveStream stream=1;}
+message ChatMessage {string id=1;string stream_id=2;string author_id=3;string body=4;google.protobuf.Timestamp sent_at=5;}
+message PublishChatRequest {string actor_user_id=1;string stream_id=2;string body=3;}
+message PublishChatResponse {ChatMessage message=1;}
+service LiveService {
+ rpc CreateStream(CreateStreamRequest) returns (CreateStreamResponse);
+ rpc ControlStream(ControlStreamRequest) returns (ControlStreamResponse);
+ rpc GetStream(GetStreamRequest) returns (GetStreamResponse);
+ rpc PublishChat(PublishChatRequest) returns (PublishChatResponse);
+}

@@ -1,0 +1,19 @@
+syntax = "proto3";
+package platform.social.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/social/v1;socialv1";
+import "google/protobuf/timestamp.proto";
+message Comment {string id=1;string video_id=2;string author_id=3;string parent_id=4;string body=5;google.protobuf.Timestamp created_at=6;}
+message AddCommentRequest {string actor_user_id=1;string video_id=2;string parent_id=3;string body=4;}
+message AddCommentResponse {Comment comment=1;}
+message ReactToVideoRequest {string actor_user_id=1;string video_id=2;string reaction=3;}
+message ReactToVideoResponse {bool applied=1;}
+message SubscribeRequest {string actor_user_id=1;string channel_id=2;}
+message SubscribeResponse {bool subscribed=1;}
+message ListCommentsRequest {string video_id=1;string page_token=2;int32 page_size=3;}
+message ListCommentsResponse {repeated Comment comments=1;string next_page_token=2;}
+service SocialService {
+ rpc AddComment(AddCommentRequest) returns (AddCommentResponse);
+ rpc ReactToVideo(ReactToVideoRequest) returns (ReactToVideoResponse);
+ rpc Subscribe(SubscribeRequest) returns (SubscribeResponse);
+ rpc ListComments(ListCommentsRequest) returns (ListCommentsResponse);
+}

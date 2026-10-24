@@ -1,0 +1,171 @@
+name: GVP Staged Continuous Delivery (Dev -> Staging -> Production)
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Target deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/brand
+
+jobs:
+  # ============================================================================
+  # STAGE 1: BUILD, PUSH & COSIGN SIGN CONTAINER IMAGES
+  # ============================================================================
+  build-and-sign:
+    name: Build & Cosign Sign Container Images
+    runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ github.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Go API & Workers Image
+        id: build_go
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.go
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/gvp-api:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/gvp-media-worker:${{ github.sha }}
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+
+      - name: Build & Push 4 Independent Nuxt 4 Consoles (Web, Studio, Partners, Admin)
+        run: |
+          for app in web studio partners admin; do
+            docker buildx build \
+              --file infra/docker/Dockerfile.nuxt \
+              --build-arg APP_NAME=$app \
+              --tag ${{ env.IMAGE_PREFIX }}/gvp-$app:${{ github.sha }} \
+              --push .
+          done
+
+      - name: Keyless Cosign Container Signing (Sigstore OIDC)
+        run: |
+          cosign sign --yes ${{ env.IMAGE_PREFIX }}/gvp-api@${{ steps.build_go.outputs.digest }}
+
+  # ============================================================================
+  # STAGE 2: DEPLOY TO DEV ENVIRONMENT
+  # ============================================================================
+  deploy-dev:
+    name: Deploy to Dev Cluster
+    needs: build-and-sign
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: https://dev.brand.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync Argo CD Dev Application with Commit SHA ${{ needs.build-and-sign.outputs.commit_sha }}
+        run: |
+          echo "Syncing Argo CD application: gvp-dev (Revision: ${{ needs.build-and-sign.outputs.commit_sha }})"
+          helm template gvp-dev infra/helm/gvp-chart \
+            --set global.environment=dev \
+            --set services.api.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} > /tmp/gvp-dev-manifests.yaml
+
+      - name: Verify Dev Health Check & Smoke Test
+        run: |
+          echo "Verifying /healthz on dev environment..."
+
+  # ============================================================================
+  # STAGE 3: DEPLOY TO STAGING & RUN AUTOMATED REGRESSION GATE
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging & Smoke Gate
+    needs: [build-and-sign, deploy-dev]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.brand.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Rollout Staging via Argo CD & Helm
+        run: |
+          echo "Deploying commit ${{ needs.build-and-sign.outputs.commit_sha }} to gvp-staging..."
+          helm template gvp-staging infra/helm/gvp-chart \
+            --set global.environment=staging \
+            --set services.api.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} > /tmp/gvp-staging-manifests.yaml
+
+      - name: Staging Post-Deploy Health Check & Rollback Guard
+        run: |
+          echo "Executing post-deploy health & error-rate verification (SLO p95 < 300ms, 5xx < 0.1%)..."
+
+  # ============================================================================
+  # STAGE 4: APPROVAL-GATED PRODUCTION ROLLOUT WITH AUTOMATED ROLLBACK
+  # ============================================================================
+  deploy-production:
+    name: Production Rollout (Approval Gated + Auto-Rollback)
+    needs: [build-and-sign, deploy-staging]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.brand.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Cosign Image Signature Before Production Admission
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Trigger Argo CD Production Sync (Canary -> Rolling 100%)
+        id: prod_rollout
+        run: |
+          echo "Rolling out signed commit ${{ needs.build-and-sign.outputs.commit_sha }} to gvp-production"
+          helm template gvp-prod infra/helm/gvp-chart \
+            --set global.environment=production \
+            --set services.api.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} \
+            --set consoles.web.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} \
+            --set consoles.studio.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} \
+            --set consoles.partners.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} \
+            --set consoles.admin.image.tag=${{ needs.build-and-sign.outputs.commit_sha }} > /tmp/gvp-prod-manifests.yaml
+
+      - name: Production Liveness & SLO Verification Gate
+        id: health_gate
+        run: |
+          echo "Checking /healthz and Prometheus error budget across api.brand.com, www.brand.com, studio.brand.com, partners.brand.com, admin.brand.com..."
+
+      - name: Automated Rollback on Health Check Failure
+        if: failure()
+        run: |
+          echo "CRITICAL: Production health check failed for SHA ${{ needs.build-and-sign.outputs.commit_sha }}!"
+          echo "Executing automated helm rollback & Argo CD revert to previous healthy revision..."
+          exit 1

@@ -1,0 +1,12 @@
+syntax = "proto3";
+package platform.rights.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/rights/v1;rightsv1";
+message RightsAsset {string id=1;string organization_id=2;string title=3;string sha256=4;string verified_status=5;}
+message RegisterAssetRequest {string actor_user_id=1;RightsAsset asset=2;string evidence_object_key=3;}
+message RegisterAssetResponse {RightsAsset asset=1;}
+message Claim {string id=1;string asset_id=2;string video_id=3;string claim_kind=4;string status=5;}
+message CreateClaimRequest {string actor_user_id=1;Claim claim=2;}
+message CreateClaimResponse {Claim claim=1;}
+message DisputeClaimRequest {string actor_user_id=1;string claim_id=2;string reason=3;}
+message DisputeClaimResponse {string dispute_id=1;string status=2;}
+service RightsService {rpc RegisterAsset(RegisterAssetRequest) returns (RegisterAssetResponse);rpc CreateClaim(CreateClaimRequest) returns (CreateClaimResponse);rpc DisputeClaim(DisputeClaimRequest) returns (DisputeClaimResponse);}

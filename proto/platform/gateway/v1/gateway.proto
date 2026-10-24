@@ -1,0 +1,6 @@
+syntax = "proto3";
+package platform.gateway.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/gateway/v1;gatewayv1";
+message GatewayPolicyRequest {string path=1;string method=2;string user_id=3;}
+message GatewayPolicyResponse {bool permitted=1;string required_permission=2;string request_id=3;}
+service GatewayPolicyService {rpc CheckRoute(GatewayPolicyRequest) returns (GatewayPolicyResponse);}

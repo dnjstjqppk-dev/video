@@ -1,0 +1,21 @@
+syntax = "proto3";
+package platform.media.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/media/v1;mediav1";
+import "google/protobuf/timestamp.proto";
+message UploadSession {string id=1;string video_id=2;string state=3;int64 expected_size_bytes=4;google.protobuf.Timestamp expires_at=5;}
+message CreateUploadSessionRequest {string actor_user_id=1;string video_id=2;int64 expected_size_bytes=3;string checksum_sha256=4;}
+message CreateUploadSessionResponse {UploadSession session=1;string part_upload_endpoint=2;}
+message CompleteUploadRequest {string session_id=1;string actor_user_id=2;repeated UploadedPart parts=3;}
+message UploadedPart {int32 number=1;string etag=2;int64 size_bytes=3;}
+message CompleteUploadResponse {string processing_job_id=1;}
+message ProcessingJob {string id=1;string video_id=2;string state=3;int32 attempt=4;string failure_code=5;}
+message GetProcessingJobRequest {string job_id=1;}
+message GetProcessingJobResponse {ProcessingJob job=1;}
+message RequestPlaybackRequest {string actor_user_id=1;string video_id=2;string country=3;}
+message RequestPlaybackResponse {string manifest_url=1;google.protobuf.Timestamp valid_until=2;bool drm_required=3;}
+service MediaService {
+ rpc CreateUploadSession(CreateUploadSessionRequest) returns (CreateUploadSessionResponse);
+ rpc CompleteUpload(CompleteUploadRequest) returns (CompleteUploadResponse);
+ rpc GetProcessingJob(GetProcessingJobRequest) returns (GetProcessingJobResponse);
+ rpc RequestPlayback(RequestPlaybackRequest) returns (RequestPlaybackResponse);
+}

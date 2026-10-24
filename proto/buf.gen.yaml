@@ -1,0 +1,8 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: module=example.com/global-video-platform/gen/go
+  - remote: buf.build/grpc/go
+    out: gen/go
+    opt: module=example.com/global-video-platform/gen/go

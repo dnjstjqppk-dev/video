@@ -1,0 +1,15 @@
+{
+  "name": "@gvp/shared-types",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@gvp/tsconfig": "workspace:*",
+    "typescript": "^5.7.0"
+  }
+}
+

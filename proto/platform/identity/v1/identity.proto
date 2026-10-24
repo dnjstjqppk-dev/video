@@ -1,0 +1,25 @@
+syntax = "proto3";
+package platform.identity.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/identity/v1;identityv1";
+import "google/protobuf/timestamp.proto";
+message User {
+ string id = 1;
+ string oidc_subject = 2;
+ string verified_email = 3;
+ string display_name = 4;
+ string locale = 5;
+ string status = 6;
+ google.protobuf.Timestamp created_at = 7;
+}
+message VerifyTokenRequest {string bearer_token = 1;}
+message VerifyTokenResponse {User user = 1; repeated string scopes = 2;}
+message GetUserRequest {string user_id = 1;}
+message GetUserResponse {User user = 1;}
+message Organization {string id = 1; string kind = 2; string name = 3; string verification_status = 4;}
+message CheckPermissionRequest {string user_id = 1; string permission = 2; string resource_id = 3; string organization_id = 4;}
+message CheckPermissionResponse {bool permitted = 1; string reason_code = 2;}
+service IdentityService {
+ rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
+ rpc GetUser(GetUserRequest) returns (GetUserResponse);
+ rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse);
+}

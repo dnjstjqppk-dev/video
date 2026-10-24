@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package gvp.analytics.v1;
+
+option go_package = "globalvideoplatform/services/api/internal/analytics/v1;analyticsv1";
+
+service AnalyticsIngestionService {
+  rpc IngestPlaybackEvent (IngestPlaybackEventRequest) returns (IngestPlaybackEventResponse);
+  rpc BatchIngestPlaybackEvents (BatchIngestPlaybackEventsRequest) returns (BatchIngestPlaybackEventsResponse);
+}
+
+message PlaybackEventRecord {
+  string event_id = 1;
+  string event_type = 2;
+  int64 occurred_at_unix_ms = 3;
+  string user_id = 4;
+  string session_id = 5;
+  string video_id = 6;
+  string channel_id = 7;
+  string device_type = 8;
+  string client_version = 9;
+  string playback_session_id = 10;
+  int32 watch_duration_seconds = 11;
+  int32 current_position_seconds = 12;
+  int32 video_duration_seconds = 13;
+  string ip_address_hashed = 14;
+}
+
+message IngestPlaybackEventRequest {
+  PlaybackEventRecord event = 1;
+}
+
+message IngestPlaybackEventResponse {
+  bool accepted = 1;
+  string event_id = 2;
+}
+
+message BatchIngestPlaybackEventsRequest {
+  repeated PlaybackEventRecord events = 1;
+}
+
+message BatchIngestPlaybackEventsResponse {
+  int32 accepted_count = 1;
+  int32 failed_count = 2;
+}
+

@@ -1,0 +1,46 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    platform: "global-video-platform"
+    environment: "production"
+
+rule_files:
+  - "/etc/prometheus/alerts.yml"
+
+scrape_configs:
+  - job_name: "gvp-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["api:8080"]
+        labels:
+          service: "api"
+          tier: "backend"
+
+  - job_name: "gvp-workers"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "media-worker:8080"
+          - "realtime-chat:8081"
+          - "analytics-worker:8080"
+          - "recommendation-worker:8080"
+          - "scheduler:8080"
+        labels:
+          tier: "worker"
+
+  - job_name: "gvp-nuxt-consoles"
+    metrics_path: "/_nitro/metrics"
+    static_configs:
+      - targets:
+          - "web:3000"
+          - "studio:3001"
+          - "partners:3002"
+          - "admin:3003"
+        labels:
+          tier: "frontend"
+
+  - job_name: "nats-jetstream"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["nats:8222"]

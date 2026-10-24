@@ -1,0 +1,19 @@
+apiVersion: v2
+name: gvp-chart
+description: Global Video Platform — Production Helm Chart (Go Modular Monolith, Workers & 4 Independent Nuxt 4 Consoles)
+type: application
+version: 2.0.0
+appVersion: "1.0.0"
+keywords:
+  - video-platform
+  - golang
+  - nuxt4
+  - vue3
+  - cloudflare-r2
+  - hls
+maintainers:
+  - name: Global Video Platform SRE & Architecture Team
+    email: sre@brand.com
+annotations:
+  argocd.argoproj.io/sync-options: Prune=true,ApplyOutOfSyncOnly=true
+  seccomp.security.alpha.kubernetes.io/pod: runtime/default

@@ -1,0 +1,10 @@
+syntax = "proto3";
+package platform.events.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/events/v1;eventsv1";
+import "google/protobuf/timestamp.proto";
+message EventEnvelope {string id=1;string event_type=2;int32 schema_version=3;string aggregate_type=4;string aggregate_id=5;google.protobuf.Timestamp occurred_at=6;string trace_id=7;bytes payload=8;}
+message VideoReadyEvent {string video_id=1;string channel_id=2;string manifest_object_key=3;}
+message VideoPublishedEvent {string video_id=1;string channel_id=2;string visibility=3;}
+message PaymentSettledEvent {string payment_id=1;string provider_ref=2;string currency=3;int64 amount_minor=4;}
+message CopyrightClaimUpdatedEvent {string claim_id=1;string video_id=2;string status=3;}
+message LivestreamStartedEvent {string stream_id=1;string channel_id=2;}

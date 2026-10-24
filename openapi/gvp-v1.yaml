@@ -1,0 +1,162 @@
+openapi: 3.1.0
+info:
+  title: Global Video Platform API
+  description: YouTube-scale production API for Users, Creators, Partners, Admins, and Mobile
+  version: 1.0.0
+servers:
+  - url: https://api.brand.com/v1
+    description: Production Go API
+  - url: http://localhost:8080/v1
+    description: Local Development Server
+
+paths:
+  /me:
+    get:
+      summary: Get current authenticated user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /videos/{id}/playback:
+    get:
+      summary: Retrieve adaptive HLS playback manifest & playback token
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Playback manifest, qualities, captions, and chapters
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /feed/home:
+    get:
+      summary: Personalized or default home recommendation feed
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 24
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated video recommendations
+
+  /feed/shorts:
+    get:
+      summary: Infinite vertical shorts feed
+      responses:
+        '200':
+          description: Shorts list
+
+  /uploads:
+    post:
+      summary: Initiate multipart R2 upload session
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, fileSizeBytes, mimeType]
+              properties:
+                title:
+                  type: string
+                fileSizeBytes:
+                  type: integer
+                mimeType:
+                  type: string
+      responses:
+        '201':
+          description: Upload session created with part size and upload key
+
+  /events/analytics:
+    post:
+      summary: Ingest client analytics playback events to NATS & ClickHouse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, event_type, session_id, video_id, channel_id, device_type]
+              properties:
+                event_id:
+                  type: string
+                event_type:
+                  type: string
+                session_id:
+                  type: string
+                video_id:
+                  type: string
+                channel_id:
+                  type: string
+                device_type:
+                  type: string
+      responses:
+        '202':
+          description: Event accepted for background processing
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Authentication token missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Insufficient permissions for resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Target resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+            field:
+              type: string
+

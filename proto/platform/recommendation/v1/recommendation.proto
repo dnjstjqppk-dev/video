@@ -1,0 +1,9 @@
+syntax = "proto3";
+package platform.recommendation.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/recommendation/v1;recommendationv1";
+message RecommendRequest {string actor_user_id=1;string session_id=2;string context=3;int32 page_size=4;string page_token=5;string country=6;string language=7;}
+message VideoRecommendation {string video_id=1;double score=2;string reason_code=3;}
+message RecommendResponse {repeated VideoRecommendation items=1;string next_page_token=2;string experiment_id=3;}
+message FeedbackRequest {string actor_user_id=1;string video_id=2;string feedback_type=3;}
+message FeedbackResponse {bool recorded=1;}
+service RecommendationService {rpc Recommend(RecommendRequest) returns (RecommendResponse);rpc RecordFeedback(FeedbackRequest) returns (FeedbackResponse);}

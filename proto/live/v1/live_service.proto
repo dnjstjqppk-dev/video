@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package gvp.live.v1;
+
+option go_package = "globalvideoplatform/services/api/internal/live/v1;livev1";
+
+service LiveStreamControllerService {
+  rpc ProvisionStream (ProvisionStreamRequest) returns (ProvisionStreamResponse);
+  rpc RotateStreamKey (RotateStreamKeyRequest) returns (RotateStreamKeyResponse);
+  rpc StreamWebhookEvent (StreamWebhookEventRequest) returns (StreamWebhookEventResponse);
+  rpc TerminateStream (TerminateStreamRequest) returns (TerminateStreamResponse);
+}
+
+message ProvisionStreamRequest {
+  string stream_id = 1;
+  string channel_id = 2;
+  string title = 3;
+}
+
+message ProvisionStreamResponse {
+  string stream_id = 1;
+  string stream_key = 2;
+  string rtmps_ingest_url = 3;
+  string srt_ingest_url = 4;
+  string hls_playback_url = 5;
+}
+
+message RotateStreamKeyRequest {
+  string stream_id = 1;
+}
+
+message RotateStreamKeyResponse {
+  string new_stream_key = 1;
+  string rtmps_ingest_url = 2;
+}
+
+message StreamWebhookEventRequest {
+  string event_type = 1; // "stream.started", "stream.stopped", "stream.recording_ready"
+  string stream_id = 2;
+  int64 timestamp = 3;
+  string recording_hls_url = 4;
+}
+
+message StreamWebhookEventResponse {
+  bool acknowledged = 1;
+}
+
+message TerminateStreamRequest {
+  string stream_id = 1;
+  string reason = 2;
+}
+
+message TerminateStreamResponse {
+  bool success = 1;
+}
+

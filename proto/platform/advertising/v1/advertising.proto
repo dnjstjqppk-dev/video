@@ -1,0 +1,11 @@
+syntax = "proto3";
+package platform.advertising.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/advertising/v1;advertisingv1";
+message Campaign {string id=1;string advertiser_id=2;string name=3;string currency=4;int64 budget_minor=5;string state=6;}
+message CreateCampaignRequest {string actor_user_id=1;string organization_id=2;Campaign campaign=3;}
+message CreateCampaignResponse {Campaign campaign=1;}
+message SelectAdRequest {string placement_code=1;string country=2;string consent_category=3;string content_video_id=4;string request_id=5;}
+message SelectAdResponse {string creative_id=1;string impression_token=2;string media_url=3;string campaign_id=4;}
+message RecordAdEventRequest {string event_id=1;string impression_token=2;string kind=3;}
+message RecordAdEventResponse {bool accepted=1;}
+service AdvertisingService {rpc CreateCampaign(CreateCampaignRequest) returns (CreateCampaignResponse);rpc SelectAd(SelectAdRequest) returns (SelectAdResponse);rpc RecordAdEvent(RecordAdEventRequest) returns (RecordAdEventResponse);}

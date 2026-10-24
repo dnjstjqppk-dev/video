@@ -1,0 +1,80 @@
+groups:
+  - name: gvp_slo_and_latency_alerts
+    interval: 30s
+    rules:
+      # 1. API p95 Latency > 300ms
+      - alert: GvpApiHighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="api"}[5m])) by (le, route)) > 0.300
+        for: 3m
+        labels:
+          severity: critical
+          team: backend-sre
+        annotations:
+          summary: "GVP API p95 latency exceeded 300ms SLO ({{ $value | printf \"%.3f\" }}s)"
+          description: "Route {{ $labels.route }} p95 latency has been > 300ms for 3 minutes."
+
+      # 2. API Error Rate > 0.1%
+      - alert: GvpApiHighErrorRate
+        expr: |
+          (sum(rate(http_requests_total{service="api", status=~"5.."}[5m])) / sum(rate(http_requests_total{service="api"}[5m]))) > 0.001
+        for: 2m
+        labels:
+          severity: critical
+          team: backend-sre
+        annotations:
+          summary: "GVP API 5xx error rate exceeded 0.1% SLO"
+          description: "Current 5xx error ratio is {{ $value | humanizePercentage }} over the last 5m."
+
+  - name: gvp_media_and_worker_alerts
+    interval: 30s
+    rules:
+      # 3. Transcoding Queue Lag Alert
+      - alert: GvpMediaTranscodingQueueLagHigh
+        expr: |
+          nats_consumer_num_pending{stream="MEDIA_JOBS", consumer="media-worker"} > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: media-pipeline
+        annotations:
+          summary: "Media worker FFmpeg transcoding queue lag > 50 jobs"
+          description: "Pending transcode jobs in NATS JetStream MEDIA_JOBS: {{ $value }}. Verify Spot node pool autoscaling."
+
+      # 4. Transactional Outbox Relay Lag
+      - alert: GvpOutboxRelayStalled
+        expr: |
+          gvp_outbox_unpublished_events_count > 500
+        for: 2m
+        labels:
+          severity: critical
+          team: data-platform
+        annotations:
+          summary: "PostgreSQL Transactional Outbox backlog exceeds 500 unpublished events"
+          description: "Check gvp-scheduler and NATS JetStream connectivity immediately."
+
+  - name: gvp_finops_and_cost_alerts
+    interval: 5m
+    rules:
+      # 5. Monthly Cost Budget Threshold Alerts (80% Warning, 100% Critical)
+      - alert: GvpMonthlyInfrastructureBudget80Percent
+        expr: |
+          (gvp_finops_monthly_spend_usd / gvp_finops_monthly_budget_limit_usd) >= 0.80
+        for: 15m
+        labels:
+          severity: warning
+          team: finops-governance
+        annotations:
+          summary: "Monthly cloud & media infrastructure spend exceeded 80% of budget"
+          description: "Current spend ratio is {{ $value | humanizePercentage }}. Review Cloudflare Stream Live minutes and R2 storage growth."
+
+      - alert: GvpMonthlyInfrastructureBudgetExceeded
+        expr: |
+          (gvp_finops_monthly_spend_usd / gvp_finops_monthly_budget_limit_usd) >= 1.00
+        for: 5m
+        labels:
+          severity: critical
+          team: finops-governance
+        annotations:
+          summary: "Monthly cloud & media infrastructure spend exceeded 100% budget cap"
+          description: "Immediate FinOps review required. Non-essential 4K re-encoding queues throttled."

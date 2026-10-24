@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package gvp.recommendation.v1;
+
+option go_package = "globalvideoplatform/services/api/internal/recommendation/v1;recommendationv1";
+
+service RecommendationEngineService {
+  rpc GetPersonalizedHomeFeed (GetPersonalizedHomeFeedRequest) returns (GetPersonalizedHomeFeedResponse);
+  rpc GetShortsFeed (GetShortsFeedRequest) returns (GetShortsFeedResponse);
+  rpc GetRelatedVideos (GetRelatedVideosRequest) returns (GetRelatedVideosResponse);
+}
+
+message GetPersonalizedHomeFeedRequest {
+  string user_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  string category = 4;
+  repeated string exclude_video_ids = 5;
+}
+
+message VideoScoreItem {
+  string video_id = 1;
+  double score = 2;
+  string reason = 3;
+}
+
+message GetPersonalizedHomeFeedResponse {
+  repeated VideoScoreItem items = 1;
+  string next_cursor = 2;
+}
+
+message GetShortsFeedRequest {
+  string user_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message GetShortsFeedResponse {
+  repeated VideoScoreItem items = 1;
+  string next_cursor = 2;
+}
+
+message GetRelatedVideosRequest {
+  string current_video_id = 1;
+  string user_id = 2;
+  int32 count = 3;
+}
+
+message GetRelatedVideosResponse {
+  repeated VideoScoreItem items = 1;
+}
+

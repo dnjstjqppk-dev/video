@@ -1,0 +1,11 @@
+syntax = "proto3";
+package platform.partners.v1;
+option go_package = "example.com/global-video-platform/gen/go/platform/partners/v1;partnersv1";
+message Contract {string id=1;string organization_id=2;string channel_id=3;string contract_type=4;string terms_hash=5;string signature_state=6;}
+message ProposeContractRequest {string actor_user_id=1;Contract contract=2;}
+message ProposeContractResponse {Contract contract=1;}
+message InviteMemberRequest {string actor_user_id=1;string organization_id=2;string invited_user_id=3;string role=4;}
+message InviteMemberResponse {string invitation_id=1;}
+message GetPartnerSummaryRequest {string actor_user_id=1;string organization_id=2;}
+message GetPartnerSummaryResponse {string organization_id=1;int64 linked_channels=2;int64 active_contracts=3;}
+service PartnerService {rpc ProposeContract(ProposeContractRequest) returns (ProposeContractResponse);rpc InviteMember(InviteMemberRequest) returns (InviteMemberResponse);rpc GetPartnerSummary(GetPartnerSummaryRequest) returns (GetPartnerSummaryResponse);}

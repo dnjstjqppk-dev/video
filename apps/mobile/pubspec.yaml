@@ -1,0 +1,37 @@
+name: gvp_mobile
+description: Global Video Platform (GVP) native mobile application (iOS & Android).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+  dio: ^5.7.0
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  flutter_secure_storage: ^9.2.2
+  drift: ^2.22.1
+  shared_preferences: ^2.3.3
+  cached_network_image: ^3.4.1
+  video_player: ^2.9.2
+  sentry_flutter: ^8.11.0
+  firebase_messaging: ^15.1.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.9.0
+
+flutter:
+  uses-material-design: true
