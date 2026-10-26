@@ -2,7 +2,7 @@ name: GVP Staged Continuous Delivery (Dev -> Staging -> Production)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "master"]
     tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
