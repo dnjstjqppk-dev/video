@@ -190,6 +190,46 @@ const { data: feedData, pending, error, refresh } = await useAsyncData(
   { watch: [selectedCategory] }
 )
 
+const { data: feedAd } = await useAsyncData('home-feed-ad', async () => {
+  try {
+    const res = await api.getAdDecision({
+      slot_id: 'home_feed_banner',
+      user_id: appStore.currentUser?.id,
+      category: 'Technology',
+      platform: 'WEB'
+    })
+    return res
+  } catch {
+    return null
+  }
+})
+
+function onFeedAdClick() {
+  if (!feedAd.value?.creative) return
+  if (feedAd.value.campaign_id && feedAd.value.decision_id) {
+    api.recordAdEvent({
+      event_id: `evt_clk_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+      decision_id: feedAd.value.decision_id,
+      campaign_id: feedAd.value.campaign_id,
+      event_type: 'click'
+    }).catch(() => {})
+  }
+  if (feedAd.value.creative.destinationUrl) {
+    window.open(feedAd.value.creative.destinationUrl, '_blank')
+  }
+}
+
+onMounted(() => {
+  if (feedAd.value?.ad_available && feedAd.value?.campaign_id && feedAd.value?.decision_id) {
+    api.recordAdEvent({
+      event_id: `evt_imp_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+      decision_id: feedAd.value.decision_id,
+      campaign_id: feedAd.value.campaign_id,
+      event_type: 'impression'
+    }).catch(() => {})
+  }
+})
+
 const visibleVideos = computed(() => {
   const list = feedData.value || fallbackVideos
   return list.filter(v => {
@@ -327,8 +367,46 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
       </button>
     </div>
 
-    <!-- Sponsored Native Ad Slot Banner -->
-    <section class="mb-8 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#1A1A2E] via-[#16213E] to-[#0F3460] p-5 shadow-lg">
+    <!-- Sponsored Native Ad Slot Banner (Real Ad Decision Loop - ARTICLE 7) -->
+    <section
+      v-if="feedAd?.ad_available && feedAd?.creative"
+      class="mb-8 overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-r from-[#1A1A2E] via-[#16213E] to-[#0F3460] p-5 shadow-xl transition hover:border-amber-400/50"
+    >
+      <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        <div class="flex items-center gap-4">
+          <img
+            v-if="feedAd.creative.mediaUrl"
+            :src="feedAd.creative.mediaUrl"
+            :alt="feedAd.creative.title"
+            class="h-16 w-16 shrink-0 rounded-xl object-cover shadow border border-white/10"
+          />
+          <div>
+            <div class="mb-1.5 flex items-center gap-2">
+              <span class="rounded bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold uppercase text-black">
+                Sponsored Ad
+              </span>
+              <span class="text-xs text-neutral-300">
+                {{ feedAd.creative.advertiserName }} · Verified Ad Flight
+              </span>
+            </div>
+            <h2 class="text-lg font-bold text-white sm:text-xl">
+              {{ feedAd.creative.title }}
+            </h2>
+            <p class="mt-1 text-xs text-neutral-300 sm:text-sm">
+              {{ feedAd.creative.category }} · {{ feedAd.creative.callToAction }}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          @click="onFeedAdClick"
+          class="shrink-0 rounded-full bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-blue-500"
+        >
+          {{ feedAd.creative.callToAction || 'Visit Site →' }}
+        </button>
+      </div>
+    </section>
+    <section v-else class="mb-8 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#1A1A2E] via-[#16213E] to-[#0F3460] p-5 shadow-lg">
       <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
           <div class="mb-1.5 flex items-center gap-2">

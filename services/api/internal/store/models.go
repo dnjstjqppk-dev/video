@@ -117,14 +117,77 @@ type AdCampaign struct {
 	ID               string    `json:"id"`
 	AdvertiserID     string    `json:"advertiser_id"`
 	Name             string    `json:"name"`
-	Format           string    `json:"format"`
-	Status           string    `json:"status"`
+	Format           string    `json:"format"` // preroll, midroll, feed_banner, shorts_sponsored, banner
+	Status           string    `json:"status"` // draft, pending_review, approved, scheduled, active, paused, exhausted
 	TotalBudgetCents int64     `json:"total_budget_cents"`
 	DailyBudgetCents int64     `json:"daily_budget_cents"`
 	SpentCents       int64     `json:"spent_cents"`
 	Impressions      int64     `json:"impressions"`
 	Clicks           int64     `json:"clicks"`
+	CpmBidCents      int64     `json:"cpm_bid_cents"`
+	CpcBidCents      int64     `json:"cpc_bid_cents"`
+	StartAt          time.Time `json:"start_at"`
+	EndAt            time.Time `json:"end_at"`
+	TargetCategories []string  `json:"target_categories"`
+	Creatives        []string  `json:"creatives"` // Creative IDs
 	CreatedAt        time.Time `json:"created_at"`
+}
+
+type AdCreative struct {
+	ID                string    `json:"id"`
+	CampaignID        string    `json:"campaign_id"`
+	Format            string    `json:"format"` // preroll, feed_banner, shorts_sponsored
+	MediaURL          string    `json:"media_url"`
+	ThumbnailURL      string    `json:"thumbnail_url"`
+	Headline          string    `json:"headline"`
+	Description       string    `json:"description"`
+	CallToAction      string    `json:"call_to_action"`
+	DestinationURL    string    `json:"destination_url"`
+	DurationSeconds   int       `json:"duration_seconds"`
+	SkipOffsetSeconds int       `json:"skip_offset_seconds"`
+	ReviewStatus      string    `json:"review_status"` // pending, approved, rejected
+	CreatedAt         time.Time `json:"created_at"`
+}
+
+type AdSlot struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Format       string `json:"format"`
+	FloorCpmCent int64  `json:"floor_cpm_cent"`
+}
+
+type AdDeliveryDecision struct {
+	DecisionID  string      `json:"decision_id"`
+	SlotID      string      `json:"slot_id"`
+	CampaignID  string      `json:"campaign_id,omitempty"`
+	CreativeID  string      `json:"creative_id,omitempty"`
+	UserID      string      `json:"user_id,omitempty"`
+	DecidedAt   time.Time   `json:"decided_at"`
+	Status      string      `json:"status"` // SERVED, UNFILLED
+	Reason      string      `json:"reason"` // MATCHED, BUDGET_EXHAUSTED, NO_MATCHING_CREATIVE, OUT_OF_SCHEDULE
+	BidCpmCents int64       `json:"bid_cpm_cents,omitempty"`
+	Creative    *AdCreative `json:"creative,omitempty"`
+}
+
+type AdDeliveryEvent struct {
+	EventID     string    `json:"event_id"`
+	DecisionID  string    `json:"decision_id"`
+	CampaignID  string    `json:"campaign_id"`
+	EventType   string    `json:"event_type"` // impression, start, first_quartile, midpoint, third_quartile, complete, click, skip
+	CostCents   int64     `json:"cost_cents"`
+	OccurredAt  time.Time `json:"occurred_at"`
+}
+
+type MediaJob struct {
+	ID           string     `json:"id"`
+	VideoID      string     `json:"video_id"`
+	InputURI     string     `json:"input_uri"`
+	OutputPrefix string     `json:"output_prefix"`
+	Status       string     `json:"status"` // QUEUED, PROCESSING, READY, FAILED
+	ProgressPct  int        `json:"progress_pct"`
+	CreatedAt    time.Time  `json:"created_at"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+	Error        string     `json:"error,omitempty"`
 }
 
 type CopyrightClaim struct {
@@ -201,6 +264,11 @@ type MemoryStore struct {
 	Likes           map[string]map[string]bool // userID -> set of videoIDs
 	LiveStreams     map[string]*LiveStream
 	Campaigns       map[string]*AdCampaign
+	AdCreatives     map[string]*AdCreative
+	AdSlots         map[string]*AdSlot
+	AdDecisions     map[string]*AdDeliveryDecision
+	AdEvents        []*AdDeliveryEvent
+	MediaJobs       map[string]*MediaJob
 	Claims          map[string]*CopyrightClaim
 	Moderation      map[string]*ModerationCase
 	Playlists       map[string]*Playlist
@@ -220,6 +288,11 @@ func NewMemoryStore() *MemoryStore {
 		Likes:           make(map[string]map[string]bool),
 		LiveStreams:     make(map[string]*LiveStream),
 		Campaigns:       make(map[string]*AdCampaign),
+		AdCreatives:     make(map[string]*AdCreative),
+		AdSlots:         make(map[string]*AdSlot),
+		AdDecisions:     make(map[string]*AdDeliveryDecision),
+		AdEvents:        make([]*AdDeliveryEvent, 0),
+		MediaJobs:       make(map[string]*MediaJob),
 		Claims:          make(map[string]*CopyrightClaim),
 		Moderation:      make(map[string]*ModerationCase),
 		Playlists:       make(map[string]*Playlist),
@@ -360,5 +433,103 @@ func (s *MemoryStore) seedDefaults() {
 			CreatedAt:   now.Add(-48 * time.Hour),
 		},
 	}
+
+	// Default Standard Ad Slots
+	s.AdSlots["watch_preroll"] = &AdSlot{ID: "watch_preroll", Name: "Video Watch Pre-Roll Stream", Format: "preroll", FloorCpmCent: 3500}
+	s.AdSlots["home_feed_banner"] = &AdSlot{ID: "home_feed_banner", Name: "Home Feed Top Sponsored Card", Format: "feed_banner", FloorCpmCent: 2000}
+	s.AdSlots["shorts_sponsored"] = &AdSlot{ID: "shorts_sponsored", Name: "Shorts Feed Sponsored Video", Format: "shorts_sponsored", FloorCpmCent: 4000}
+
+	// Seed Standard Verified Advertiser Account
+	advertiserUser := &User{
+		ID:               "44444444-4444-4444-4444-444444444444",
+		Email:            "advertiser@brand.com",
+		Username:         "acme_corp_ads",
+		Role:             "advertiser",
+		SubscriptionTier: "enterprise",
+		IsVerified:       true,
+		IsActive:         true,
+		DisplayName:      "Acme Cloud Technologies",
+		Bio:              "Global Enterprise Cloud Infrastructure & Edge Solutions",
+		AvatarURL:        "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150",
+		CreatedAt:        now,
+	}
+	s.Users[advertiserUser.ID] = advertiserUser
+
+	// Seed Real Active Verified Campaigns & Approved Creatives
+	camp1 := &AdCampaign{
+		ID:               "camp-cloud-001",
+		AdvertiserID:     advertiserUser.ID,
+		Name:             "Q4 Global Enterprise Cloud Acceleration",
+		Format:           "preroll",
+		Status:           "active",
+		TotalBudgetCents: 500000000, // 5,000,000 KRW
+		DailyBudgetCents: 50000000,  // 500,000 KRW
+		SpentCents:       1250000,
+		Impressions:      4820,
+		Clicks:           142,
+		CpmBidCents:      5500,
+		CpcBidCents:      2500,
+		StartAt:          now.Add(-7 * 24 * time.Hour),
+		EndAt:            now.Add(30 * 24 * time.Hour),
+		TargetCategories: []string{"Technology", "Science", "Education"},
+		Creatives:        []string{"creative-preroll-001"},
+		CreatedAt:        now.Add(-7 * 24 * time.Hour),
+	}
+	s.Campaigns[camp1.ID] = camp1
+
+	creative1 := &AdCreative{
+		ID:                "creative-preroll-001",
+		CampaignID:        camp1.ID,
+		Format:            "preroll",
+		MediaURL:          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+		ThumbnailURL:      "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800",
+		Headline:          "Next-Gen Edge Cloud Infrastructure for Streaming",
+		Description:       "Deploy ultra-low latency applications globally in seconds with Acme Edge Cloud.",
+		CallToAction:      "Start Free Trial",
+		DestinationURL:    "https://example.com/edge-cloud?utm_source=gvp&utm_medium=video_preroll",
+		DurationSeconds:   15,
+		SkipOffsetSeconds: 5,
+		ReviewStatus:      "approved",
+		CreatedAt:         now.Add(-7 * 24 * time.Hour),
+	}
+	s.AdCreatives[creative1.ID] = creative1
+
+	camp2 := &AdCampaign{
+		ID:               "camp-banner-002",
+		AdvertiserID:     advertiserUser.ID,
+		Name:             "DevOps Workflow Automation Suite Banner",
+		Format:           "feed_banner",
+		Status:           "active",
+		TotalBudgetCents: 300000000, // 3,000,000 KRW
+		DailyBudgetCents: 30000000,
+		SpentCents:       850000,
+		Impressions:      8920,
+		Clicks:           310,
+		CpmBidCents:      3200,
+		CpcBidCents:      1800,
+		StartAt:          now.Add(-5 * 24 * time.Hour),
+		EndAt:            now.Add(20 * 24 * time.Hour),
+		TargetCategories: []string{"Technology", "Gaming"},
+		Creatives:        []string{"creative-banner-002"},
+		CreatedAt:        now.Add(-5 * 24 * time.Hour),
+	}
+	s.Campaigns[camp2.ID] = camp2
+
+	creative2 := &AdCreative{
+		ID:                "creative-banner-002",
+		CampaignID:        camp2.ID,
+		Format:            "feed_banner",
+		MediaURL:          "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200",
+		ThumbnailURL:      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400",
+		Headline:          "Automate Your Global CI/CD Deployments in Minutes",
+		Description:       "Join 50,000+ teams accelerating software delivery with unified GitOps pipelines.",
+		CallToAction:      "Learn More",
+		DestinationURL:    "https://example.com/gitops?utm_source=gvp&utm_medium=feed_banner",
+		DurationSeconds:   0,
+		SkipOffsetSeconds: 0,
+		ReviewStatus:      "approved",
+		CreatedAt:         now.Add(-5 * 24 * time.Hour),
+	}
+	s.AdCreatives[creative2.ID] = creative2
 }
 

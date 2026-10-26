@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { VideoChapter, VideoCaption, VideoPlaybackSource, AnalyticsPlaybackEvent } from '@gvp/shared-types'
+import type { VideoChapter, VideoCaption, VideoPlaybackSource, AnalyticsPlaybackEvent, AdCreative } from '@gvp/shared-types'
 import { useAppStore } from '~/stores/app'
 
 const props = withDefaults(
@@ -17,9 +17,9 @@ const props = withDefaults(
     isLive?: boolean
   }>(),
   {
-    hlsMasterUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    hlsMasterUrl: '',
     posterUrl: '',
-    durationSeconds: 634,
+    durationSeconds: 0,
     chapters: () => [],
     captions: () => [],
     sources: () => [],
@@ -55,6 +55,110 @@ const isPiP = ref(false)
 const playbackSessionId = ref(`pbs_${Math.random().toString(36).slice(2, 11)}_${Date.now()}`)
 const cumulativeWatchSeconds = ref(0)
 const validViewSent = ref(false)
+
+// Ad Decision & Pre-Roll Engine State (ARTICLE 7)
+const isAdPlaying = ref(false)
+const currentAd = ref<AdCreative | null>(null)
+const adDecisionId = ref<string>('')
+const adCampaignId = ref<string>('')
+const adCountdownSeconds = ref(5)
+const canSkipAd = ref(false)
+let adCountdownInterval: ReturnType<typeof setInterval> | null = null
+
+async function checkAndPlayPrerollAd() {
+  if (appStore.currentUser?.subscriptionTier === 'premium' || appStore.currentUser?.subscriptionTier === 'premium_family') {
+    initShakaPlayer()
+    return
+  }
+
+  try {
+    const decision = await api.getAdDecision({
+      slot_id: 'watch_preroll',
+      user_id: appStore.currentUser?.id,
+      category: 'Technology',
+      platform: 'WEB'
+    })
+
+    if (decision.ad_available && decision.creative) {
+      currentAd.value = decision.creative
+      adDecisionId.value = decision.decision_id || ''
+      adCampaignId.value = decision.campaign_id || ''
+      isAdPlaying.value = true
+      adCountdownSeconds.value = decision.creative.skipOffsetSeconds || 5
+      canSkipAd.value = false
+
+      adCountdownInterval = setInterval(() => {
+        if (adCountdownSeconds.value > 1) {
+          adCountdownSeconds.value -= 1
+        } else {
+          adCountdownSeconds.value = 0
+          canSkipAd.value = true
+          if (adCountdownInterval) clearInterval(adCountdownInterval)
+        }
+      }, 1000)
+
+      api.recordAdEvent({
+        event_id: `evt_imp_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+        decision_id: adDecisionId.value,
+        campaign_id: adCampaignId.value,
+        event_type: 'impression'
+      }).catch(() => {})
+      return
+    }
+  } catch (err) {
+    console.warn('Ad decision request skipped:', err)
+  }
+
+  initShakaPlayer()
+}
+
+function skipAd() {
+  if (!canSkipAd.value) return
+  if (adCountdownInterval) clearInterval(adCountdownInterval)
+  if (adCampaignId.value) {
+    api.recordAdEvent({
+      event_id: `evt_skp_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+      decision_id: adDecisionId.value,
+      campaign_id: adCampaignId.value,
+      event_type: 'skip'
+    }).catch(() => {})
+  }
+  finishAdAndStartVideo()
+}
+
+function onAdComplete() {
+  if (adCountdownInterval) clearInterval(adCountdownInterval)
+  if (adCampaignId.value) {
+    api.recordAdEvent({
+      event_id: `evt_cmp_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+      decision_id: adDecisionId.value,
+      campaign_id: adCampaignId.value,
+      event_type: 'complete'
+    }).catch(() => {})
+  }
+  finishAdAndStartVideo()
+}
+
+function clickAd() {
+  if (!currentAd.value) return
+  if (adCampaignId.value) {
+    api.recordAdEvent({
+      event_id: `evt_clk_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`,
+      decision_id: adDecisionId.value,
+      campaign_id: adCampaignId.value,
+      event_type: 'click'
+    }).catch(() => {})
+  }
+  if (currentAd.value.destinationUrl) {
+    window.open(currentAd.value.destinationUrl, '_blank')
+  }
+}
+
+function finishAdAndStartVideo() {
+  isAdPlaying.value = false
+  currentAd.value = null
+  initShakaPlayer()
+}
 
 const qualityOptions = ['Auto', '2160p', '1440p', '1080p', '720p', '480p']
 const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -311,7 +415,7 @@ function onVideoTimeUpdate() {
 }
 
 onMounted(() => {
-  initShakaPlayer()
+  checkAndPlayPrerollAd()
   emitTelemetry('impression')
   window.addEventListener('keydown', handleKeydown)
 
@@ -331,6 +435,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
   if (progressTimer) clearInterval(progressTimer)
+  if (adCountdownInterval) clearInterval(adCountdownInterval)
   if (shakaInstance) {
     shakaInstance.destroy?.()
   }
@@ -347,6 +452,70 @@ defineExpose({
     ref="playerContainerRef"
     class="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl select-none"
   >
+    <!-- YouTube-Class Pre-Roll Ad Player Surface & Overlay (ARTICLE 7) -->
+    <div v-if="isAdPlaying && currentAd" class="absolute inset-0 z-30 flex flex-col justify-between bg-black">
+      <video
+        :src="currentAd.mediaUrl"
+        autoplay
+        playsinline
+        class="h-full w-full object-contain"
+        @ended="onAdComplete"
+      />
+
+      <!-- Top Ad Info Bar -->
+      <div class="absolute inset-x-0 top-0 flex items-center justify-between bg-gradient-to-b from-black/85 via-black/40 to-transparent p-4">
+        <div class="flex items-center gap-3">
+          <span class="rounded bg-[#F59E0B] px-2 py-0.5 text-xs font-black uppercase tracking-wider text-black">Ad · 1 of 1</span>
+          <span class="text-sm font-semibold text-white drop-shadow">{{ currentAd.title }}</span>
+          <span class="text-xs text-neutral-300 drop-shadow">Sponsored by {{ currentAd.advertiserName }}</span>
+        </div>
+        <button
+          type="button"
+          @click="clickAd"
+          class="rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur transition hover:bg-white/30"
+        >
+          Visit Advertiser ↗
+        </button>
+      </div>
+
+      <!-- Bottom Controls & Skip CTA -->
+      <div class="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/85 via-black/30 to-transparent p-6">
+        <!-- Left: CTA Action Button -->
+        <button
+          type="button"
+          @click="clickAd"
+          class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-blue-500"
+        >
+          <span>{{ currentAd.callToAction || 'Learn More' }}</span>
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+
+        <!-- Right: 5s Countdown or Skip Ad Button -->
+        <div>
+          <div
+            v-if="!canSkipAd"
+            class="flex items-center gap-2 rounded-lg bg-black/75 px-4 py-2 text-sm font-medium text-neutral-300 backdrop-blur border border-white/10"
+          >
+            <span class="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>You can skip ad in {{ adCountdownSeconds }}s</span>
+          </div>
+          <button
+            v-else
+            type="button"
+            @click="skipAd"
+            class="flex items-center gap-2 rounded-lg bg-black/85 px-5 py-2.5 text-sm font-bold text-white shadow-xl backdrop-blur transition hover:bg-white hover:text-black border border-white/20"
+          >
+            <span>Skip Ad</span>
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- HTML5 / Shaka Video Surface -->
     <video
       ref="videoRef"

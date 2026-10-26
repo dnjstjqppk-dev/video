@@ -75,7 +75,13 @@ const { data: campaignsData } = await useAsyncData('partner-campaigns', async ()
 
 const campaigns = ref<AdCampaign[]>(campaignsData.value || fallbackCampaigns)
 
+const errorMessage = ref<string | null>(null)
+const successMessage = ref<string | null>(null)
+
 async function createCampaign() {
+  errorMessage.value = null
+  successMessage.value = null
+
   const payload: Partial<AdCampaign> = {
     name: newCampaignName.value,
     format: newFormat.value,
@@ -90,29 +96,9 @@ async function createCampaign() {
   try {
     const created = await api.createPartnerCampaign(payload)
     campaigns.value.unshift(created)
-  } catch {
-    campaigns.value.unshift({
-      id: `cmp_${Date.now()}`,
-      advertiserId: 'usr_adv_1',
-      organizationId: 'org_adv_samsung',
-      name: newCampaignName.value,
-      format: newFormat.value,
-      status: CampaignStatus.ACTIVE,
-      dailyBudget: dailyBudget.value,
-      totalBudget: totalBudget.value,
-      spentAmount: 0,
-      cpmBid: cpmBid.value,
-      cpcBid: cpcBid.value,
-      targetCategories: payload.targetCategories || ['tech'],
-      targetCountries: payload.targetCountries || ['KR'],
-      startDate: '2026-10-24',
-      endDate: '2026-12-01',
-      impressions: 0,
-      clicks: 0,
-      views: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    })
+    successMessage.value = `캠페인 [${created.name}]이 성공적으로 등록되었습니다.`
+  } catch (err: any) {
+    errorMessage.value = `캠페인 생성 실패: ${err?.message || 'API 서버 통신 오류'}`
   }
 }
 </script>
@@ -123,6 +109,14 @@ async function createCampaign() {
     <p class="mt-1 text-xs text-neutral-400">
       Create Pre-Roll, Mid-Roll, and Shorts campaigns · Configure CPM/CPC bidding & daily budget pacing
     </p>
+
+    <!-- Alert Notifications -->
+    <div v-if="errorMessage" class="mt-4 rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-xs font-semibold text-red-200">
+      {{ errorMessage }}
+    </div>
+    <div v-if="successMessage" class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-xs font-semibold text-emerald-200">
+      {{ successMessage }}
+    </div>
 
     <!-- Create Campaign Form -->
     <form class="mt-6 rounded-2xl border border-white/10 bg-[#141A2C] p-6" @submit.prevent="createCampaign">

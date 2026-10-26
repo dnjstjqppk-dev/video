@@ -7,6 +7,7 @@ const activeAdminRole = useState<UserRole>('admin-role', () => UserRole.SUPER_AD
 
 const navLinks = [
   { path: '/', label: '플랫폼 통합 관제 (Operations)', icon: '🛰️' },
+  { path: '/ads', label: '광고 송출 진단 (Ad Delivery)', icon: '🎯' },
   { path: '/users', label: '사용자 & RBAC 거버넌스 (Users)', icon: '👥' },
   { path: '/moderation', label: '신뢰 및 안전 큐 (Moderation)', icon: '🛡️' },
   { path: '/finance', label: '정산 승인 & 유닛 이코노믹스 (Finance)', icon: '🏦' },

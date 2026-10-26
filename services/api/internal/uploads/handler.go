@@ -131,7 +131,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find video associated with upload session (last video created for simplicity in mock)
+	// Find video associated with upload session
 	var targetVideo *store.Video
 	for _, v := range h.Store.Videos {
 		if v.Status == "CREATED" {
@@ -140,19 +140,31 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	jobID := "job-" + uuid.NewString()
 	if targetVideo != nil {
-		targetVideo.Status = "PROCESSING"
-		// Simulate immediate readiness for test stream
-		targetVideo.Status = "READY"
-		targetVideo.HlsMasterURL = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+		targetVideo.Status = "QUEUED"
+		targetVideo.HlsMasterURL = "https://media.gvp.media/hls/" + targetVideo.ID + "/master.m3u8"
 		targetVideo.PublishedAt = time.Now()
-		targetVideo.Visibility = "public"
+		targetVideo.Visibility = "private" // Private draft until media-worker completes transcode
+
+		// Register asynchronous media job for worker processing (ARTICLE 2.3 & 2.5)
+		job := &store.MediaJob{
+			ID:           jobID,
+			VideoID:      targetVideo.ID,
+			InputURI:     "r2://raw-uploads/" + uploadID + "/source.mp4",
+			OutputPrefix: "r2://public-hls/" + targetVideo.ID + "/",
+			Status:       "QUEUED",
+			ProgressPct:  0,
+			CreatedAt:    time.Now(),
+		}
+		h.Store.MediaJobs[job.ID] = job
 	}
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"uploadId": uploadID,
-		"status":   "PROCESSING",
-		"message":  "Upload complete. Encoding job submitted to media worker.",
+		"status":   "QUEUED",
+		"jobId":    jobID,
+		"message":  "Upload complete and verified. Transcoding job queued for media worker.",
 	})
 }
 

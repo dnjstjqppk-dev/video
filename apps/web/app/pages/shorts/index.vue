@@ -22,6 +22,11 @@ interface ShortClip {
   videoUrl: string
   liked?: boolean
   subscribed?: boolean
+  isSponsored?: boolean
+  ctaText?: string
+  destinationUrl?: string
+  campaignId?: string
+  decisionId?: string
 }
 
 const shortsList = ref<ShortClip[]>([
@@ -35,7 +40,7 @@ const shortsList = ref<ShortClip[]>([
     likes: 48200,
     comments: 912,
     posterUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=720&q=80',
-    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+    videoUrl: 'https://media.gvp.media/hls/short_01/master.m3u8'
   },
   {
     id: 'short_02',
@@ -47,7 +52,7 @@ const shortsList = ref<ShortClip[]>([
     likes: 129400,
     comments: 2410,
     posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=720&q=80',
-    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+    videoUrl: 'https://media.gvp.media/hls/short_02/master.m3u8'
   },
   {
     id: 'short_03',
@@ -59,9 +64,42 @@ const shortsList = ref<ShortClip[]>([
     likes: 312000,
     comments: 5830,
     posterUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=720&q=80',
-    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'
+    videoUrl: 'https://media.gvp.media/hls/short_03/master.m3u8'
   }
 ])
+
+onMounted(async () => {
+  try {
+    const adDecision = await api.getAdDecision({
+      slot_id: 'shorts_sponsored',
+      user_id: appStore.currentUser?.id,
+      category: 'Technology',
+      platform: 'WEB'
+    })
+    if (adDecision.ad_available && adDecision.creative) {
+      const sponsoredClip: ShortClip = {
+        id: 'ad_' + (adDecision.decision_id || 'sponsored'),
+        channelId: 'ch_sponsor',
+        channelHandle: '@' + (adDecision.creative.advertiserName?.toLowerCase().replace(/\s+/g, '') || 'sponsor'),
+        channelAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&q=80',
+        title: `[Sponsored] ${adDecision.creative.title} — ${adDecision.creative.category}`,
+        audioTitle: 'Promoted Sound — ' + adDecision.creative.advertiserName,
+        likes: 15400,
+        comments: 320,
+        posterUrl: adDecision.creative.mediaUrl,
+        videoUrl: adDecision.creative.mediaUrl,
+        isSponsored: true,
+        ctaText: adDecision.creative.callToAction || 'Learn More',
+        destinationUrl: adDecision.creative.destinationUrl,
+        campaignId: adDecision.campaign_id,
+        decisionId: adDecision.decision_id
+      }
+      shortsList.value.splice(1, 0, sponsoredClip)
+    }
+  } catch {
+    // Non-blocking ad injection
+  }
+})
 
 const activeIndex = ref(0)
 const loopEnabled = ref(true)
@@ -73,6 +111,14 @@ const nextShort = computed(() => shortsList.value[(activeIndex.value + 1) % shor
 
 async function sendShortsTelemetry(clip: ShortClip) {
   try {
+    if (clip.isSponsored && clip.decisionId && clip.campaignId) {
+      await api.recordAdEvent({
+        event_id: `evt_imp_${clip.id}_${Date.now()}`,
+        decision_id: clip.decisionId,
+        campaign_id: clip.campaignId,
+        event_type: 'impression'
+      })
+    }
     await api.recordAnalyticsEvent({
       event_id: `evt_short_${Date.now()}`,
       event_type: 'valid_view',
@@ -159,6 +205,9 @@ onMounted(() => {
         <!-- Bottom Metadata Overlay -->
         <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-5 pr-16 text-white">
           <div class="flex items-center gap-2.5">
+            <span v-if="currentShort.isSponsored" class="rounded bg-amber-400 px-2 py-0.5 text-[10px] font-black uppercase text-black">
+              Sponsored
+            </span>
             <NuxtLink :to="`/channels/${currentShort.channelId}`">
               <img :src="currentShort.channelAvatar" :alt="currentShort.channelHandle" class="h-9 w-9 rounded-full object-cover ring-2 ring-[#FF0033]" />
             </NuxtLink>
@@ -166,6 +215,7 @@ onMounted(() => {
               {{ currentShort.channelHandle }}
             </NuxtLink>
             <button
+              v-if="!currentShort.isSponsored"
               type="button"
               class="rounded-full px-3 py-1 text-xs font-bold transition"
               :class="currentShort.subscribed ? 'bg-white/20 text-white' : 'bg-[#FF0033] text-white'"
@@ -178,6 +228,21 @@ onMounted(() => {
           <p class="mt-3 text-sm font-medium leading-snug">
             {{ currentShort.title }}
           </p>
+
+          <!-- Sponsored CTA Button -->
+          <div v-if="currentShort.isSponsored && currentShort.destinationUrl" class="mt-2.5">
+            <a
+              :href="currentShort.destinationUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-blue-500"
+              @click="api.recordAdEvent({ decision_id: currentShort.decisionId || '', campaign_id: currentShort.campaignId || '', event_type: 'click' })"
+            >
+              <span>{{ currentShort.ctaText || 'Learn More' }}</span>
+              <span>↗</span>
+            </a>
+          </div>
+
           <p class="mt-2 flex items-center gap-1.5 text-xs text-neutral-300">
             <span>🎵</span>
             <span class="truncate">{{ currentShort.audioTitle }}</span>

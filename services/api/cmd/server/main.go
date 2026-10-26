@@ -122,6 +122,10 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		// Live Streams
 		v1.Mount("/live-streams", liveH.Routes(authMiddleware))
 
+		// Ad Server, Decision Engine & Diagnostics (ARTICLE 6 & 7)
+		v1.Mount("/ads", adsH.Routes(authMiddleware))
+		v1.Mount("/advertiser", adsH.Routes(authMiddleware))
+
 		// Studio
 		v1.Mount("/studio", studioH.Routes(authMiddleware))
 		v1.With(authMiddleware.RequireAuth).Get("/studio/earnings", settleH.GetEarnings)
@@ -136,6 +140,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 
 		// Admin
 		v1.Mount("/admin", adminH.Routes(authMiddleware))
+		v1.Get("/admin/ads/delivery-diagnostics", adsH.GetDeliveryDiagnostics)
 		v1.With(authMiddleware.RequireRole("super_admin", "moderator")).Get("/admin/moderation", modH.ListQueue)
 		v1.With(authMiddleware.RequireRole("super_admin", "moderator")).Post("/admin/moderation/{id}/resolve", modH.ResolveCase)
 

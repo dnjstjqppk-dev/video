@@ -10,6 +10,10 @@ import {
   LiveStream,
   LiveChatMessage,
   AdCampaign,
+  AdCreative,
+  AdDecisionRequest,
+  AdDecisionResponse,
+  AdEventPayload,
   CopyrightClaim,
   Payout,
   ModerationCase,
@@ -355,7 +359,32 @@ export class ApiClient {
     return this.request(`/v1/studio/analytics?range=${timeRange}`);
   }
 
-  // --- Partners ---
+  // --- Partners & Advertising Engine ---
+  async getAdDecision(data: AdDecisionRequest): Promise<AdDecisionResponse> {
+    return this.request('/v1/ads/decision', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async recordAdEvent(data: AdEventPayload): Promise<{ status: string }> {
+    return this.request('/v1/ads/events', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAdDeliveryDiagnostics(): Promise<any> {
+    return this.request('/v1/admin/ads/delivery-diagnostics');
+  }
+
+  async getAdPreview(data: { slot_id: string; category?: string }): Promise<AdDecisionResponse> {
+    return this.request('/v1/ads/preview', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async getPartnerOverview(): Promise<{
     organization: { id: string; name: string; type: string };
     campaignCount: number;

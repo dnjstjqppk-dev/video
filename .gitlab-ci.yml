@@ -1,0 +1,188 @@
+# ============================================================================
+# Global Video Platform (GVP) — GitLab CI/CD Production Pipeline
+# Master Directive: BN-GVP-YOUTUBE-CLASS-PRODUCTION-001 (ARTICLE 19)
+# ============================================================================
+
+stages:
+  - lint
+  - test
+  - build
+  - security
+  - deploy_staging
+  - deploy_production
+
+variables:
+  GO_VERSION: "1.24"
+  NODE_VERSION: "24.22.1"
+  PNPM_VERSION: "10.0.0"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+default:
+  interruptible: true
+
+# -----------------------------------------------------------------------------
+# 1. LINT STAGE
+# -----------------------------------------------------------------------------
+
+lint:packages:
+  stage: lint
+  image: node:24-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - pnpm run typecheck
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+lint:go:
+  stage: lint
+  image: golang:1.24-alpine
+  before_script:
+    - apk add --no-cache git build-base
+  script:
+    - cd services/api
+    - go vet ./...
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+# -----------------------------------------------------------------------------
+# 2. TEST STAGE
+# -----------------------------------------------------------------------------
+
+test:go-api:
+  stage: test
+  image: golang:1.24-alpine
+  variables:
+    GVP_ENV: "test"
+    GVP_ALLOW_DEV_TOKENS: "true"
+  before_script:
+    - apk add --no-cache git build-base
+  script:
+    - cd services/api
+    - go test -v -race -coverprofile=coverage.out ./...
+  artifacts:
+    expire_in: 7 days
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: services/api/coverage.out
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+test:contracts:
+  stage: test
+  image: node:24-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - pnpm --filter @gvp/shared-types typecheck
+    - pnpm --filter @gvp/ts-api-client typecheck
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+# -----------------------------------------------------------------------------
+# 3. BUILD STAGE
+# -----------------------------------------------------------------------------
+
+build:go-api:
+  stage: build
+  image: golang:1.24-alpine
+  before_script:
+    - apk add --no-cache git build-base
+  script:
+    - cd services/api
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o bin/server ./cmd/server
+  artifacts:
+    paths:
+      - services/api/bin/server
+    expire_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+build:web-apps:
+  stage: build
+  image: node:24-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - pnpm --filter @gvp/web build
+    - pnpm --filter @gvp/studio build
+    - pnpm --filter @gvp/partners build
+    - pnpm --filter @gvp/admin build
+  artifacts:
+    paths:
+      - apps/web/.output/
+      - apps/studio/.output/
+      - apps/partners/.output/
+      - apps/admin/.output/
+    expire_in: 3 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+# -----------------------------------------------------------------------------
+# 4. SECURITY & VULNERABILITY AUDIT STAGE
+# -----------------------------------------------------------------------------
+
+security:trivy-fs:
+  stage: security
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy fs --scanners vuln,secret,config --severity HIGH,CRITICAL --ignore-unfixed .
+  allow_failure: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+
+# -----------------------------------------------------------------------------
+# 5. DEPLOY STAGING
+# -----------------------------------------------------------------------------
+
+deploy:staging:
+  stage: deploy_staging
+  image: node:24-alpine
+  environment:
+    name: staging
+    url: https://staging.gvp.media
+  before_script:
+    - npm install -g wrangler
+  script:
+    - echo "Deploying Global Video Platform Staging build to Cloudflare Workers..."
+    - npx wrangler deploy --env staging
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+# -----------------------------------------------------------------------------
+# 6. DEPLOY PRODUCTION
+# -----------------------------------------------------------------------------
+
+deploy:production:
+  stage: deploy_production
+  image: node:24-alpine
+  environment:
+    name: production
+    url: https://gvp.media
+  before_script:
+    - npm install -g wrangler
+  script:
+    - echo "Deploying Global Video Platform Production to Cloudflare Pages & Workers..."
+    - npx wrangler deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: manual

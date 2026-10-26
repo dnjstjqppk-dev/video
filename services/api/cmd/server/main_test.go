@@ -262,3 +262,135 @@ func TestPlaylistsAndSubscriptions(t *testing.T) {
 		t.Fatalf("expected 200 for unsubscribing, got %d", rec.Code)
 	}
 }
+
+func TestAdDecisionTelemetryAndDiagnostics(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	router := buildRouter(memStore)
+
+	// 1. Valid Ad Decision for watch_preroll
+	decReqBody := []byte(`{"slot_id":"watch_preroll","user_id":"33333333-3333-3333-3333-333333333333","category":"Technology","platform":"WEB"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ads/decision", bytes.NewReader(decReqBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for ad decision, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var decResp struct {
+		AdAvailable bool              `json:"ad_available"`
+		DecisionID  string            `json:"decision_id"`
+		CampaignID  string            `json:"campaign_id"`
+		Reason      string            `json:"reason"`
+		Creative    *store.AdCreative `json:"creative"`
+		Tracking    map[string]string `json:"tracking"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &decResp); err != nil {
+		t.Fatalf("failed to decode ad decision response: %v", err)
+	}
+	if !decResp.AdAvailable {
+		t.Fatalf("expected ad_available == true for seeded watch_preroll slot, got false (reason=%s)", decResp.Reason)
+	}
+	if decResp.Creative == nil || decResp.Creative.MediaURL == "" {
+		t.Fatalf("expected creative with media URL, got %+v", decResp.Creative)
+	}
+	if decResp.DecisionID == "" || decResp.CampaignID == "" {
+		t.Fatalf("expected decision_id and campaign_id to be populated, got decID=%s campID=%s", decResp.DecisionID, decResp.CampaignID)
+	}
+
+	// 2. Telemetry: Record Impression Event
+	impBody, _ := json.Marshal(map[string]interface{}{
+		"event_id":    "evt-imp-test-1",
+		"decision_id": decResp.DecisionID,
+		"campaign_id": decResp.CampaignID,
+		"event_type":  "impression",
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/ads/events", bytes.NewReader(impBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted && rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 or 202 for ad impression event, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Duplicate event deduplication
+	req = httptest.NewRequest(http.MethodPost, "/v1/ads/events", bytes.NewReader(impBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK && rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 200 or 202 for duplicate ad event, got %d", rec.Code)
+	}
+	var dupResp map[string]interface{}
+	_ = json.Unmarshal(rec.Body.Bytes(), &dupResp)
+	if dupResp["status"] != "DUPLICATE_IGNORED" {
+		t.Fatalf("expected DUPLICATE_IGNORED for duplicate event_id, got %v", dupResp)
+	}
+
+	// Record Click Event
+	clkBody, _ := json.Marshal(map[string]interface{}{
+		"event_id":    "evt-clk-test-1",
+		"decision_id": decResp.DecisionID,
+		"campaign_id": decResp.CampaignID,
+		"event_type":  "click",
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/ads/events", bytes.NewReader(clkBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted && rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 or 202 for ad click event, got %d", rec.Code)
+	}
+
+	// 3. Ad Preview endpoint
+	prevBody := []byte(`{"slot_id":"home_feed_banner","category":"Technology"}`)
+	req = httptest.NewRequest(http.MethodPost, "/v1/ads/preview", bytes.NewReader(prevBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for ad preview, got %d", rec.Code)
+	}
+
+	// 4. Admin Delivery Diagnostics
+	req = httptest.NewRequest(http.MethodGet, "/v1/admin/ads/delivery-diagnostics", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for ad delivery diagnostics, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var diagResp struct {
+		Summary struct {
+			TotalRequests   int64   `json:"total_requests"`
+			ServedDecisions int64   `json:"served_decisions"`
+			FillRatePct     float64 `json:"fill_rate_pct"`
+		} `json:"summary"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &diagResp); err != nil {
+		t.Fatalf("failed to decode diagnostics response: %v", err)
+	}
+	if diagResp.Summary.TotalRequests < 1 || diagResp.Summary.ServedDecisions < 1 {
+		t.Fatalf("expected at least 1 request and 1 served decision, got requests=%d served=%d", diagResp.Summary.TotalRequests, diagResp.Summary.ServedDecisions)
+	}
+
+	// 5. Unmatched Slot should return ad_available = false
+	unmatchedBody := []byte(`{"slot_id":"non_existent_slot_xyz"}`)
+	req = httptest.NewRequest(http.MethodPost, "/v1/ads/decision", bytes.NewReader(unmatchedBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for unmatched slot decision, got %d", rec.Code)
+	}
+	var unmatchResp struct {
+		AdAvailable bool   `json:"ad_available"`
+		Reason      string `json:"reason"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &unmatchResp)
+	if unmatchResp.AdAvailable {
+		t.Fatalf("expected ad_available == false for non-existent slot")
+	}
+	if unmatchResp.Reason != "UNKNOWN_SLOT_ID" {
+		t.Fatalf("expected reason == 'UNKNOWN_SLOT_ID', got '%s'", unmatchResp.Reason)
+	}
+}

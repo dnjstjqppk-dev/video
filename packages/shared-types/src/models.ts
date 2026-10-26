@@ -14,6 +14,7 @@ import {
   ModerationStatus,
   CopyrightClaimAction,
   CopyrightClaimStatus,
+  LedgerAccountType,
   PayoutStatus,
   SubscriptionTier
 } from './enums';
@@ -196,6 +197,45 @@ export interface LiveChatMessage {
   donationAmount?: number;
   currency?: string;
   timestamp: string;
+}
+
+export interface AdCreative {
+  id: string;
+  campaignId: string;
+  slotId: string;
+  format: string;
+  title: string;
+  mediaUrl: string;
+  destinationUrl: string;
+  callToAction: string;
+  durationSeconds: number;
+  skipOffsetSeconds: number;
+  advertiserName: string;
+  category: string;
+  isApproved: boolean;
+}
+
+export interface AdDecisionRequest {
+  slot_id: string;
+  user_id?: string;
+  category?: string;
+  platform?: string;
+}
+
+export interface AdDecisionResponse {
+  ad_available: boolean;
+  decision_id?: string;
+  campaign_id?: string;
+  reason?: string;
+  creative?: AdCreative;
+  tracking?: Record<string, string>;
+}
+
+export interface AdEventPayload {
+  event_id?: string;
+  decision_id: string;
+  campaign_id: string;
+  event_type: 'impression' | 'start' | 'first_quartile' | 'midpoint' | 'third_quartile' | 'complete' | 'click' | 'skip';
 }
 
 export interface AdCampaign {

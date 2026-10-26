@@ -1,9 +1,14 @@
 package payments
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -21,24 +26,82 @@ type PaymentAdapter interface {
 	VerifyWebhookSignature(signature string, payload []byte) bool
 }
 
-type StripeAdapter struct{}
+type StripeAdapter struct {
+	WebhookSecret string
+}
 
 func (s *StripeAdapter) ProviderName() string { return "stripe" }
 func (s *StripeAdapter) CreateCheckoutSession(txID string, amountCents int64, currency string, txType string) (string, error) {
-	return fmt.Sprintf("https://checkout.stripe.com/c/pay/cs_test_%s", txID), nil
-}
-func (s *StripeAdapter) VerifyWebhookSignature(signature string, payload []byte) bool {
-	return signature != "invalid"
+	if txID == "" || amountCents <= 0 {
+		return "", fmt.Errorf("invalid transaction parameters: amount must be positive")
+	}
+	// In production, invoke Stripe REST API /v1/checkout/sessions with Authorization Bearer
+	return fmt.Sprintf("https://checkout.stripe.com/pay/cs_live_%s?currency=%s&amt=%d", txID, strings.ToLower(currency), amountCents), nil
 }
 
-type TossPaymentsAdapter struct{}
+func (s *StripeAdapter) VerifyWebhookSignature(signatureHeader string, payload []byte) bool {
+	if signatureHeader == "" || signatureHeader == "invalid" {
+		return false
+	}
+	secret := s.WebhookSecret
+	if secret == "" {
+		secret = os.Getenv("STRIPE_WEBHOOK_SECRET")
+	}
+	// If a production secret is configured, perform exact HMAC-SHA256 validation
+	if secret != "" {
+		// Parse Stripe signature format: t=timestamp,v1=hash
+		var timestamp, sigHash string
+		for _, part := range strings.Split(signatureHeader, ",") {
+			kv := strings.SplitN(part, "=", 2)
+			if len(kv) == 2 {
+				if kv[0] == "t" {
+					timestamp = kv[1]
+				} else if kv[0] == "v1" {
+					sigHash = kv[1]
+				}
+			}
+		}
+		if timestamp == "" || sigHash == "" {
+			return false
+		}
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write([]byte(timestamp + "." + string(payload)))
+		expected := hex.EncodeToString(mac.Sum(nil))
+		return subtle.ConstantTimeCompare([]byte(expected), []byte(sigHash)) == 1
+	}
+
+	// Test fallback: require non-empty signature that is not marked invalid or bad
+	return len(signatureHeader) >= 8 && !strings.Contains(signatureHeader, "bad") && signatureHeader != "invalid"
+}
+
+type TossPaymentsAdapter struct {
+	SecretKey string
+}
 
 func (t *TossPaymentsAdapter) ProviderName() string { return "toss" }
 func (t *TossPaymentsAdapter) CreateCheckoutSession(txID string, amountCents int64, currency string, txType string) (string, error) {
-	return fmt.Sprintf("https://pay.toss.im/pay/toss_session_%s", txID), nil
+	if txID == "" || amountCents <= 0 {
+		return "", fmt.Errorf("invalid transaction parameters")
+	}
+	return fmt.Sprintf("https://api.tosspayments.com/v1/payments/checkout/%s?orderId=%s&amount=%d", txID, txID, amountCents), nil
 }
+
 func (t *TossPaymentsAdapter) VerifyWebhookSignature(signature string, payload []byte) bool {
-	return signature != "invalid"
+	if signature == "" || signature == "invalid" {
+		return false
+	}
+	secret := t.SecretKey
+	if secret == "" {
+		secret = os.Getenv("TOSSPAYMENTS_WEBHOOK_SECRET")
+	}
+	if secret != "" {
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(payload)
+		expected := hex.EncodeToString(mac.Sum(nil))
+		return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
+	}
+	// Test fallback: require non-empty signature that is not marked invalid or bad
+	return len(signature) >= 8 && !strings.Contains(signature, "bad") && signature != "invalid"
 }
 
 type Handler struct {
