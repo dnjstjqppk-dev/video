@@ -154,3 +154,4 @@ DROP TABLE IF EXISTS ad_creative_reviews;
 DROP TABLE IF EXISTS ad_targeting_rules;
 DROP TABLE IF EXISTS ad_flights;
 DROP TABLE IF EXISTS ad_slots;
+

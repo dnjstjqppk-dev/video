@@ -149,3 +149,4 @@ const recentDecisions = computed(() => diagnosticsData.value?.recent_decisions |
     </div>
   </div>
 </template>
+
