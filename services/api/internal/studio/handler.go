@@ -72,10 +72,10 @@ func (h *Handler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"viewsTimeSeries":       timeSeries,
-		"watchTimeTimeSeries":   timeSeries,
-		"subscriberTimeSeries":  timeSeries,
-		"revenueTimeSeries":     timeSeries,
+		"viewsTimeSeries":      timeSeries,
+		"watchTimeTimeSeries":  timeSeries,
+		"subscriberTimeSeries": timeSeries,
+		"revenueTimeSeries":    timeSeries,
 	})
 }
 
@@ -89,4 +89,3 @@ func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
 		"total": len(allComments),
 	})
 }
-

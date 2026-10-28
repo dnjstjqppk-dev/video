@@ -85,17 +85,17 @@ type Video struct {
 }
 
 type Comment struct {
-	ID           string    `json:"id"`
-	VideoID      string    `json:"video_id"`
-	UserID       string    `json:"user_id"`
-	DisplayName  string    `json:"display_name"`
-	AvatarURL    string    `json:"avatar_url"`
-	Content      string    `json:"content"`
-	LikeCount    int       `json:"like_count"`
-	ReplyCount   int       `json:"reply_count"`
-	IsPinned     bool      `json:"is_pinned"`
-	IsHearted    bool      `json:"is_hearted"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID          string    `json:"id"`
+	VideoID     string    `json:"video_id"`
+	UserID      string    `json:"user_id"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url"`
+	Content     string    `json:"content"`
+	LikeCount   int       `json:"like_count"`
+	ReplyCount  int       `json:"reply_count"`
+	IsPinned    bool      `json:"is_pinned"`
+	IsHearted   bool      `json:"is_hearted"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type LiveStream struct {
@@ -170,12 +170,12 @@ type AdDeliveryDecision struct {
 }
 
 type AdDeliveryEvent struct {
-	EventID     string    `json:"event_id"`
-	DecisionID  string    `json:"decision_id"`
-	CampaignID  string    `json:"campaign_id"`
-	EventType   string    `json:"event_type"` // impression, start, first_quartile, midpoint, third_quartile, complete, click, skip
-	CostCents   int64     `json:"cost_cents"`
-	OccurredAt  time.Time `json:"occurred_at"`
+	EventID    string    `json:"event_id"`
+	DecisionID string    `json:"decision_id"`
+	CampaignID string    `json:"campaign_id"`
+	EventType  string    `json:"event_type"` // impression, start, first_quartile, midpoint, third_quartile, complete, click, skip
+	CostCents  int64     `json:"cost_cents"`
+	OccurredAt time.Time `json:"occurred_at"`
 }
 
 type MediaJob struct {
@@ -191,14 +191,14 @@ type MediaJob struct {
 }
 
 type CopyrightClaim struct {
-	ID                 string    `json:"id"`
-	ClaimedVideoID     string    `json:"claimed_video_id"`
-	OwnerName          string    `json:"owner_name"`
-	ClaimAction        string    `json:"claim_action"`
-	Status             string    `json:"status"`
-	MatchStartSeconds  int       `json:"match_start_seconds"`
-	MatchEndSeconds    int       `json:"match_end_seconds"`
-	CreatedAt          time.Time `json:"created_at"`
+	ID                string    `json:"id"`
+	ClaimedVideoID    string    `json:"claimed_video_id"`
+	OwnerName         string    `json:"owner_name"`
+	ClaimAction       string    `json:"claim_action"`
+	Status            string    `json:"status"`
+	MatchStartSeconds int       `json:"match_start_seconds"`
+	MatchEndSeconds   int       `json:"match_end_seconds"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type ModerationCase struct {
@@ -532,4 +532,3 @@ func (s *MemoryStore) seedDefaults() {
 	}
 	s.AdCreatives[creative2.ID] = creative2
 }
-

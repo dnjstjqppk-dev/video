@@ -5,15 +5,15 @@ import (
 )
 
 type Config struct {
-	Port              string
-	DatabaseURL       string
-	ValkeyURL         string
-	NatsURL           string
-	JWTSecret         string
-	R2Endpoint        string
-	R2AccessKey       string
-	R2SecretKey       string
-	R2Bucket          string
+	Port                string
+	DatabaseURL         string
+	ValkeyURL           string
+	NatsURL             string
+	JWTSecret           string
+	R2Endpoint          string
+	R2AccessKey         string
+	R2SecretKey         string
+	R2Bucket            string
 	CloudflareStreamKey string
 }
 
@@ -40,4 +40,3 @@ func Load() *Config {
 		R2Bucket:    "gvp-media-vod",
 	}
 }
-

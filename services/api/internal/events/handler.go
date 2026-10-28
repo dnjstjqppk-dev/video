@@ -53,4 +53,3 @@ func (h *Handler) RecordAnalyticsEvent(w http.ResponseWriter, r *http.Request) {
 		"received_at": time.Now().Format(time.RFC3339),
 	})
 }
-

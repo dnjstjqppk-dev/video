@@ -1,5 +1,5 @@
 # ============================================================================
-# Global Video Platform (GVP) — GitLab CI/CD Production Pipeline
+# Global Video Platform (GVP) ??GitLab CI/CD Production Pipeline
 # Master Directive: BN-GVP-YOUTUBE-CLASS-PRODUCTION-001 (ARTICLE 19)
 # ============================================================================
 
@@ -41,7 +41,7 @@ lint:packages:
 
 lint:go:
   stage: lint
-  image: golang:1.24-alpine
+  image: golang:1.27-alpine
   before_script:
     - apk add --no-cache git build-base
   script:
@@ -58,7 +58,7 @@ lint:go:
 
 test:go-api:
   stage: test
-  image: golang:1.24-alpine
+  image: golang:1.27-alpine
   variables:
     GVP_ENV: "test"
     GVP_ALLOW_DEV_TOKENS: "true"
@@ -99,7 +99,7 @@ test:contracts:
 
 build:go-api:
   stage: build
-  image: golang:1.24-alpine
+  image: golang:1.27-alpine
   before_script:
     - apk add --no-cache git build-base
   script:

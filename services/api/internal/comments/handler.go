@@ -80,4 +80,3 @@ func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 	identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Comment not found")
 }
-

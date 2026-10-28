@@ -127,4 +127,3 @@ func (h *Handler) SearchSuggestions(w http.ResponseWriter, r *http.Request) {
 	}
 	identity.WriteJSON(w, http.StatusOK, suggestions)
 }
-

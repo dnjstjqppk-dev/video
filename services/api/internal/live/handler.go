@@ -107,4 +107,3 @@ func (h *Handler) RotateKey(w http.ResponseWriter, r *http.Request) {
 	stream.StreamKey = fmt.Sprintf("live_%s_%d", uuid.NewString()[:8], time.Now().Unix())
 	identity.WriteJSON(w, http.StatusOK, map[string]string{"streamKey": stream.StreamKey})
 }
-

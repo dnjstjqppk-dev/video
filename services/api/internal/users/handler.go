@@ -93,4 +93,3 @@ func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ClearHistory(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusOK, map[string]string{"status": "cleared"})
 }
-

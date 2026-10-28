@@ -179,4 +179,3 @@ func (h *Handler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 		"subscriber_count": channel.SubscriberCount,
 	})
 }
-

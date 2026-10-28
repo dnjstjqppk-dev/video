@@ -112,4 +112,3 @@ func (h *Handler) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
 		"total": len(h.Store.AuditLogs),
 	})
 }
-

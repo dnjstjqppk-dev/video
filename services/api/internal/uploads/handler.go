@@ -167,4 +167,3 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		"message":  "Upload complete and verified. Transcoding job queued for media worker.",
 	})
 }
-

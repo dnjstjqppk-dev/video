@@ -57,17 +57,17 @@ func (h *Handler) GetPlayback(w http.ResponseWriter, r *http.Request) {
 	video.ViewCount++
 
 	playback := map[string]interface{}{
-		"video_id":         video.ID,
-		"title":            video.Title,
-		"hls_master_url":   video.HlsMasterURL,
-		"duration":         video.DurationSeconds,
-		"sources":          video.Sources,
-		"chapters":         video.Chapters,
-		"captions":         video.Captions,
-		"playback_token":   "pb_token_" + video.ID,
-		"ad_break_points":  []int{180, 420}, // Ad cues in seconds
-		"is_members_only":  video.Visibility == "members_only",
-		"has_access":       true,
+		"video_id":        video.ID,
+		"title":           video.Title,
+		"hls_master_url":  video.HlsMasterURL,
+		"duration":        video.DurationSeconds,
+		"sources":         video.Sources,
+		"chapters":        video.Chapters,
+		"captions":        video.Captions,
+		"playback_token":  "pb_token_" + video.ID,
+		"ad_break_points": []int{180, 420}, // Ad cues in seconds
+		"is_members_only": video.Visibility == "members_only",
+		"has_access":      true,
 	}
 
 	identity.WriteJSON(w, http.StatusOK, playback)
@@ -163,4 +163,3 @@ func (h *Handler) UnlikeVideo(w http.ResponseWriter, r *http.Request) {
 		"like_count": video.LikeCount,
 	})
 }
-

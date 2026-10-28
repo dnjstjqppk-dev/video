@@ -41,7 +41,7 @@ class GvpMobileApp extends ConsumerWidget {
             const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: const Color(0xFF161622),
           elevation: 0,
           shape: RoundedRectangleBorder(

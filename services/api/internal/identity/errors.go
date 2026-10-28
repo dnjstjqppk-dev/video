@@ -38,4 +38,3 @@ func WriteJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(data)
 }
-

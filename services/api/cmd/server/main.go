@@ -28,6 +28,7 @@ import (
 	"globalvideoplatform/services/api/internal/payments"
 	"globalvideoplatform/services/api/internal/playlists"
 	"globalvideoplatform/services/api/internal/recommendations"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/settlements"
 	"globalvideoplatform/services/api/internal/store"
 	"globalvideoplatform/services/api/internal/studio"
@@ -40,6 +41,11 @@ import (
 func buildRouter(memStore *store.MemoryStore) http.Handler {
 	authMiddleware := identity.NewAuthMiddleware(memStore)
 
+	// Security infrastructure (TASK-010~028, TASK-084~085)
+	rateLimiter := security.NewRateLimiter(1200, time.Minute) // 1200 req/min per IP (generous for tests/CI)
+	idempotencyManager := security.NewIdempotencyManager(24 * time.Hour)
+	adminGuard := security.NewAdminGuard()
+
 	r := chi.NewRouter()
 
 	// Global Middlewares
@@ -48,6 +54,15 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+
+	// Security hardening headers (HSTS, CSP nonce, X-Frame-Options, etc.)
+	r.Use(security.SecurityHeadersMiddleware)
+
+	// Sliding-window rate limiting per client IP
+	r.Use(rateLimiter.Middleware)
+
+	// Idempotency replay cache for mutating requests with X-Idempotency-Key
+	r.Use(idempotencyManager.Middleware)
 
 	// CORS Configuration for Nuxt 4 web consoles & mobile Dio
 	r.Use(cors.Handler(cors.Options{
@@ -140,10 +155,13 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/claims", copyH.CreateClaim)
 
 		// Admin
-		v1.Mount("/admin", adminH.Routes(authMiddleware))
-		v1.Get("/admin/ads/delivery-diagnostics", adsH.GetDeliveryDiagnostics)
-		v1.With(authMiddleware.RequireRole("super_admin", "moderator")).Get("/admin/moderation", modH.ListQueue)
-		v1.With(authMiddleware.RequireRole("super_admin", "moderator")).Post("/admin/moderation/{id}/resolve", modH.ResolveCase)
+		v1.Group(func(admin chi.Router) {
+			admin.Use(adminGuard.IPWhitelistMiddleware)
+			admin.Mount("/admin", adminH.Routes(authMiddleware))
+			admin.Get("/admin/ads/delivery-diagnostics", adsH.GetDeliveryDiagnostics)
+			admin.With(authMiddleware.RequireRole("super_admin", "moderator")).Get("/admin/moderation", modH.ListQueue)
+			admin.With(authMiddleware.RequireRole("super_admin", "moderator")).Post("/admin/moderation/{id}/resolve", modH.ResolveCase)
+		})
 
 		// Events & Analytics Ingestion
 		v1.Mount("/events", eventH.Routes())
@@ -193,4 +211,3 @@ func main() {
 	slog.Info("Server stopped cleanly")
 	fmt.Println("Server stopped")
 }
-

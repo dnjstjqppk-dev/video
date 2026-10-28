@@ -55,7 +55,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 // -----------------------------------------------------------------------------
 
 type AdDecisionRequest struct {
-	SlotID   string `json:"slot_id"`   // watch_preroll, home_feed_banner, shorts_sponsored
+	SlotID   string `json:"slot_id"` // watch_preroll, home_feed_banner, shorts_sponsored
 	UserID   string `json:"user_id"`
 	Category string `json:"category"`
 	Platform string `json:"platform"` // WEB, ANDROID, IOS
@@ -383,15 +383,15 @@ func (h *Handler) GetDeliveryDiagnostics(w http.ResponseWriter, r *http.Request)
 
 	diagnostics := map[string]interface{}{
 		"summary": map[string]interface{}{
-			"total_requests":          totalRequests,
-			"served_decisions":        servedDecisions,
-			"unfilled_decisions":      unfilledDecisions,
-			"fill_rate_pct":           fillRate,
-			"verified_impressions":    totalImpressions,
-			"total_clicks":            totalClicks,
-			"ctr_pct":                 ctr,
-			"total_spend_cents":       totalSpend,
-			"active_campaigns_count":  activeCampaigns,
+			"total_requests":             totalRequests,
+			"served_decisions":           servedDecisions,
+			"unfilled_decisions":         unfilledDecisions,
+			"fill_rate_pct":              fillRate,
+			"verified_impressions":       totalImpressions,
+			"total_clicks":               totalClicks,
+			"ctr_pct":                    ctr,
+			"total_spend_cents":          totalSpend,
+			"active_campaigns_count":     activeCampaigns,
 			"total_registered_creatives": len(h.Store.AdCreatives),
 		},
 		"unfilled_reasons": reasonsMap,
@@ -535,15 +535,15 @@ func (h *Handler) GetAdvertiserReports(w http.ResponseWriter, r *http.Request) {
 			ctr = float64(camp.Clicks) / float64(camp.Impressions) * 100.0
 		}
 		campaignSummaries = append(campaignSummaries, map[string]interface{}{
-			"id":             camp.ID,
-			"name":           camp.Name,
-			"format":         camp.Format,
-			"status":         camp.Status,
-			"budget_cents":   camp.TotalBudgetCents,
-			"spent_cents":    camp.SpentCents,
-			"impressions":    camp.Impressions,
-			"clicks":         camp.Clicks,
-			"ctr_pct":        ctr,
+			"id":           camp.ID,
+			"name":         camp.Name,
+			"format":       camp.Format,
+			"status":       camp.Status,
+			"budget_cents": camp.TotalBudgetCents,
+			"spent_cents":  camp.SpentCents,
+			"impressions":  camp.Impressions,
+			"clicks":       camp.Clicks,
+			"ctr_pct":      ctr,
 		})
 	}
 

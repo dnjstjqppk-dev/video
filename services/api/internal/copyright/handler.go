@@ -74,4 +74,3 @@ func (h *Handler) CreateClaim(w http.ResponseWriter, r *http.Request) {
 	h.Store.Claims[claim.ID] = claim
 	identity.WriteJSON(w, http.StatusCreated, claim)
 }
-

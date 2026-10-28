@@ -65,4 +65,3 @@ func (h *Handler) GetContracts(w http.ResponseWriter, r *http.Request) {
 	}
 	identity.WriteJSON(w, http.StatusOK, contracts)
 }
-
