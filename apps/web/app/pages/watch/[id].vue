@@ -32,7 +32,7 @@ const fallbackVideo: Video = {
   videoType: VideoType.STANDARD,
   durationSeconds: 634,
   thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&q=80',
-  hlsMasterUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+  hlsMasterUrl: 'https://media.gvp.media/hls/vid_arch_2026/master.m3u8',
   visibility: VideoVisibility.PUBLIC,
   status: VideoProcessingStatus.READY,
   viewCount: 412900,
@@ -43,8 +43,8 @@ const fallbackVideo: Video = {
   category: 'tech',
   isAgeRestricted: false,
   sources: [
-    { quality: VideoQuality.P2160, manifestUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', width: 3840, height: 2160, bitrate: 18000000, fps: 60, codec: 'avc1.640033' },
-    { quality: VideoQuality.P1080, manifestUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', width: 1920, height: 1080, bitrate: 5800000, fps: 60, codec: 'avc1.64002a' }
+    { quality: VideoQuality.P2160, manifestUrl: 'https://media.gvp.media/hls/vid_arch_2026/2160p.m3u8', width: 3840, height: 2160, bitrate: 18000000, fps: 60, codec: 'avc1.640033' },
+    { quality: VideoQuality.P1080, manifestUrl: 'https://media.gvp.media/hls/vid_arch_2026/1080p.m3u8', width: 1920, height: 1080, bitrate: 5800000, fps: 60, codec: 'avc1.64002a' }
   ],
   chapters: [
     { id: 'chp_1', title: '00:00 Architecture Overview & Monorepo Topology', startTimeSeconds: 0, endTimeSeconds: 120 },
@@ -338,7 +338,7 @@ const relatedVideos = [
             :video-id="activeVideo.id"
             :channel-id="activeVideo.channelId"
             :title="activeVideo.title"
-            :hls-master-url="activeVideo.hlsMasterUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'"
+            :hls-master-url="activeVideo.hlsMasterUrl || ''"
             :poster-url="activeVideo.thumbnailUrl"
             :duration-seconds="activeVideo.durationSeconds"
             :chapters="activeVideo.chapters"

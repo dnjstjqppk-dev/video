@@ -125,6 +125,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		// Ad Server, Decision Engine & Diagnostics (ARTICLE 6 & 7)
 		v1.Mount("/ads", adsH.Routes(authMiddleware))
 		v1.Mount("/advertiser", adsH.Routes(authMiddleware))
+		v1.Get("/advertiser/reports", adsH.GetAdvertiserReports)
 
 		// Studio
 		v1.Mount("/studio", studioH.Routes(authMiddleware))

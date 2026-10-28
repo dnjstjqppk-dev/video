@@ -45,9 +45,20 @@ const demographics = [
 
 function exportCsvReport() {
   const header = 'Date,Views,WatchHours,CTR_Percent,EstimatedRevenue_KRW\n'
-  const rows = fallbackSeries
-    .map(r => `${r.date},${r.views},${r.watchHours},${r.ctr},${r.revenueKrw}`)
-    .join('\n')
+  let rows = ''
+  if (analyticsData.value?.viewsTimeSeries?.length) {
+    rows = analyticsData.value.viewsTimeSeries
+      .map((pt, i) => {
+        const watch = analyticsData.value?.watchTimeTimeSeries?.[i]?.value || 0
+        const rev = analyticsData.value?.revenueTimeSeries?.[i]?.value || 0
+        return `${pt.date},${pt.value},${watch},8.5,${rev}`
+      })
+      .join('\n')
+  } else {
+    rows = fallbackSeries
+      .map(r => `${r.date},${r.views},${r.watchHours},${r.ctr},${r.revenueKrw}`)
+      .join('\n')
+  }
   const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

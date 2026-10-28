@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
             :video-id="streamId"
             channel-id="ch_tech_kr"
             title="[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A"
-            hls-master-url="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            hls-master-url="https://media.gvp.media/live/stream_summit_2026/master.m3u8"
             poster-url="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80"
             :is-live="true"
           />

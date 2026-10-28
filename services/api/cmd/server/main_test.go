@@ -394,3 +394,113 @@ func TestAdDecisionTelemetryAndDiagnostics(t *testing.T) {
 		t.Fatalf("expected reason == 'UNKNOWN_SLOT_ID', got '%s'", unmatchResp.Reason)
 	}
 }
+
+func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	router := buildRouter(memStore)
+
+	// 1. Advertiser creates a new Campaign with creative (ARTICLE 7.2 Step 1)
+	campPayload := []byte(`{
+		"name": "Hyundai Ioniq 9 Electric SUV Global Launch",
+		"format": "preroll",
+		"totalBudget": 50000000,
+		"dailyBudget": 5000000,
+		"cpmBidCents": 18000,
+		"cpcBidCents": 950,
+		"categories": ["Technology", "Automotive"],
+		"creativeMediaUrl": "https://media.gvp.media/ads/creatives/ioniq9_preroll_4k.mp4",
+		"headline": "The All-New 3-Row Electric SUV Experience",
+		"destinationUrl": "https://www.hyundai.com/ioniq9",
+		"callToAction": "Explore Design"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/partners/campaigns", bytes.NewReader(campPayload))
+	req.Header.Set("Authorization", "Bearer creator-token")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for campaign creation, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var createdCamp struct {
+		ID        string   `json:"id"`
+		Creatives []string `json:"creatives"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &createdCamp); err != nil || createdCamp.ID == "" || len(createdCamp.Creatives) == 0 {
+		t.Fatalf("failed to decode created campaign: %v", err)
+	}
+
+	// 2. Creative Governance & Approval (ARTICLE 7.2 Step 5)
+	creativeID := createdCamp.Creatives[0]
+	apprReq := httptest.NewRequest(http.MethodPost, "/v1/ads/admin/creatives/"+creativeID+"/approve", nil)
+	apprRec := httptest.NewRecorder()
+	router.ServeHTTP(apprRec, apprReq)
+	if apprRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for creative approval, got %d", apprRec.Code)
+	}
+
+	// 3. User requests Ad Decision for watch_preroll (ARTICLE 7.2 Step 8-10)
+	decPayload := []byte(`{"slot_id":"watch_preroll","user_id":"33333333-3333-3333-3333-333333333333","category":"Technology","platform":"WEB"}`)
+	decReq := httptest.NewRequest(http.MethodPost, "/v1/ads/decision", bytes.NewReader(decPayload))
+	decReq.Header.Set("Content-Type", "application/json")
+	decRec := httptest.NewRecorder()
+	router.ServeHTTP(decRec, decReq)
+	if decRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for ad decision, got %d", decRec.Code)
+	}
+	var decResp struct {
+		AdAvailable bool              `json:"ad_available"`
+		DecisionID  string            `json:"decision_id"`
+		CampaignID  string            `json:"campaign_id"`
+		Creative    *store.AdCreative `json:"creative"`
+	}
+	if err := json.Unmarshal(decRec.Body.Bytes(), &decResp); err != nil || !decResp.AdAvailable {
+		t.Fatalf("expected ad_available == true, got %+v, err=%v", decResp, err)
+	}
+
+	// 4. Client VideoPlayer renders and records verified impression (ARTICLE 7.2 Step 11-13)
+	impEventID := "evt-e2e-imp-" + decResp.DecisionID
+	impPayload, _ := json.Marshal(map[string]interface{}{
+		"event_id":    impEventID,
+		"decision_id": decResp.DecisionID,
+		"campaign_id": decResp.CampaignID,
+		"event_type":  "impression",
+	})
+	impReq := httptest.NewRequest(http.MethodPost, "/v1/ads/events", bytes.NewReader(impPayload))
+	impReq.Header.Set("Content-Type", "application/json")
+	impRec := httptest.NewRecorder()
+	router.ServeHTTP(impRec, impReq)
+	if impRec.Code != http.StatusOK && impRec.Code != http.StatusAccepted {
+		t.Fatalf("expected 200/202 for ad impression event, got %d", impRec.Code)
+	}
+
+	// 5. Viewer clicks CTA and registers verified engagement click (ARTICLE 7.2 Step 14)
+	clkEventID := "evt-e2e-clk-" + decResp.DecisionID
+	clkPayload, _ := json.Marshal(map[string]interface{}{
+		"event_id":    clkEventID,
+		"decision_id": decResp.DecisionID,
+		"campaign_id": decResp.CampaignID,
+		"event_type":  "click",
+	})
+	clkReq := httptest.NewRequest(http.MethodPost, "/v1/ads/events", bytes.NewReader(clkPayload))
+	clkReq.Header.Set("Content-Type", "application/json")
+	clkRec := httptest.NewRecorder()
+	router.ServeHTTP(clkRec, clkReq)
+	if clkRec.Code != http.StatusOK && clkRec.Code != http.StatusAccepted {
+		t.Fatalf("expected 200/202 for ad click event, got %d", clkRec.Code)
+	}
+
+	// 6. Verify real-time audit via Delivery Inspector & Advertiser Reports
+	diagReq := httptest.NewRequest(http.MethodGet, "/v1/admin/ads/delivery-diagnostics", nil)
+	diagRec := httptest.NewRecorder()
+	router.ServeHTTP(diagRec, diagReq)
+	if diagRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for delivery diagnostics, got %d", diagRec.Code)
+	}
+
+	repReq := httptest.NewRequest(http.MethodGet, "/v1/advertiser/reports", nil)
+	repRec := httptest.NewRecorder()
+	router.ServeHTTP(repRec, repReq)
+	if repRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for advertiser reports, got %d", repRec.Code)
+	}
+}

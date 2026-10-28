@@ -39,6 +39,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 
 	// Advertiser Portal endpoints
 	r.Get("/advertiser/reports", h.GetAdvertiserReports)
+	r.Get("/reports", h.GetAdvertiserReports)
 
 	// Admin Governance & Diagnostic endpoints
 	r.Get("/admin/diagnostics", h.GetDeliveryDiagnostics)

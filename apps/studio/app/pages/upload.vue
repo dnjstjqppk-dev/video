@@ -69,12 +69,12 @@ async function startMultipartUpload() {
     uploadId.value = session.uploadId
     videoId.value = session.videoId
     totalParts.value = session.totalParts || 10
-  } catch {
-    uploadId.value = `upl_r2_${Date.now()}`
-    videoId.value = `vid_${Date.now()}`
+    runChunkLoop()
+  } catch (err: any) {
+    isUploading.value = false
+    uploadError.value = `Upload session initialization failed: ${err?.message || 'Server connection error'}`
+    currentStatus.value = VideoProcessingStatus.FAILED
   }
-
-  runChunkLoop()
 }
 
 function runChunkLoop() {
@@ -87,10 +87,13 @@ function runChunkLoop() {
         if (uploadId.value) {
           await api.getUploadPartUrls(uploadId.value, nextPart)
         }
-      } catch {
-        // Fallback presigned URL simulation
+        uploadedParts.value = nextPart
+      } catch (err: any) {
+        if (uploadInterval) clearInterval(uploadInterval)
+        isUploading.value = false
+        uploadError.value = `Part ${nextPart} presigned URL generation failed: ${err?.message || 'Network error'}`
+        return
       }
-      uploadedParts.value = nextPart
     } else {
       if (uploadInterval) clearInterval(uploadInterval)
       isUploading.value = false
@@ -116,23 +119,13 @@ async function finalizeMultipartUpload() {
         partNumber: idx + 1,
         etag: `"etag_part_${idx + 1}_sha256"`
       }))
-      await api.completeUpload(uploadId.value, parts)
+      const res = await api.completeUpload(uploadId.value, parts)
+      currentStatus.value = res.status as VideoProcessingStatus || VideoProcessingStatus.QUEUED
     }
-  } catch {
-    // Continue state machine progression
+  } catch (err: any) {
+    uploadError.value = `Multipart upload finalization failed: ${err?.message || 'Media queue error'}`
+    currentStatus.value = VideoProcessingStatus.FAILED
   }
-
-  // Advance live transcoding stepper: UPLOADED -> VALIDATING -> QUEUED -> PROCESSING -> READY
-  let stepIdx = 0
-  currentStatus.value = transcodeSteps[0]
-  const stepTimer = setInterval(() => {
-    stepIdx++
-    if (stepIdx < transcodeSteps.length) {
-      currentStatus.value = transcodeSteps[stepIdx]
-    } else {
-      clearInterval(stepTimer)
-    }
-  }, 900)
 }
 
 onBeforeUnmount(() => {

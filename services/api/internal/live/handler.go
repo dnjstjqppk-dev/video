@@ -69,20 +69,8 @@ func (h *Handler) GetStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	stream, ok := h.Store.LiveStreams[id]
 	if !ok {
-		// Return dummy live stream
-		stream = &store.LiveStream{
-			ID:             id,
-			ChannelID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-			Title:          "Next-Gen Live Broadcasting Masterclass",
-			Description:    "Interactive Q&A and live stream architecture demonstration",
-			ThumbnailURL:   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800",
-			Status:         "live",
-			StreamKey:      "live_stream_key_hidden",
-			RtmpsIngestURL: "rtmps://live.cloudflare.com:443/live/",
-			PlaybackHlsURL: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-			ViewerCount:    1420,
-			CreatedAt:      time.Now(),
-		}
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Live stream not found")
+		return
 	}
 	identity.WriteJSON(w, http.StatusOK, stream)
 }

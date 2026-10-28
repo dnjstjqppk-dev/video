@@ -25,7 +25,8 @@ const tenantOrganizations: Record<PartnerTenantType, { id: string; name: string;
 
 const navItems = [
   { path: '/', label: '파트너 종합 현황 (Overview)', icon: '🏢' },
-  { path: '/campaigns', label: '광고 캠페인 콘솔 (Advertiser)', icon: '📣' },
+  { path: '/advertiser', label: '독립 광고주 포털 (Advertiser)', icon: '🎯' },
+  { path: '/campaigns', label: '광고 캠페인 매니저 (Campaigns)', icon: '📣' },
   { path: '/mcn', label: 'MCN 소속 채널 관리 (MCN)', icon: '🤝' },
   { path: '/rights', label: '저작권 & 핑거프린트 (Rights ID)', icon: '🛡️' },
   { path: '/settlements', label: '복식부기 정산서 (Settlements)', icon: '🧾' }
