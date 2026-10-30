@@ -245,14 +245,31 @@ type MediaJob struct {
 }
 
 type CopyrightClaim struct {
-	ID                string    `json:"id"`
-	ClaimedVideoID    string    `json:"claimed_video_id"`
-	OwnerName         string    `json:"owner_name"`
-	ClaimAction       string    `json:"claim_action"`
-	Status            string    `json:"status"`
-	MatchStartSeconds int       `json:"match_start_seconds"`
-	MatchEndSeconds   int       `json:"match_end_seconds"`
-	CreatedAt         time.Time `json:"created_at"`
+	ID                string     `json:"id"`
+	ClaimedVideoID    string     `json:"claimed_video_id"`
+	OwnerName         string     `json:"owner_name"`
+	ClaimAction       string     `json:"claim_action"` // monetize, track, block
+	Status            string     `json:"status"`       // active, pending, disputed, released, upheld, takedown
+	MatchStartSeconds int        `json:"match_start_seconds"`
+	MatchEndSeconds   int        `json:"match_end_seconds"`
+	DisputeReason     string     `json:"dispute_reason,omitempty"` // fair_use, license_held, public_domain, original_content
+	DisputeText       string     `json:"dispute_text,omitempty"`
+	DisputeFiledAt    *time.Time `json:"dispute_filed_at,omitempty"`
+	ResolvedAt        *time.Time `json:"resolved_at,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+}
+
+type DMCATakedownNotice struct {
+	ID                 string    `json:"id"`
+	VideoID            string    `json:"video_id"`
+	ClaimantName       string    `json:"claimant_name"`
+	ClaimantEmail      string    `json:"claimant_email"`
+	CopyrightWorkTitle string    `json:"copyright_work_title"`
+	InfringingURL      string    `json:"infringing_url"`
+	SignatureLegal     string    `json:"signature_legal"`
+	GoodFaithBelief    bool      `json:"good_faith_belief"`
+	Status             string    `json:"status"` // issued, counter_noticed, resolved
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 type ModerationCase struct {
@@ -327,6 +344,7 @@ type MemoryStore struct {
 	AdEvents        []*AdDeliveryEvent
 	MediaJobs       map[string]*MediaJob
 	Claims          map[string]*CopyrightClaim
+	DMCANotices     map[string]*DMCATakedownNotice
 	Moderation      map[string]*ModerationCase
 	Playlists       map[string]*Playlist
 	Transactions    map[string]*PaymentTransaction
@@ -354,6 +372,7 @@ func NewMemoryStore() *MemoryStore {
 		AdEvents:        make([]*AdDeliveryEvent, 0),
 		MediaJobs:       make(map[string]*MediaJob),
 		Claims:          make(map[string]*CopyrightClaim),
+		DMCANotices:     make(map[string]*DMCATakedownNotice),
 		Moderation:      make(map[string]*ModerationCase),
 		Playlists:       make(map[string]*Playlist),
 		Transactions:    make(map[string]*PaymentTransaction),
