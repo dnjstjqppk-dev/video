@@ -26,6 +26,11 @@ vendor/
 *.ipa
 .pub-cache/
 .pub/
+**/android/local.properties
+**/GeneratedPluginRegistrant.*
+**/ios/Flutter/**
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
 
 # Logs & temp
 *.log
