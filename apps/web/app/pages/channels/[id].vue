@@ -41,12 +41,18 @@ useSeoMeta({
 const activeTab = ref<'videos' | 'shorts' | 'live' | 'playlists' | 'community'>('videos')
 const isSubscribed = ref(false)
 const pollSelection = ref<number | null>(null)
-const pollVotes = ref([64, 21, 15])
+const pollRawVotes = ref([640, 210, 150])
+
+const totalPollVotes = computed(() => pollRawVotes.value.reduce((a, b) => a + b, 0))
+const pollPercentages = computed(() => {
+  const tot = totalPollVotes.value || 1
+  return pollRawVotes.value.map(v => Math.round((v / tot) * 100))
+})
 
 function votePoll(index: number) {
-  if (pollSelection.value !== null || !Number.isInteger(index) || pollVotes.value[index] === undefined) return
+  if (pollSelection.value !== null || !Number.isInteger(index) || pollRawVotes.value[index] === undefined) return
   pollSelection.value = index
-  pollVotes.value[index] = (pollVotes.value[index] ?? 0) + 1
+  pollRawVotes.value[index] += 1
 }
 
 const channelVideos = [
@@ -226,14 +232,22 @@ const channelPlaylists = [
             v-for="(option, idx) in ['AV1 Hardware Encoding on GPU Fleet', 'ClickHouse Real-Time Creator Analytics', 'WebTransport Low-Latency Live Ingest']"
             :key="option"
             type="button"
-            class="flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-left text-xs font-semibold transition"
-            :class="pollSelection === idx ? 'border-[#3EA6FF] bg-[#3EA6FF]/20 text-white' : 'border-white/15 bg-white/5 hover:bg-white/10'"
+            class="relative flex w-full items-center justify-between overflow-hidden rounded-xl border px-4 py-3 text-left text-xs font-semibold transition"
+            :class="pollSelection === idx ? 'border-[#3EA6FF] text-white' : 'border-white/15 bg-white/5 hover:bg-white/10 text-neutral-200'"
             @click="votePoll(idx)"
           >
-            <span>{{ option }}</span>
-            <span>{{ pollVotes[idx] }}%</span>
+            <div
+              v-if="pollSelection !== null"
+              class="absolute inset-y-0 left-0 bg-[#3EA6FF]/20 transition-all duration-500 ease-out"
+              :style="{ width: `${pollPercentages[idx]}%` }"
+            />
+            <span class="relative z-10">{{ option }}</span>
+            <span v-if="pollSelection !== null" class="relative z-10 font-mono font-bold">{{ pollPercentages[idx] }}%</span>
           </button>
         </div>
+        <p v-if="pollSelection !== null" class="mt-2 text-[11px] text-neutral-400">
+          {{ totalPollVotes.toLocaleString() }} {{ appStore.locale === 'ko' ? '표' : 'votes' }}
+        </p>
       </div>
     </div>
   </div>

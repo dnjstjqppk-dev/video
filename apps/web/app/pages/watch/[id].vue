@@ -185,6 +185,35 @@ const { data: commentsList } = await useAsyncData(`comments-${videoId.value}`, a
 })
 
 const comments = ref<Comment[]>(commentsList.value || fallbackComments)
+const isDisliked = ref(false)
+const commentSort = ref<'top' | 'newest'>('top')
+const expandedReplies = ref<Record<string, boolean>>({})
+
+function toggleDislike() {
+  isDisliked.value = !isDisliked.value
+  if (isDisliked.value && isLiked.value) {
+    isLiked.value = false
+    likeCount.value = Math.max(0, likeCount.value - 1)
+  }
+}
+
+function toggleExpandReplies(commentId: string) {
+  expandedReplies.value[commentId] = !expandedReplies.value[commentId]
+}
+
+const sortedComments = computed(() => {
+  const list = [...comments.value]
+  if (commentSort.value === 'newest') {
+    return list.sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+  }
+  return list.sort((a, b) => {
+    if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+    return (b.likeCount || 0) - (a.likeCount || 0)
+  })
+})
 
 async function toggleSubscribe() {
   try {
@@ -262,41 +291,88 @@ async function submitComment() {
 async function submitReply(parentId: string) {
   const text = replyText.value.trim()
   if (!text) return
+  let replyObj: Comment
   try {
-    const created = await api.addComment(activeVideo.value.id, text, parentId)
-    comments.value.push(created)
+    replyObj = await api.addComment(activeVideo.value.id, text, parentId)
   } catch {
-    comments.value.push({
+    replyObj = {
       id: `cmt_reply_${Date.now()}`,
       videoId: activeVideo.value.id,
       channelId: activeVideo.value.channelId,
       userId: appStore.currentUser?.id || 'usr_demo_01',
+      parentId,
       author: {
         id: appStore.currentUser?.id || 'usr_demo_01',
-        displayName: `${appStore.currentUser?.displayName} (답글)`,
+        displayName: appStore.currentUser?.displayName || 'User',
         avatarUrl: appStore.currentUser?.avatarUrl,
         isCreator: false
       },
-      content: `↳ ${text}`,
+      content: text,
       likeCount: 0,
       replyCount: 0,
       isPinned: false,
       isHeartedByCreator: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    })
+    }
   }
+
+  const parent = comments.value.find(c => c.id === parentId)
+  if (parent) {
+    if (!parent.replies) parent.replies = []
+    parent.replies.push(replyObj)
+    parent.replyCount = parent.replies.length
+    expandedReplies.value[parentId] = true
+  } else {
+    comments.value.push(replyObj)
+  }
+
   replyText.value = ''
   replyTargetId.value = null
 }
 
-async function removeComment(commentId: string) {
+async function handleLikeComment(cmt: Comment) {
+  try {
+    const res = await api.likeComment(cmt.id)
+    cmt.likeCount = res.likeCount
+  } catch {
+    cmt.likeCount = (cmt.likeCount || 0) + 1
+  }
+}
+
+async function handleHeartComment(cmt: Comment) {
+  try {
+    const res = await api.heartComment(cmt.id)
+    cmt.isHeartedByCreator = res.isHearted
+  } catch {
+    cmt.isHeartedByCreator = !cmt.isHeartedByCreator
+  }
+}
+
+async function handlePinComment(cmt: Comment) {
+  try {
+    const res = await api.pinComment(cmt.id)
+    cmt.isPinned = res.isPinned
+  } catch {
+    cmt.isPinned = !cmt.isPinned
+  }
+}
+
+async function removeComment(commentId: string, parentId?: string) {
   try {
     await api.deleteComment(commentId)
   } catch {
     // Local fallback removal
   }
-  comments.value = comments.value.filter(c => c.id !== commentId)
+  if (parentId) {
+    const parent = comments.value.find(c => c.id === parentId)
+    if (parent && parent.replies) {
+      parent.replies = parent.replies.filter(r => r.id !== commentId)
+      parent.replyCount = parent.replies.length
+    }
+  } else {
+    comments.value = comments.value.filter(c => c.id !== commentId)
+  }
 }
 
 const relatedVideos = [
@@ -393,17 +469,30 @@ const relatedVideos = [
             </button>
           </div>
 
-          <!-- Action Pills: Like, Share, Save, Report -->
+          <!-- Action Pills: Like/Dislike, Share, Save, Report -->
           <div class="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              class="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition"
-              :class="isLiked ? 'bg-[#FF0033] text-white' : 'bg-[#272727] text-white hover:bg-[#3A3A3A]'"
-              @click="toggleLike"
-            >
-              <span>👍</span>
-              <span>{{ likeCount.toLocaleString() }}</span>
-            </button>
+            <!-- Unified Like / Dislike Split Capsule -->
+            <div class="flex items-center rounded-full bg-[#272727] p-0.5">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded-l-full px-3.5 py-1.5 text-xs font-semibold transition"
+                :class="isLiked ? 'text-[#3EA6FF]' : 'text-white hover:bg-white/10'"
+                @click="toggleLike"
+              >
+                <span>👍</span>
+                <span>{{ likeCount.toLocaleString() }}</span>
+              </button>
+              <div class="h-4 w-px bg-white/20" />
+              <button
+                type="button"
+                class="rounded-r-full px-3 py-1.5 text-xs font-semibold transition"
+                :class="isDisliked ? 'text-[#3EA6FF]' : 'text-white hover:bg-white/10'"
+                @click="toggleDislike"
+                title="I dislike this"
+              >
+                <span>👎</span>
+              </button>
+            </div>
 
             <button
               type="button"
@@ -485,14 +574,38 @@ const relatedVideos = [
 
         <!-- Threaded Comments Section -->
         <section class="mt-6">
-          <h2 class="text-base font-bold">
-            {{ comments.length.toLocaleString() }} {{ appStore.locale === 'ko' ? '개의 댓글' : 'Comments' }}
-          </h2>
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-6">
+              <h2 class="text-base font-bold text-white">
+                {{ comments.length.toLocaleString() }} {{ appStore.locale === 'ko' ? '개의 댓글' : 'Comments' }}
+              </h2>
+              <div class="flex items-center gap-1 text-xs font-medium text-neutral-300">
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition"
+                  :class="commentSort === 'top' ? 'bg-white/15 text-white font-semibold' : 'text-neutral-400 hover:text-white'"
+                  @click="commentSort = 'top'"
+                >
+                  <span>⚡</span>
+                  <span>{{ appStore.locale === 'ko' ? '인기순' : 'Top' }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition"
+                  :class="commentSort === 'newest' ? 'bg-white/15 text-white font-semibold' : 'text-neutral-400 hover:text-white'"
+                  @click="commentSort = 'newest'"
+                >
+                  <span>🕒</span>
+                  <span>{{ appStore.locale === 'ko' ? '최신순' : 'Newest' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
 
           <!-- New Comment Input -->
           <form class="mt-4 flex items-start gap-3" @submit.prevent="submitComment">
             <img
-              :src="appStore.currentUser?.avatarUrl"
+              :src="appStore.currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
               :alt="appStore.currentUser?.displayName"
               class="h-9 w-9 rounded-full object-cover"
             />
@@ -522,31 +635,83 @@ const relatedVideos = [
           </form>
 
           <!-- Comment Thread List -->
-          <div class="mt-6 space-y-5">
-            <article v-for="cmt in comments" :key="cmt.id" class="flex items-start gap-3">
+          <div class="mt-6 space-y-6">
+            <article v-for="cmt in sortedComments" :key="cmt.id" class="flex items-start gap-3">
               <img
-                :src="cmt.author.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
-                :alt="cmt.author.displayName"
+                :src="cmt.author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
+                :alt="cmt.author?.displayName"
                 class="h-9 w-9 shrink-0 rounded-full object-cover"
               />
               <div class="flex-1 text-sm">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-white">{{ cmt.author.displayName }}</span>
-                  <span v-if="cmt.isPinned" class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-neutral-300">
-                    📌 Pinned
+                <!-- Header: Display name, Badges, Date -->
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-semibold text-white">{{ cmt.author?.displayName || 'User' }}</span>
+                  <span
+                    v-if="cmt.isChannelOwner || cmt.author?.isCreator"
+                    class="rounded-full bg-[#3EA6FF]/20 px-2 py-0.5 text-[10px] font-bold text-[#3EA6FF]"
+                  >
+                    {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
+                  </span>
+                  <span
+                    v-if="cmt.isPinned"
+                    class="flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-neutral-300"
+                  >
+                    <span>📌</span>
+                    <span>{{ appStore.locale === 'ko' ? '고정됨' : 'Pinned' }}</span>
                   </span>
                   <span class="text-xs text-neutral-400">
                     {{ new Date(cmt.createdAt).toLocaleDateString() }}
                   </span>
                 </div>
+
+                <!-- Body -->
                 <p class="mt-1 text-neutral-200">{{ cmt.content }}</p>
-                <div class="mt-2 flex items-center gap-4 text-xs text-neutral-400">
-                  <button type="button" class="hover:text-white" @click="cmt.likeCount++">
-                    👍 {{ cmt.likeCount }}
-                  </button>
+
+                <!-- Actions: Like, Heart, Pin, Reply, Delete -->
+                <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-neutral-400">
                   <button
                     type="button"
-                    class="font-semibold hover:text-white"
+                    class="flex items-center gap-1 transition hover:text-white"
+                    @click="handleLikeComment(cmt)"
+                  >
+                    <span>👍</span>
+                    <span>{{ cmt.likeCount || 0 }}</span>
+                  </button>
+
+                  <!-- Creator Heart indicator -->
+                  <span
+                    v-if="cmt.isHeartedByCreator"
+                    class="flex items-center gap-1 text-rose-400"
+                    :title="appStore.locale === 'ko' ? '게시자가 하트를 눌렀습니다' : 'Hearted by creator'"
+                  >
+                    <span>❤️</span>
+                  </span>
+
+                  <!-- Channel Owner controls: Heart & Pin -->
+                  <button
+                    v-if="appStore.currentUser?.id === activeVideo.channel.ownerId"
+                    type="button"
+                    class="flex items-center gap-1 transition hover:text-white"
+                    :class="cmt.isHeartedByCreator ? 'text-rose-400' : 'text-neutral-400'"
+                    @click="handleHeartComment(cmt)"
+                  >
+                    <span>{{ cmt.isHeartedByCreator ? '❤️' : '🤍' }}</span>
+                    <span>{{ appStore.locale === 'ko' ? '하트' : 'Heart' }}</span>
+                  </button>
+                  <button
+                    v-if="appStore.currentUser?.id === activeVideo.channel.ownerId"
+                    type="button"
+                    class="flex items-center gap-1 transition hover:text-white"
+                    :class="cmt.isPinned ? 'text-amber-300 font-semibold' : 'text-neutral-400'"
+                    @click="handlePinComment(cmt)"
+                  >
+                    <span>📌</span>
+                    <span>{{ cmt.isPinned ? (appStore.locale === 'ko' ? '고정 해제' : 'Unpin') : (appStore.locale === 'ko' ? '고정' : 'Pin') }}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="font-semibold transition hover:text-white"
                     @click="replyTargetId = replyTargetId === cmt.id ? null : cmt.id"
                   >
                     {{ appStore.locale === 'ko' ? '답글' : 'Reply' }}
@@ -554,28 +719,86 @@ const relatedVideos = [
                   <button
                     v-if="cmt.userId === appStore.currentUser?.id"
                     type="button"
-                    class="text-red-400 hover:underline"
+                    class="text-red-400 transition hover:underline"
                     @click="removeComment(cmt.id)"
                   >
                     {{ appStore.locale === 'ko' ? '삭제' : 'Delete' }}
                   </button>
                 </div>
 
-                <!-- Inline Reply Box -->
+                <!-- Inline Reply Input Box -->
                 <div v-if="replyTargetId === cmt.id" class="mt-3 flex items-center gap-2">
                   <input
                     v-model="replyText"
                     type="text"
-                    placeholder="Write a reply..."
-                    class="flex-1 rounded-lg border border-white/15 bg-[#161616] px-3 py-1.5 text-xs text-white outline-none"
+                    :placeholder="appStore.locale === 'ko' ? '답글 작성...' : 'Write a reply...'"
+                    class="flex-1 rounded-lg border border-white/15 bg-[#161616] px-3 py-1.5 text-xs text-white outline-none focus:border-[#3EA6FF]"
+                    @keydown.enter="submitReply(cmt.id)"
                   />
                   <button
                     type="button"
-                    class="rounded-lg bg-[#3EA6FF] px-3 py-1.5 text-xs font-bold text-black"
+                    class="rounded-lg bg-[#3EA6FF] px-3 py-1.5 text-xs font-bold text-black transition hover:bg-[#65B8FF]"
                     @click="submitReply(cmt.id)"
                   >
-                    Send
+                    {{ appStore.locale === 'ko' ? '등록' : 'Send' }}
                   </button>
+                </div>
+
+                <!-- Collapsible Nested Replies -->
+                <div v-if="cmt.replies && cmt.replies.length > 0" class="mt-3">
+                  <button
+                    type="button"
+                    class="flex items-center gap-1.5 text-xs font-bold text-[#3EA6FF] transition hover:text-[#65B8FF]"
+                    @click="toggleExpandReplies(cmt.id)"
+                  >
+                    <span>{{ expandedReplies[cmt.id] ? '▲' : '▼' }}</span>
+                    <span>
+                      {{ cmt.replies.length }} {{ appStore.locale === 'ko' ? '개의 답글' : (cmt.replies.length === 1 ? 'reply' : 'replies') }}
+                    </span>
+                  </button>
+
+                  <div v-if="expandedReplies[cmt.id]" class="mt-3 space-y-3 border-l-2 border-white/10 pl-4">
+                    <article v-for="reply in cmt.replies" :key="reply.id" class="flex items-start gap-2.5">
+                      <img
+                        :src="reply.author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
+                        :alt="reply.author?.displayName"
+                        class="h-7 w-7 shrink-0 rounded-full object-cover"
+                      />
+                      <div class="flex-1 text-xs">
+                        <div class="flex items-center gap-2">
+                          <span class="font-semibold text-white">{{ reply.author?.displayName || 'User' }}</span>
+                          <span
+                            v-if="reply.isChannelOwner || reply.author?.isCreator"
+                            class="rounded-full bg-[#3EA6FF]/20 px-1.5 py-0.2 text-[9px] font-bold text-[#3EA6FF]"
+                          >
+                            {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
+                          </span>
+                          <span class="text-neutral-400">
+                            {{ new Date(reply.createdAt).toLocaleDateString() }}
+                          </span>
+                        </div>
+                        <p class="mt-0.5 text-neutral-200">{{ reply.content }}</p>
+                        <div class="mt-1 flex items-center gap-3 text-neutral-400">
+                          <button
+                            type="button"
+                            class="flex items-center gap-1 transition hover:text-white"
+                            @click="handleLikeComment(reply)"
+                          >
+                            <span>👍</span>
+                            <span>{{ reply.likeCount || 0 }}</span>
+                          </button>
+                          <button
+                            v-if="reply.userId === appStore.currentUser?.id"
+                            type="button"
+                            class="text-red-400 hover:underline"
+                            @click="removeComment(reply.id, cmt.id)"
+                          >
+                            {{ appStore.locale === 'ko' ? '삭제' : 'Delete' }}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
                 </div>
               </div>
             </article>

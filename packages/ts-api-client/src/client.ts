@@ -268,19 +268,31 @@ export class ApiClient {
   }
 
   // --- Comments ---
-  async getVideoComments(videoId: string, page = 1, limit = 20): Promise<{ items: Comment[]; total: number }> {
-    return this.request(`/v1/videos/${videoId}/comments?page=${page}&limit=${limit}`);
+  async getVideoComments(videoId: string, page = 1, limit = 20, sort: 'top' | 'newest' = 'top'): Promise<{ items: Comment[]; total: number }> {
+    return this.request(`/v1/videos/${videoId}/comments?page=${page}&limit=${limit}&sort=${sort}`);
   }
 
   async addComment(videoId: string, content: string, parentId?: string): Promise<Comment> {
     return this.request(`/v1/videos/${videoId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content, parentId }),
+      body: JSON.stringify({ content, parent_id: parentId }),
     });
   }
 
   async deleteComment(commentId: string): Promise<void> {
     return this.request(`/v1/comments/${commentId}`, { method: 'DELETE' });
+  }
+
+  async likeComment(commentId: string): Promise<{ liked: boolean; likeCount: number }> {
+    return this.request(`/v1/comments/${commentId}/like`, { method: 'POST' });
+  }
+
+  async heartComment(commentId: string): Promise<{ isHearted: boolean }> {
+    return this.request(`/v1/comments/${commentId}/heart`, { method: 'POST' });
+  }
+
+  async pinComment(commentId: string): Promise<{ isPinned: boolean }> {
+    return this.request(`/v1/comments/${commentId}/pin`, { method: 'POST' });
   }
 
   // --- Playlists ---

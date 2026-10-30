@@ -143,6 +143,9 @@ export interface Comment {
   replyCount: number;
   isPinned: boolean;
   isHeartedByCreator: boolean;
+  isChannelOwner?: boolean;
+  parentId?: string;
+  replies?: Comment[];
   userReaction?: 'like' | 'dislike' | null;
   createdAt: string;
   updatedAt: string;

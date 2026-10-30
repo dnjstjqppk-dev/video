@@ -165,6 +165,9 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		v1.Get("/videos/{id}/comments", commH.GetComments)
 		v1.With(authMiddleware.RequireAuth).Post("/videos/{id}/comments", commH.AddComment)
 		v1.With(authMiddleware.RequireAuth).Delete("/comments/{id}", commH.DeleteComment)
+		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/like", commH.LikeComment)
+		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/heart", commH.HeartComment)
+		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/pin", commH.PinComment)
 
 		// Uploads
 		v1.Mount("/uploads", uploadH.Routes(authMiddleware))

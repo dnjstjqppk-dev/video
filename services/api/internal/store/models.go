@@ -92,17 +92,20 @@ type Video struct {
 }
 
 type Comment struct {
-	ID          string    `json:"id"`
-	VideoID     string    `json:"video_id"`
-	UserID      string    `json:"user_id"`
-	DisplayName string    `json:"display_name"`
-	AvatarURL   string    `json:"avatar_url"`
-	Content     string    `json:"content"`
-	LikeCount   int       `json:"like_count"`
-	ReplyCount  int       `json:"reply_count"`
-	IsPinned    bool      `json:"is_pinned"`
-	IsHearted   bool      `json:"is_hearted"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID             string     `json:"id"`
+	VideoID        string     `json:"video_id"`
+	UserID         string     `json:"user_id"`
+	DisplayName    string     `json:"display_name"`
+	AvatarURL      string     `json:"avatar_url"`
+	Content        string     `json:"content"`
+	LikeCount      int        `json:"like_count"`
+	ReplyCount     int        `json:"reply_count"`
+	IsPinned       bool       `json:"is_pinned"`
+	IsHearted      bool       `json:"is_hearted"`
+	IsChannelOwner bool       `json:"is_channel_owner"`
+	ParentID       string     `json:"parent_id,omitempty"`
+	Replies        []*Comment `json:"replies,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type LiveStream struct {
@@ -344,6 +347,21 @@ func (s *MemoryStore) seedDefaults() {
 		CreatedAt:        now,
 	}
 	s.Users[creatorUser.ID] = creatorUser
+
+	viewerUser := &User{
+		ID:               "33333333-3333-3333-3333-333333333333",
+		Email:            "viewer@brand.com",
+		Username:         "sarah_dev",
+		Role:             "viewer",
+		SubscriptionTier: "free",
+		IsVerified:       true,
+		IsActive:         true,
+		DisplayName:      "Sarah Kim",
+		Bio:              "Software Engineer & Cloud Enthusiast",
+		AvatarURL:        "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150",
+		CreatedAt:        now,
+	}
+	s.Users[viewerUser.ID] = viewerUser
 
 	channel1 := &Channel{
 		ID:                  "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
