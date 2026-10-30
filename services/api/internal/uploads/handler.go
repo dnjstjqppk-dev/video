@@ -27,8 +27,42 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Post("/", h.CreateUploadSession)
 	r.Post("/{id}/parts", h.GetPartUploadURL)
 	r.Post("/{id}/complete", h.CompleteUpload)
+	r.Get("/{id}/status", h.GetUploadStatus)
 
 	return r
+}
+
+func (h *Handler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
+	uploadID := chi.URLParam(r, "id")
+	if uploadID == "" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Upload ID required")
+		return
+	}
+
+	var job *store.MediaJob
+	for _, j := range h.Store.MediaJobs {
+		if j.ID == uploadID || j.VideoID == uploadID {
+			job = j
+			break
+		}
+	}
+
+	if job == nil {
+		identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"upload_id":    uploadID,
+			"status":       "QUEUED",
+			"progress_pct": 0,
+		})
+		return
+	}
+
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"upload_id":    uploadID,
+		"job_id":       job.ID,
+		"video_id":     job.VideoID,
+		"status":       job.Status,
+		"progress_pct": job.ProgressPct,
+	})
 }
 
 func (h *Handler) CreateUploadSession(w http.ResponseWriter, r *http.Request) {

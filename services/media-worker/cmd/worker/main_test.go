@@ -14,7 +14,7 @@ func TestMediaWorkerABRLadderAndLifecycle(t *testing.T) {
 		t.Fatalf("expected 5 renditions capped at 1080p, got %d", len(ladder))
 	}
 
-	// Verify keyframe alignment & fMP4 flags
+	// Verify keyframe alignment & fMP4 flags (TASK-218)
 	args := BuildFFmpegHLSArgs("input.mp4", "/out", ladder)
 	joined := strings.Join(args, " ")
 	if !strings.Contains(joined, "-g 48 -keyint_min 48 -sc_threshold 0") || !strings.Contains(joined, "fmp4") {
@@ -67,5 +67,70 @@ func TestMediaWorkerPathTraversalAndDLQ(t *testing.T) {
 	}
 	if len(w.DLQ) != 1 || w.DLQ[0].JobID != "job-bad" {
 		t.Fatalf("expected job routed to DLQ, got %+v", w.DLQ)
+	}
+}
+
+func TestGenerateHLSPlaylists(t *testing.T) {
+	ladder := SelectABRLadder(1080)
+	master, variants := GenerateHLSPlaylists("vid-abc", ladder, 120.0)
+
+	if !strings.HasPrefix(master, "#EXTM3U") {
+		t.Fatalf("master playlist missing EXTM3U header: %s", master)
+	}
+	if !strings.Contains(master, "#EXT-X-STREAM-INF:BANDWIDTH=5192000,AVERAGE-BANDWIDTH=4776640,RESOLUTION=1920x1080") {
+		t.Fatalf("missing 1080p stream inf in master: %s", master)
+	}
+	if len(variants) != len(ladder) {
+		t.Fatalf("expected %d variant playlists, got %d", len(ladder), len(variants))
+	}
+	v1080 := variants["1080p"]
+	if !strings.Contains(v1080, "#EXT-X-TARGETDURATION:4") || !strings.Contains(v1080, "segment_00000.m4s") {
+		t.Fatalf("invalid variant playlist format: %s", v1080)
+	}
+}
+
+func TestGenerateDASHManifest(t *testing.T) {
+	ladder := SelectABRLadder(1080)
+	mpd := GenerateDASHManifest("vid-abc", ladder, 120.0)
+
+	if !strings.HasPrefix(mpd, "<?xml") || !strings.Contains(mpd, "<MPD") {
+		t.Fatalf("invalid DASH MPD header: %s", mpd)
+	}
+	if !strings.Contains(mpd, `id="video_1080p"`) {
+		t.Fatalf("missing 1080p representation in MPD: %s", mpd)
+	}
+}
+
+func TestGenerateStoryboardVTT(t *testing.T) {
+	vtt := GenerateStoryboardVTT("vid-abc", 65.0, 10, 160, 90, 5, 5)
+
+	if !strings.HasPrefix(vtt, "WEBVTT") {
+		t.Fatalf("missing WEBVTT header: %s", vtt)
+	}
+	if !strings.Contains(vtt, "00:00:00.000 --> 00:00:10.000") || !strings.Contains(vtt, "storyboard_001.jpg#xywh=0,0,160,90") {
+		t.Fatalf("missing expected first cue in storyboard: %s", vtt)
+	}
+	if !strings.Contains(vtt, "storyboard_001.jpg#xywh=160,0,160,90") {
+		t.Fatalf("missing expected second cue coordinates: %s", vtt)
+	}
+}
+
+func TestAudioNormalizationAndQualityGates(t *testing.T) {
+	// Audio normalization arguments (TASK-223)
+	audioArgs := BuildAudioNormalizationArgs("input.wav", "norm.aac")
+	joined := strings.Join(audioArgs, " ")
+	if !strings.Contains(joined, "loudnorm=I=-14:LRA=11:TP=-1.5") {
+		t.Fatalf("missing loudnorm filter in audio args: %s", joined)
+	}
+
+	// Quality gate evaluation (TASK-227)
+	approved, grade := EvaluateVideoQuality(94.2, 42.1, 0.98)
+	if !approved || grade != "EXCELLENT" {
+		t.Fatalf("expected EXCELLENT approved, got %v / %s", approved, grade)
+	}
+
+	approved, grade = EvaluateVideoQuality(75.0, 32.0, 0.85)
+	if approved || grade != "POOR" {
+		t.Fatalf("expected POOR rejected, got %v / %s", approved, grade)
 	}
 }
