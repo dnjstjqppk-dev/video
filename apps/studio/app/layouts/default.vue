@@ -12,6 +12,8 @@ const navLinks = [
   { path: '/editor/vid_arch_2026', label: '타임라인 에디터 (Editor)', icon: '✂️' },
   { path: '/analytics', label: '채널 분석 (Analytics)', icon: '📈' },
   { path: '/monetization', label: '수익 창출 & 정산 (Earn)', icon: '💰' },
+  { path: '/customization', label: '채널 맞춤설정 (Customization)', icon: '🎨' },
+  { path: '/comments', label: '댓글 및 검토 (Comments)', icon: '💬' },
   { path: '/live', label: '라이브 관제실 (Live Room)', icon: '📡' }
 ]
 </script>
