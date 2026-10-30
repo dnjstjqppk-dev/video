@@ -10,9 +10,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-web:
-    name: Build & Deploy to Cloudflare
+  deploy-consoles:
+    name: Build & Deploy Consoles to Cloudflare Workers / Pages
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [web, studio, partners, admin]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,19 +34,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Web application with Cloudflare preset
-        run: pnpm --filter @gvp/web build
+      - name: Build ${{ matrix.app }} console with Cloudflare preset
+        run: pnpm --filter @gvp/${{ matrix.app }} build
         env:
           NITRO_PRESET: cloudflare-module
 
-      - name: Deploy via Wrangler
+      - name: Deploy ${{ matrix.app }} via Wrangler
         if: ${{ env.HAS_CF_TOKEN == 'true' }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/${{ matrix.app }}
           command: deploy
         env:
           HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-

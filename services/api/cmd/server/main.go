@@ -220,7 +220,26 @@ func main() {
 	slog.SetDefault(logger)
 
 	cfg := config.Load()
-	memStore := store.NewMemoryStore()
+
+	var pgStore *store.PostgresStore
+	if cfg.DatabaseURL != "" {
+		var err error
+		pgStore, err = store.NewPostgresStore(cfg.DatabaseURL)
+		if err != nil {
+			slog.Warn("PostgreSQL not immediately reachable, falling back to resilient in-memory store", "error", err)
+		} else {
+			slog.Info("PostgreSQL 18 connection pool initialized", "url", store.SanitizeDatabaseURL(cfg.DatabaseURL))
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := pgStore.InitSchema(ctx); err != nil {
+				slog.Warn("PostgreSQL schema initialization deferred", "error", err)
+			} else {
+				slog.Info("PostgreSQL 18 tables verified and ready")
+			}
+			cancel()
+		}
+	}
+
+	memStore := store.NewMemoryStoreWithDB(pgStore)
 	r := buildRouter(memStore)
 
 	server := &http.Server{

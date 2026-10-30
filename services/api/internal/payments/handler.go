@@ -82,35 +82,6 @@ func (s *StripeAdapter) VerifyWebhookSignature(signatureHeader string, payload [
 	return false
 }
 
-type TossPaymentsAdapter struct {
-	SecretKey string
-}
-
-func (t *TossPaymentsAdapter) ProviderName() string { return "toss" }
-func (t *TossPaymentsAdapter) CreateCheckoutSession(txID string, amountCents int64, currency string, txType string) (string, error) {
-	if txID == "" || amountCents <= 0 {
-		return "", fmt.Errorf("invalid transaction parameters")
-	}
-	return "", fmt.Errorf("Toss checkout integration is not configured")
-}
-
-func (t *TossPaymentsAdapter) VerifyWebhookSignature(signature string, payload []byte) bool {
-	if signature == "" || signature == "invalid" {
-		return false
-	}
-	secret := t.SecretKey
-	if secret == "" {
-		secret = os.Getenv("TOSSPAYMENTS_WEBHOOK_SECRET")
-	}
-	if secret != "" {
-		mac := hmac.New(sha256.New, []byte(secret))
-		mac.Write(payload)
-		expected := hex.EncodeToString(mac.Sum(nil))
-		return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
-	}
-	return false
-}
-
 type Handler struct {
 	Store    *store.MemoryStore
 	Adapters map[string]PaymentAdapter
@@ -122,6 +93,7 @@ func NewHandler(s *store.MemoryStore) *Handler {
 		Store: s,
 		Adapters: map[string]PaymentAdapter{
 			"stripe": &StripeAdapter{},
+			"toss":   &TossPaymentsAdapter{},
 		},
 	}
 }

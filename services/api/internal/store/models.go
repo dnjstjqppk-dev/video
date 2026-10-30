@@ -327,6 +327,7 @@ type PaymentTransaction struct {
 
 type MemoryStore struct {
 	mu              sync.RWMutex
+	DB              *PostgresStore // Backing PostgreSQL 18 store
 	Users           map[string]*User
 	Channels        map[string]*Channel
 	Videos          map[string]*Video
@@ -354,7 +355,12 @@ type MemoryStore struct {
 }
 
 func NewMemoryStore() *MemoryStore {
+	return NewMemoryStoreWithDB(nil)
+}
+
+func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 	s := &MemoryStore{
+		DB:              db,
 		Users:           make(map[string]*User),
 		Channels:        make(map[string]*Channel),
 		Videos:          make(map[string]*Video),
