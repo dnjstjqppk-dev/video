@@ -23,8 +23,7 @@ type AuthMiddleware struct {
 func NewAuthMiddleware(s *store.MemoryStore) *AuthMiddleware {
 	// Dev tokens are strictly gated: permitted only in test/development, prohibited in production
 	env := strings.ToLower(os.Getenv("GVP_ENV"))
-	isProd := env == "production" || env == "prod"
-	allowDev := !isProd && (os.Getenv("GVP_ALLOW_DEV_TOKENS") != "false")
+	allowDev := (env == "development" || env == "test") && os.Getenv("GVP_ALLOW_DEV_TOKENS") == "true"
 	var validator *security.Validator
 	issuer := os.Getenv("OIDC_ISSUER")
 	audience := os.Getenv("OIDC_AUDIENCE")
@@ -70,7 +69,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 				user = u
 			} else {
 				for _, u := range m.Store.Users {
-					if u.Email == claims.Email && claims.Email != "" {
+					if claims.EmailVerified && u.Email == claims.Email && claims.Email != "" {
 						user = u
 						break
 					}
@@ -99,6 +98,10 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		// 3. If token was provided but could not be validated or user not found -> 401 Unauthorized
 		if user == nil {
 			WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Invalid or expired credentials")
+			return
+		}
+		if !user.IsActive {
+			WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Account is inactive")
 			return
 		}
 

@@ -43,6 +43,10 @@ function onSearchInput() {
   }, 180)
 }
 
+function onSearchBlur() {
+  setTimeout(() => (showSuggestions.value = false), 200)
+}
+
 function submitSearch(term?: string) {
   const finalQuery = (term ?? searchQuery.value).trim()
   if (!finalQuery) return
@@ -132,7 +136,7 @@ const subscribedChannels = [
               :class="appStore.theme === 'dark' ? 'border-white/20 bg-[#121212] text-white placeholder-neutral-400' : 'border-neutral-300 bg-neutral-100 text-black placeholder-neutral-500'"
               @focus="showSuggestions = true; onSearchInput()"
               @input="onSearchInput"
-              @blur="setTimeout(() => (showSuggestions = false), 200)"
+              @blur="onSearchBlur"
             />
           </div>
           <button

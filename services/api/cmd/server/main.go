@@ -61,9 +61,6 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	// Sliding-window rate limiting per client IP
 	r.Use(rateLimiter.Middleware)
 
-	// Idempotency replay cache for mutating requests with X-Idempotency-Key
-	r.Use(idempotencyManager.Middleware)
-
 	// CORS Configuration for Nuxt 4 web consoles & mobile Dio
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*", "https://*.brand.com"},
@@ -75,14 +72,57 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	}))
 
 	r.Use(authMiddleware.Authenticate)
+	// Validate current credentials before considering any cached response.
+	r.Use(idempotencyManager.Middleware)
 
-	// Liveness & Readiness Probes
+	// Liveness Probe (TASK-086)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"status":    "UP",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 			"version":   "1.0.0",
 		})
+	})
+
+	// Readiness Probe (TASK-086)
+	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
+		if memStore == nil {
+			identity.WriteError(w, r, http.StatusServiceUnavailable, "NOT_READY", "Storage subsystem not ready")
+			return
+		}
+		identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"status":    "READY",
+			"ready":     true,
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"subsystems": map[string]string{
+				"storage":   "operational",
+				"security":  "operational",
+				"ad_engine": "operational",
+			},
+		})
+	})
+
+	// Prometheus Metrics Endpoint (TASK-087)
+	r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		metrics := fmt.Sprintf(
+			"# HELP gvp_uptime_seconds Total server uptime in seconds\n"+
+				"# TYPE gvp_uptime_seconds gauge\ngvp_uptime_seconds %d\n"+
+				"# HELP gvp_users_total Total registered users\n"+
+				"# TYPE gvp_users_total gauge\ngvp_users_total %d\n"+
+				"# HELP gvp_videos_total Total catalog videos\n"+
+				"# TYPE gvp_videos_total gauge\ngvp_videos_total %d\n"+
+				"# HELP gvp_channels_total Total channels\n"+
+				"# TYPE gvp_channels_total gauge\ngvp_channels_total %d\n"+
+				"# HELP gvp_ad_events_total Total collected ad telemetry events\n"+
+				"# TYPE gvp_ad_events_total counter\ngvp_ad_events_total %d\n",
+			time.Now().Unix(),
+			len(memStore.Users),
+			len(memStore.Videos),
+			len(memStore.Channels),
+			len(memStore.AdEvents),
+		)
+		w.Write([]byte(metrics))
 	})
 
 	// Handlers

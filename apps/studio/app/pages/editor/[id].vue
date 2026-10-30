@@ -133,7 +133,7 @@ function dispatchFfmpegEditJob() {
 
           <!-- Audio & Copyright Mute Track -->
           <div class="h-7 w-full rounded-lg bg-amber-950/60 px-3 leading-7 text-amber-200">
-            🔇 Muted Claim Segment ({{ mutedSegments[0].startSec }}s–{{ mutedSegments[0].endSec }}s) · Replaced with: {{ replacementAudioTrack }}
+            🔇 Muted Claim Segment ({{ (mutedSegments[0]?.startSec ?? 0) }}s–{{ (mutedSegments[0]?.endSec ?? 0) }}s) · Replaced with: {{ replacementAudioTrack }}
           </div>
         </div>
       </div>

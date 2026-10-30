@@ -44,9 +44,9 @@ const pollSelection = ref<number | null>(null)
 const pollVotes = ref([64, 21, 15])
 
 function votePoll(index: number) {
-  if (pollSelection.value !== null) return
+  if (pollSelection.value !== null || !Number.isInteger(index) || pollVotes.value[index] === undefined) return
   pollSelection.value = index
-  pollVotes.value[index] += 1
+  pollVotes.value[index] = (pollVotes.value[index] ?? 0) + 1
 }
 
 const channelVideos = [

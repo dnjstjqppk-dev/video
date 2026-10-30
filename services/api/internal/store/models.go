@@ -6,18 +6,25 @@ import (
 )
 
 type User struct {
-	ID               string    `json:"id"`
-	Email            string    `json:"email"`
-	Username         string    `json:"username"`
-	Role             string    `json:"role"`
-	SubscriptionTier string    `json:"subscription_tier"`
-	IsVerified       bool      `json:"is_verified"`
-	IsActive         bool      `json:"is_active"`
-	DisplayName      string    `json:"display_name"`
-	Bio              string    `json:"bio"`
-	AvatarURL        string    `json:"avatar_url"`
-	BannerURL        string    `json:"banner_url"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID                  string     `json:"id"`
+	Email               string     `json:"email"`
+	Username            string     `json:"username"`
+	Role                string     `json:"role"`
+	SubscriptionTier    string     `json:"subscription_tier"`
+	IsVerified          bool       `json:"is_verified"`
+	IsActive            bool       `json:"is_active"`
+	DisplayName         string     `json:"display_name"`
+	Bio                 string     `json:"bio"`
+	AvatarURL           string     `json:"avatar_url"`
+	BannerURL           string     `json:"banner_url"`
+	MFAEnabled          bool       `json:"mfa_enabled"`
+	TOTPSecret          string     `json:"-"`
+	BackupCodes         []string   `json:"-"`
+	BlockedUsers        []string   `json:"blocked_users,omitempty"`
+	CopyrightStrikes    int        `json:"copyright_strikes"`
+	CommunityStrikes    int        `json:"community_strikes"`
+	DeletionRequestedAt *time.Time `json:"deletion_requested_at,omitempty"`
+	CreatedAt           time.Time  `json:"created_at"`
 }
 
 type Channel struct {

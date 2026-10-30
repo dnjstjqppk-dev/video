@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,16 +14,18 @@ import (
 )
 
 type CachedResponse struct {
-	StatusCode int
-	Header     http.Header
-	Body       []byte
-	CreatedAt  time.Time
+	StatusCode  int
+	Header      http.Header
+	Body        []byte
+	CreatedAt   time.Time
+	Fingerprint [32]byte
 }
 
 type IdempotencyManager struct {
 	mu      sync.RWMutex
 	records map[string]*CachedResponse
 	ttl     time.Duration
+	pending map[string]chan struct{}
 }
 
 func NewIdempotencyManager(ttl time.Duration) *IdempotencyManager {
@@ -32,15 +35,8 @@ func NewIdempotencyManager(ttl time.Duration) *IdempotencyManager {
 	im := &IdempotencyManager{
 		records: make(map[string]*CachedResponse),
 		ttl:     ttl,
+		pending: make(map[string]chan struct{}),
 	}
-
-	// Periodic cleanup of expired idempotency keys
-	go func() {
-		ticker := time.NewTicker(30 * time.Minute)
-		for range ticker.C {
-			im.cleanup()
-		}
-	}()
 
 	return im
 }
@@ -59,16 +55,24 @@ func (im *IdempotencyManager) cleanup() {
 
 type responseRecorder struct {
 	http.ResponseWriter
-	statusCode int
-	body       bytes.Buffer
+	statusCode  int
+	body        bytes.Buffer
+	wroteHeader bool
 }
 
 func (r *responseRecorder) WriteHeader(code int) {
+	if r.wroteHeader {
+		return
+	}
+	r.wroteHeader = true
 	r.statusCode = code
 	r.ResponseWriter.WriteHeader(code)
 }
 
 func (r *responseRecorder) Write(b []byte) (int, error) {
+	if !r.wroteHeader {
+		r.WriteHeader(http.StatusOK)
+	}
 	r.body.Write(b)
 	return r.ResponseWriter.Write(b)
 }
@@ -89,22 +93,68 @@ func (im *IdempotencyManager) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		im.mu.RLock()
-		cached, exists := im.records[idempotencyKey]
-		im.mu.RUnlock()
-
-		if exists && time.Since(cached.CreatedAt) < im.ttl {
-			// Replay cached response exactly
-			for k, values := range cached.Header {
-				for _, v := range values {
-					w.Header().Add(k, v)
-				}
-			}
-			w.Header().Set("X-Cache-Lookup", "HIT-IDEMPOTENT")
-			w.WriteHeader(cached.StatusCode)
-			w.Write(cached.Body)
+		// Anonymous operations need their own domain-specific deduplication.
+		if r.Header.Get("Authorization") == "" {
+			next.ServeHTTP(w, r)
 			return
 		}
+		if len(idempotencyKey) > 256 {
+			http.Error(w, "Idempotency key too long", http.StatusBadRequest)
+			return
+		}
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+		if err != nil {
+			http.Error(w, "Invalid or oversized request body", http.StatusRequestEntityTooLarge)
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		fingerprint := sha256.Sum256(append([]byte(r.Header.Get("Content-Type")+"\x00"), body...))
+		scope := sha256.Sum256([]byte(r.Header.Get("Authorization") + "\x00" + r.Method + "\x00" + r.URL.RequestURI() + "\x00" + idempotencyKey))
+		cacheKey := hex.EncodeToString(scope[:])
+		im.cleanup()
+		for {
+			im.mu.Lock()
+			if cached, exists := im.records[cacheKey]; exists && time.Since(cached.CreatedAt) < im.ttl {
+				im.mu.Unlock()
+				if cached.Fingerprint != fingerprint {
+					http.Error(w, "Idempotency key reused with different request", http.StatusConflict)
+					return
+				}
+				for k, values := range cached.Header {
+					// Keep current request's security headers and request identifier.
+					if k == "Content-Type" || k == "Location" {
+						w.Header()[k] = append([]string(nil), values...)
+					}
+				}
+				w.Header().Set("X-Cache-Lookup", "HIT-IDEMPOTENT")
+				w.WriteHeader(cached.StatusCode)
+				w.Write(cached.Body)
+				return
+			}
+			if done, exists := im.pending[cacheKey]; exists {
+				im.mu.Unlock()
+				select {
+				case <-done:
+					continue
+				case <-r.Context().Done():
+					return
+				}
+			}
+			if len(im.records)+len(im.pending) >= 10000 {
+				im.mu.Unlock()
+				http.Error(w, "Idempotency cache capacity reached", http.StatusServiceUnavailable)
+				return
+			}
+			im.pending[cacheKey] = make(chan struct{})
+			im.mu.Unlock()
+			break
+		}
+		defer func() {
+			im.mu.Lock()
+			close(im.pending[cacheKey])
+			delete(im.pending, cacheKey)
+			im.mu.Unlock()
+		}()
 
 		// Record new response
 		rec := &responseRecorder{
@@ -114,17 +164,17 @@ func (im *IdempotencyManager) Middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rec, r)
 
-		// Cache successful or business logic response
-		im.mu.Lock()
-		hdrCopy := make(http.Header)
-		for k, v := range rec.Header() {
-			hdrCopy[k] = v
+		// Failed operations must remain retryable.
+		if rec.statusCode < 200 || rec.statusCode >= 300 {
+			return
 		}
-		im.records[idempotencyKey] = &CachedResponse{
-			StatusCode: rec.statusCode,
-			Header:     hdrCopy,
-			Body:       rec.body.Bytes(),
-			CreatedAt:  time.Now(),
+		im.mu.Lock()
+		im.records[cacheKey] = &CachedResponse{
+			StatusCode:  rec.statusCode,
+			Header:      rec.Header().Clone(),
+			Body:        bytes.Clone(rec.body.Bytes()),
+			CreatedAt:   time.Now(),
+			Fingerprint: fingerprint,
 		}
 		im.mu.Unlock()
 	})

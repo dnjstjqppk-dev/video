@@ -81,6 +81,11 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.canManageVideo(r, video) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot modify video of another user")
+		return
+	}
+
 	var payload struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
@@ -114,8 +119,25 @@ func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.canManageVideo(r, video) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot modify video of another user")
+		return
+	}
+
 	video.Status = "DELETED"
 	identity.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func (h *Handler) canManageVideo(r *http.Request, video *store.Video) bool {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		return false
+	}
+	if user.Role == "super_admin" {
+		return true
+	}
+	channel, ok := h.Store.Channels[video.ChannelID]
+	return ok && channel != nil && channel.OwnerID == user.ID
 }
 
 func (h *Handler) LikeVideo(w http.ResponseWriter, r *http.Request) {

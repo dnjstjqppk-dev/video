@@ -109,7 +109,8 @@ const showCommentsDrawer = ref(false)
 const currentShort = computed(() => shortsList.value[activeIndex.value] || shortsList.value[0])
 const nextShort = computed(() => shortsList.value[(activeIndex.value + 1) % shortsList.value.length])
 
-async function sendShortsTelemetry(clip: ShortClip) {
+async function sendShortsTelemetry(clip: ShortClip | undefined) {
+  if (!clip) return
   try {
     if (clip.isSponsored && clip.decisionId && clip.campaignId) {
       await api.recordAdEvent({
@@ -140,11 +141,13 @@ async function sendShortsTelemetry(clip: ShortClip) {
 }
 
 function goNext() {
+  if (!shortsList.value.length) return
   activeIndex.value = (activeIndex.value + 1) % shortsList.value.length
   sendShortsTelemetry(currentShort.value)
 }
 
 function goPrev() {
+  if (!shortsList.value.length) return
   activeIndex.value = (activeIndex.value - 1 + shortsList.value.length) % shortsList.value.length
   sendShortsTelemetry(currentShort.value)
 }
@@ -170,7 +173,7 @@ onMounted(() => {
       <link v-if="nextShort" rel="preload" as="image" :href="nextShort.posterUrl" />
     </Head>
 
-    <div class="relative flex items-center gap-4">
+    <div v-if="currentShort" class="relative flex items-center gap-4">
       <!-- Vertical 9:16 Viewport Container -->
       <div class="relative h-[82vh] w-[46vh] max-w-[420px] overflow-hidden rounded-3xl border border-white/15 bg-black shadow-2xl">
         <img
@@ -331,5 +334,8 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    <p v-else role="status" class="text-sm text-neutral-400">
+      {{ appStore.locale === 'ko' ? '표시할 Shorts가 없습니다.' : 'No Shorts available.' }}
+    </p>
   </div>
 </template>

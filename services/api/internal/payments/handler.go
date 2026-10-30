@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +30,10 @@ type PaymentAdapter interface {
 
 type StripeAdapter struct {
 	WebhookSecret string
+	APIKey        string
+	SuccessURL    string
+	CancelURL     string
+	Client        *http.Client
 }
 
 func (s *StripeAdapter) ProviderName() string { return "stripe" }
@@ -35,8 +41,7 @@ func (s *StripeAdapter) CreateCheckoutSession(txID string, amountCents int64, cu
 	if txID == "" || amountCents <= 0 {
 		return "", fmt.Errorf("invalid transaction parameters: amount must be positive")
 	}
-	// In production, invoke Stripe REST API /v1/checkout/sessions with Authorization Bearer
-	return fmt.Sprintf("https://checkout.stripe.com/pay/cs_live_%s?currency=%s&amt=%d", txID, strings.ToLower(currency), amountCents), nil
+	return s.createSession(txID, amountCents, currency, txType)
 }
 
 func (s *StripeAdapter) VerifyWebhookSignature(signatureHeader string, payload []byte) bool {
@@ -64,14 +69,17 @@ func (s *StripeAdapter) VerifyWebhookSignature(signatureHeader string, payload [
 		if timestamp == "" || sigHash == "" {
 			return false
 		}
+		seconds, err := strconv.ParseInt(timestamp, 10, 64)
+		if err != nil || seconds < time.Now().Add(-5*time.Minute).Unix() || seconds > time.Now().Add(time.Minute).Unix() {
+			return false
+		}
 		mac := hmac.New(sha256.New, []byte(secret))
 		mac.Write([]byte(timestamp + "." + string(payload)))
 		expected := hex.EncodeToString(mac.Sum(nil))
 		return subtle.ConstantTimeCompare([]byte(expected), []byte(sigHash)) == 1
 	}
 
-	// Test fallback: require non-empty signature that is not marked invalid or bad
-	return len(signatureHeader) >= 8 && !strings.Contains(signatureHeader, "bad") && signatureHeader != "invalid"
+	return false
 }
 
 type TossPaymentsAdapter struct {
@@ -83,7 +91,7 @@ func (t *TossPaymentsAdapter) CreateCheckoutSession(txID string, amountCents int
 	if txID == "" || amountCents <= 0 {
 		return "", fmt.Errorf("invalid transaction parameters")
 	}
-	return fmt.Sprintf("https://api.tosspayments.com/v1/payments/checkout/%s?orderId=%s&amount=%d", txID, txID, amountCents), nil
+	return "", fmt.Errorf("Toss checkout integration is not configured")
 }
 
 func (t *TossPaymentsAdapter) VerifyWebhookSignature(signature string, payload []byte) bool {
@@ -100,8 +108,7 @@ func (t *TossPaymentsAdapter) VerifyWebhookSignature(signature string, payload [
 		expected := hex.EncodeToString(mac.Sum(nil))
 		return subtle.ConstantTimeCompare([]byte(expected), []byte(signature)) == 1
 	}
-	// Test fallback: require non-empty signature that is not marked invalid or bad
-	return len(signature) >= 8 && !strings.Contains(signature, "bad") && signature != "invalid"
+	return false
 }
 
 type Handler struct {
@@ -115,7 +122,6 @@ func NewHandler(s *store.MemoryStore) *Handler {
 		Store: s,
 		Adapters: map[string]PaymentAdapter{
 			"stripe": &StripeAdapter{},
-			"toss":   &TossPaymentsAdapter{},
 		},
 	}
 }
@@ -177,12 +183,17 @@ func (h *Handler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	if idemKey == "" {
 		idemKey = uuid.NewString()
 	}
+	storeKey := "checkout:" + user.ID + ":" + idemKey
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if existingTxID, exists := h.Store.IdempotencyKeys[idemKey]; exists {
+	if existingTxID, exists := h.Store.IdempotencyKeys[storeKey]; exists {
 		if existingTx, found := h.Store.Transactions[existingTxID]; found {
+			if existingTx.AmountCents != payload.AmountCents || existingTx.Currency != currency || existingTx.Provider != provider || existingTx.Type != txType {
+				identity.WriteError(w, r, http.StatusConflict, "CONFLICT", "Idempotency key reused with different checkout parameters")
+				return
+			}
 			identity.WriteJSON(w, http.StatusOK, existingTx)
 			return
 		}
@@ -191,7 +202,7 @@ func (h *Handler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	txID := uuid.NewString()
 	checkoutURL, err := adapter.CreateCheckoutSession(txID, payload.AmountCents, currency, txType)
 	if err != nil {
-		identity.WriteError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to initialize checkout session")
+		identity.WriteError(w, r, http.StatusServiceUnavailable, "UNAVAILABLE", "Payment provider could not initialize checkout")
 		return
 	}
 
@@ -209,7 +220,7 @@ func (h *Handler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Store.Transactions[txID] = tx
-	h.Store.IdempotencyKeys[idemKey] = txID
+	h.Store.IdempotencyKeys[storeKey] = txID
 
 	identity.WriteJSON(w, http.StatusCreated, tx)
 }
@@ -217,7 +228,7 @@ func (h *Handler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 // CreateDoubleEntryLedger generates balanced double-entry accounting records (70% creator, 30% platform).
 func CreateDoubleEntryLedger(txID string, amountCents int64, currency string) []store.LedgerEntry {
 	now := time.Now()
-	creatorShare := (amountCents * 70) / 100
+	creatorShare := (amountCents/100)*70 + ((amountCents%100)*70)/100
 	platformFee := amountCents - creatorShare
 
 	return []store.LedgerEntry{
@@ -260,7 +271,15 @@ func (h *Handler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sig := r.Header.Get("X-Webhook-Signature")
-	if !adapter.VerifyWebhookSignature(sig, nil) {
+	if provider == "stripe" {
+		sig = r.Header.Get("Stripe-Signature")
+	}
+	rawBody, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+	if err != nil {
+		identity.WriteError(w, r, http.StatusRequestEntityTooLarge, "INVALID_ARGUMENT", "Invalid or oversized webhook body")
+		return
+	}
+	if !adapter.VerifyWebhookSignature(sig, rawBody) {
 		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Invalid webhook signature")
 		return
 	}
@@ -276,17 +295,41 @@ func (h *Handler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		Status         string `json:"status"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if err := json.Unmarshal(rawBody, &payload); err != nil {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid webhook payload")
 		return
 	}
+	if provider == "stripe" {
+		var event struct {
+			ID   string `json:"id"`
+			Type string `json:"type"`
+			Data struct {
+				Object struct {
+					ClientReferenceID string `json:"client_reference_id"`
+					AmountTotal       int64  `json:"amount_total"`
+					Currency          string `json:"currency"`
+					PaymentStatus     string `json:"payment_status"`
+				} `json:"object"`
+			} `json:"data"`
+		}
+		if json.Unmarshal(rawBody, &event) != nil || event.ID == "" {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid Stripe event")
+			return
+		}
+		if (event.Type != "checkout.session.completed" && event.Type != "checkout.session.async_payment_succeeded") || event.Data.Object.PaymentStatus != "paid" {
+			identity.WriteJSON(w, http.StatusOK, map[string]bool{"ignored": true})
+			return
+		}
+		payload.EventID = event.ID
+		payload.TransactionID = event.Data.Object.ClientReferenceID
+		payload.AmountCents = event.Data.Object.AmountTotal
+		payload.Currency = event.Data.Object.Currency
+		payload.Status = "succeeded"
+	}
 
-	idemKey := r.Header.Get("X-Idempotency-Key")
+	idemKey := payload.EventID
 	if idemKey == "" {
 		idemKey = payload.IdempotencyKey
-	}
-	if idemKey == "" {
-		idemKey = payload.EventID
 	}
 	if idemKey == "" {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Idempotency key or event_id is required")
@@ -306,42 +349,24 @@ func (h *Handler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	txID := payload.TransactionID
-	tx, exists := h.Store.Transactions[txID]
-	if !exists {
-		if txID == "" {
-			txID = uuid.NewString()
-		}
-		amt := payload.AmountCents
-		if amt <= 0 {
-			amt = 10000
-		}
-		curr := payload.Currency
-		if curr == "" {
-			curr = "KRW"
-		}
-		txType := payload.Type
-		if txType == "" {
-			txType = "super_chat"
-		}
-		userID := payload.UserID
-		if userID == "" {
-			userID = "22222222-2222-2222-2222-222222222222"
-		}
-		tx = &store.PaymentTransaction{
-			ID:             txID,
-			UserID:         userID,
-			Provider:       provider,
-			IdempotencyKey: idemKey,
-			Type:           txType,
-			AmountCents:    amt,
-			Currency:       curr,
-			Status:         "pending",
-			CreatedAt:      time.Now(),
-		}
-		h.Store.Transactions[txID] = tx
+	tx, exists := h.Store.Transactions[payload.TransactionID]
+	if !exists || tx.Provider != provider {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Matching checkout transaction not found")
+		return
 	}
-
+	if payload.AmountCents != tx.AmountCents || !strings.EqualFold(payload.Currency, tx.Currency) {
+		identity.WriteError(w, r, http.StatusConflict, "CONFLICT", "Payment amount or currency mismatch")
+		return
+	}
+	if payload.Status != "succeeded" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Unsupported payment status")
+		return
+	}
+	if tx.Status == "succeeded" {
+		h.Store.IdempotencyKeys[webhookKey] = tx.ID
+		identity.WriteJSON(w, http.StatusOK, map[string]interface{}{"idempotent_replay": true, "transaction": tx})
+		return
+	}
 	tx.Status = "succeeded"
 	entries := CreateDoubleEntryLedger(tx.ID, tx.AmountCents, tx.Currency)
 	tx.LedgerEntries = entries

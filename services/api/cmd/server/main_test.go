@@ -2,15 +2,21 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"globalvideoplatform/services/api/internal/store"
 )
 
 func TestAPIHealthzAndFeeds(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
@@ -20,6 +26,22 @@ func TestAPIHealthzAndFeeds(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for /healthz, got %d", rec.Code)
+	}
+
+	// 1.1 Ready probe (TASK-086)
+	req = httptest.NewRequest(http.MethodGet, "/ready", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /ready, got %d", rec.Code)
+	}
+
+	// 1.2 Prometheus metrics (TASK-087)
+	req = httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte("gvp_uptime_seconds")) {
+		t.Fatalf("expected 200 and prometheus metrics for /metrics, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	// 2. Home Feed
@@ -46,6 +68,8 @@ func TestAPIHealthzAndFeeds(t *testing.T) {
 }
 
 func TestUploadSessionStudioAndPartnerClaims(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
@@ -90,6 +114,8 @@ func TestUploadSessionStudioAndPartnerClaims(t *testing.T) {
 }
 
 func TestAdminRBACEnforcement(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
@@ -113,34 +139,31 @@ func TestAdminRBACEnforcement(t *testing.T) {
 }
 
 func TestPaymentWebhookIdempotencyAndDoubleEntryLedger(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
-	// 1. Checkout session
-	checkoutBody := []byte(`{"provider":"toss","type":"super_chat","amount_cents":50000,"currency":"KRW","idempotency_key":"chk-key-1"}`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/payments/checkout", bytes.NewReader(checkoutBody))
-	req.Header.Set("Authorization", "Bearer creator-token")
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("expected 201 for checkout, got %d: %s", rec.Code, rec.Body.String())
-	}
-	var tx store.PaymentTransaction
-	if err := json.Unmarshal(rec.Body.Bytes(), &tx); err != nil || tx.ID == "" {
-		t.Fatalf("failed to parse checkout transaction: %v", err)
-	}
-
+	// Seed a previously created checkout; provider HTTP behavior is tested separately.
+	t.Setenv("STRIPE_WEBHOOK_SECRET", "test-webhook-secret")
+	tx := store.PaymentTransaction{ID: "tx-test", Provider: "stripe", UserID: "22222222-2222-2222-2222-222222222222", AmountCents: 50000, Currency: "KRW", Status: "pending"}
+	memStore.Transactions[tx.ID] = &tx
+	var req *http.Request
+	var rec *httptest.ResponseRecorder
 	// 2. First Webhook delivery -> creates balanced double-entry ledger entries
 	whPayload, _ := json.Marshal(map[string]interface{}{
-		"idempotency_key": "wh-evt-1001",
-		"transaction_id":  tx.ID,
-		"amount_cents":    50000,
-		"currency":        "KRW",
+		"id": "wh-evt-1001", "type": "checkout.session.completed",
+		"data": map[string]interface{}{"object": map[string]interface{}{
+			"client_reference_id": tx.ID, "amount_total": 50000, "currency": "krw", "payment_status": "paid",
+		}},
 	})
-	req = httptest.NewRequest(http.MethodPost, "/v1/payments/webhooks/toss", bytes.NewReader(whPayload))
+	timestamp := fmt.Sprint(time.Now().Unix())
+	mac := hmac.New(sha256.New, []byte("test-webhook-secret"))
+	mac.Write([]byte(timestamp + "." + string(whPayload)))
+	signature := fmt.Sprintf("t=%s,v1=%x", timestamp, mac.Sum(nil))
+	req = httptest.NewRequest(http.MethodPost, "/v1/payments/webhooks/stripe", bytes.NewReader(whPayload))
 	req.Header.Set("X-Idempotency-Key", "wh-evt-1001")
-	req.Header.Set("X-Webhook-Signature", "valid_sig")
+	req.Header.Set("Stripe-Signature", signature)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -172,9 +195,9 @@ func TestPaymentWebhookIdempotencyAndDoubleEntryLedger(t *testing.T) {
 	}
 
 	// 3. Duplicate Webhook delivery with same idempotency key -> no duplicate ledger entries
-	req = httptest.NewRequest(http.MethodPost, "/v1/payments/webhooks/toss", bytes.NewReader(whPayload))
+	req = httptest.NewRequest(http.MethodPost, "/v1/payments/webhooks/stripe", bytes.NewReader(whPayload))
 	req.Header.Set("X-Idempotency-Key", "wh-evt-1001")
-	req.Header.Set("X-Webhook-Signature", "valid_sig")
+	req.Header.Set("Stripe-Signature", signature)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -193,6 +216,8 @@ func TestPaymentWebhookIdempotencyAndDoubleEntryLedger(t *testing.T) {
 }
 
 func TestPlaylistsAndSubscriptions(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
@@ -264,6 +289,8 @@ func TestPlaylistsAndSubscriptions(t *testing.T) {
 }
 
 func TestAdDecisionTelemetryAndDiagnostics(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
@@ -396,6 +423,8 @@ func TestAdDecisionTelemetryAndDiagnostics(t *testing.T) {
 }
 
 func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
 	memStore := store.NewMemoryStore()
 	router := buildRouter(memStore)
 
