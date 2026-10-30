@@ -123,6 +123,50 @@ type LiveStream struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type SuperChat struct {
+	ID              string    `json:"id"`
+	StreamID        string    `json:"stream_id"`
+	UserID          string    `json:"user_id"`
+	DisplayName     string    `json:"display_name"`
+	AvatarURL       string    `json:"avatar_url"`
+	AmountCents     int64     `json:"amount_cents"`
+	Currency        string    `json:"currency"`
+	Message         string    `json:"message"`
+	TierColor       string    `json:"tier_color"` // blue, cyan, green, yellow, orange, magenta, red
+	PinDurationSecs int       `json:"pin_duration_secs"`
+	ExpiresAt       time.Time `json:"expires_at"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type LiveChatMessageItem struct {
+	ID          string     `json:"id"`
+	StreamID    string     `json:"stream_id"`
+	UserID      string     `json:"user_id"`
+	DisplayName string     `json:"display_name"`
+	AvatarURL   string     `json:"avatar_url"`
+	Message     string     `json:"message"`
+	IsModerator bool       `json:"is_moderator"`
+	IsCreator   bool       `json:"is_creator"`
+	SuperChat   *SuperChat `json:"super_chat,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type LivePollOption struct {
+	Index int    `json:"index"`
+	Text  string `json:"text"`
+	Votes int    `json:"votes"`
+}
+
+type LivePoll struct {
+	ID         string           `json:"id"`
+	StreamID   string           `json:"stream_id"`
+	Question   string           `json:"question"`
+	Options    []LivePollOption `json:"options"`
+	IsActive   bool             `json:"is_active"`
+	TotalVotes int              `json:"total_votes"`
+	CreatedAt  time.Time        `json:"created_at"`
+}
+
 type AdCampaign struct {
 	ID               string    `json:"id"`
 	AdvertiserID     string    `json:"advertiser_id"`
@@ -273,6 +317,9 @@ type MemoryStore struct {
 	Subscriptions   map[string]map[string]bool // userID -> set of channelIDs
 	Likes           map[string]map[string]bool // userID -> set of videoIDs
 	LiveStreams     map[string]*LiveStream
+	SuperChats      map[string][]*SuperChat
+	LiveChat        map[string][]*LiveChatMessageItem
+	LivePolls       map[string]*LivePoll
 	Campaigns       map[string]*AdCampaign
 	AdCreatives     map[string]*AdCreative
 	AdSlots         map[string]*AdSlot
@@ -297,6 +344,9 @@ func NewMemoryStore() *MemoryStore {
 		Subscriptions:   make(map[string]map[string]bool),
 		Likes:           make(map[string]map[string]bool),
 		LiveStreams:     make(map[string]*LiveStream),
+		SuperChats:      make(map[string][]*SuperChat),
+		LiveChat:        make(map[string][]*LiveChatMessageItem),
+		LivePolls:       make(map[string]*LivePoll),
 		Campaigns:       make(map[string]*AdCampaign),
 		AdCreatives:     make(map[string]*AdCreative),
 		AdSlots:         make(map[string]*AdSlot),
@@ -556,4 +606,20 @@ func (s *MemoryStore) seedDefaults() {
 		CreatedAt:         now.Add(-5 * 24 * time.Hour),
 	}
 	s.AdCreatives[creative2.ID] = creative2
+
+	liveStream1 := &LiveStream{
+		ID:             "live_main_01",
+		ChannelID:      channel1.ID,
+		Title:          "[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A",
+		Description:    "Live streaming masterclass on distributed HLS ABR ladder transcoding, WebRTC, and real-time chat.",
+		ThumbnailURL:   "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80",
+		Status:         "live",
+		StreamKey:      "live_summit_2026_key",
+		RtmpsIngestURL: "rtmps://live.gvp.media:443/live/",
+		SrtIngestURL:   "srt://live.gvp.media:10000",
+		PlaybackHlsURL: "https://media.gvp.media/live/stream_summit_2026/master.m3u8",
+		ViewerCount:    14820,
+		CreatedAt:      now.Add(-2 * time.Hour),
+	}
+	s.LiveStreams[liveStream1.ID] = liveStream1
 }

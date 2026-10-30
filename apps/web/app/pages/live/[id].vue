@@ -17,6 +17,39 @@ const chatInput = ref('')
 const superChatAmount = ref<number>(0)
 const wsConnected = ref(true)
 
+interface LivePoll {
+  question: string
+  options: Array<{ text: string; votes: number }>
+  totalVotes: number
+  userVotedIndex: number | null
+}
+
+const activePoll = ref<LivePoll | null>({
+  question: '다음 주 라이브 세션에서 다룰 심화 주제를 투표해주세요!',
+  options: [
+    { text: 'WebTransport 저지연 라이브 패킷 분석', votes: 142 },
+    { text: 'PostgreSQL 18 파티셔닝 & 원장 최적화', votes: 89 },
+    { text: 'AV1 하드웨어 인코더 클러스터 구축', votes: 215 },
+  ],
+  totalVotes: 446,
+  userVotedIndex: null,
+})
+
+function voteInLivePoll(idx: number) {
+  if (!activePoll.value || activePoll.value.userVotedIndex !== null) return
+  activePoll.value.userVotedIndex = idx
+  activePoll.value.options[idx].votes += 1
+  activePoll.value.totalVotes += 1
+}
+
+function getSuperChatBadgeClass(amount: number) {
+  if (amount >= 50000) return 'from-red-600 to-rose-700 text-white border-red-500'
+  if (amount >= 20000) return 'from-orange-500 to-amber-600 text-white border-orange-400'
+  if (amount >= 10000) return 'from-yellow-400 to-amber-500 text-black border-yellow-300'
+  if (amount >= 5000) return 'from-emerald-500 to-teal-600 text-white border-emerald-400'
+  return 'from-sky-500 to-blue-600 text-white border-sky-400'
+}
+
 const messages = ref<LiveChatMessage[]>([
   {
     id: 'msg_1',
@@ -141,6 +174,9 @@ onBeforeUnmount(() => {
               <span class="text-xs font-semibold text-emerald-400">
                 ● {{ viewerCount.toLocaleString() }} watching now
               </span>
+              <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+                6.8 Mbps · 60 fps · 2.0s GOP · 0% Loss
+              </span>
               <span class="text-xs text-neutral-400">· RTMPS Ingest → LL-HLS Edge</span>
             </div>
             <h1 class="mt-1.5 text-lg font-bold text-white">
@@ -166,9 +202,45 @@ onBeforeUnmount(() => {
           <span class="text-[11px] text-neutral-400">WebSocket Connected</span>
         </div>
 
-        <!-- Pinned SuperChat Ticker -->
-        <div class="border-b border-white/10 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
-          💎 <strong>최현우</strong> sent <strong>₩50,000 SuperChat</strong>
+        <!-- Pinned SuperChat Horizontal Ticker -->
+        <div class="flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-black/40 px-3 py-2 text-xs">
+          <div class="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 to-rose-700 px-3 py-1 font-semibold text-white shadow">
+            <span>💎</span>
+            <span>최현우 ₩50,000</span>
+          </div>
+          <div class="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1 font-semibold text-white shadow">
+            <span>💎</span>
+            <span>Elena Rostova ₩5,000</span>
+          </div>
+        </div>
+
+        <!-- Real-Time Live Poll Widget -->
+        <div v-if="activePoll" class="border-b border-white/10 bg-[#1F1F1F] p-3 text-xs">
+          <div class="flex items-center justify-between text-neutral-300">
+            <span class="font-bold text-white">📊 {{ appStore.locale === 'ko' ? '라이브 실시간 투표' : 'Live Poll' }}</span>
+            <span class="text-[10px] text-neutral-400">{{ activePoll.totalVotes }} {{ appStore.locale === 'ko' ? '표' : 'votes' }}</span>
+          </div>
+          <p class="mt-1 font-medium text-neutral-200">{{ activePoll.question }}</p>
+          <div class="mt-2 space-y-1.5">
+            <button
+              v-for="(opt, idx) in activePoll.options"
+              :key="idx"
+              type="button"
+              class="relative flex w-full items-center justify-between overflow-hidden rounded-lg border px-2.5 py-1.5 text-left text-xs transition"
+              :class="activePoll.userVotedIndex === idx ? 'border-[#3EA6FF] text-white' : 'border-white/10 bg-white/5 hover:bg-white/10 text-neutral-300'"
+              @click="voteInLivePoll(idx)"
+            >
+              <div
+                v-if="activePoll.userVotedIndex !== null"
+                class="absolute inset-y-0 left-0 bg-[#3EA6FF]/20"
+                :style="{ width: `${Math.round((opt.votes / (activePoll.totalVotes || 1)) * 100)}%` }"
+              />
+              <span class="relative z-10">{{ opt.text }}</span>
+              <span v-if="activePoll.userVotedIndex !== null" class="relative z-10 font-mono font-bold">
+                {{ Math.round((opt.votes / (activePoll.totalVotes || 1)) * 100) }}%
+              </span>
+            </button>
+          </div>
         </div>
 
         <!-- Chat Messages Scroll Area -->
