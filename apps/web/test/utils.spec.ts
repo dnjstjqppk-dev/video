@@ -33,3 +33,4 @@ describe('Web Platform Utilities', () => {
     expect(formatViews(3500000)).toBe('3.5M')
   })
 })
+

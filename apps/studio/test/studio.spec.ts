@@ -29,3 +29,4 @@ describe('Creator Studio Utilities', () => {
     expect(isValidUpload({ title: 'Invalid Mime', duration: 60, mimeType: 'image/png' })).toBe(false)
   })
 })
+

@@ -24,3 +24,4 @@ describe('Partner & Advertiser Engine Utilities', () => {
     expect(calculateECPM(0, 1000)).toBe(0)
   })
 })
+
