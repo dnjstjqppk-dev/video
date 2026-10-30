@@ -14,10 +14,14 @@ import (
 
 type Handler struct {
 	Store *store.MemoryStore
+	Hub   *LiveChatHub
 }
 
 func NewHandler(s *store.MemoryStore) *Handler {
-	return &Handler{Store: s}
+	return &Handler{
+		Store: s,
+		Hub:   NewLiveChatHub(),
+	}
 }
 
 func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
@@ -27,6 +31,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Get("/{id}/health", h.GetStreamHealth)
 	r.Get("/{id}/superchats", h.GetSuperChats)
 	r.Get("/{id}/chat", h.GetLiveChatMessages)
+	r.Get("/{id}/ws", h.HandleWebSocketChat)
 	r.Get("/{id}/polls/active", h.GetActiveLivePoll)
 
 	r.Group(func(pr chi.Router) {
@@ -83,6 +88,34 @@ func (h *Handler) GetStream(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusOK, stream)
 }
 
+func (h *Handler) HandleWebSocketChat(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	user := identity.GetUserFromContext(r.Context())
+	var userID, displayName string
+	var isMod, isCreator bool
+	if user != nil {
+		userID = user.ID
+		displayName = user.DisplayName
+		isMod = user.Role == "moderator" || user.Role == "super_admin" || user.Role == "admin"
+		isCreator = user.Role == "creator"
+	} else {
+		// Fallback to query params for browser WebSocket connections
+		if qUser := r.URL.Query().Get("userId"); qUser != "" {
+			userID = qUser
+		}
+		if qName := r.URL.Query().Get("displayName"); qName != "" {
+			displayName = qName
+		}
+		if r.URL.Query().Get("isModerator") == "true" {
+			isMod = true
+		}
+		if r.URL.Query().Get("isCreator") == "true" {
+			isCreator = true
+		}
+	}
+	h.Hub.ServeWebSocket(w, r, id, userID, displayName, isMod, isCreator)
+}
+
 func (h *Handler) StartStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	stream, ok := h.Store.LiveStreams[id]
@@ -91,6 +124,7 @@ func (h *Handler) StartStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	stream.Status = "live"
+	h.Hub.BroadcastToRoom(id, "stream_status", map[string]string{"status": "live"})
 	identity.WriteJSON(w, http.StatusOK, stream)
 }
 
@@ -102,6 +136,7 @@ func (h *Handler) StopStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	stream.Status = "ended"
+	h.Hub.BroadcastToRoom(id, "stream_status", map[string]string{"status": "ended"})
 	identity.WriteJSON(w, http.StatusOK, stream)
 }
 
@@ -177,6 +212,10 @@ func (h *Handler) CreateSuperChat(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Store.LiveChat[streamID] = append(h.Store.LiveChat[streamID], chatItem)
 
+	// Real-time broadcast SuperChat and chat item to WebSocket clients
+	h.Hub.BroadcastToRoom(streamID, "super_chat", sc)
+	h.Hub.BroadcastToRoom(streamID, "chat_message", chatItem)
+
 	identity.WriteJSON(w, http.StatusCreated, sc)
 }
 
@@ -238,10 +277,16 @@ func (h *Handler) SendLiveChatMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Store.LiveChat[streamID] = append(h.Store.LiveChat[streamID], chatItem)
+	h.Hub.BroadcastToRoom(streamID, "chat_message", chatItem)
 	identity.WriteJSON(w, http.StatusCreated, chatItem)
 }
 
 func (h *Handler) GetLiveChatMessages(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Upgrade") == "websocket" {
+		h.HandleWebSocketChat(w, r)
+		return
+	}
+
 	streamID := chi.URLParam(r, "id")
 	messages := h.Store.LiveChat[streamID]
 	if messages == nil {
@@ -311,6 +356,7 @@ func (h *Handler) CreateLivePoll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Store.LivePolls[streamID] = poll
+	h.Hub.BroadcastToRoom(streamID, "live_poll_created", poll)
 	identity.WriteJSON(w, http.StatusCreated, poll)
 }
 
@@ -332,6 +378,7 @@ func (h *Handler) VoteLivePoll(w http.ResponseWriter, r *http.Request) {
 
 	poll.Options[payload.OptionIndex].Votes++
 	poll.TotalVotes++
+	h.Hub.BroadcastToRoom(streamID, "live_poll_updated", poll)
 
 	identity.WriteJSON(w, http.StatusOK, poll)
 }

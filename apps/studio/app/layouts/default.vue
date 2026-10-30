@@ -14,6 +14,8 @@ const navLinks = [
   { path: '/monetization', label: '수익 창출 & 정산 (Earn)', icon: '💰' },
   { path: '/customization', label: '채널 맞춤설정 (Customization)', icon: '🎨' },
   { path: '/comments', label: '댓글 및 검토 (Comments)', icon: '💬' },
+  { path: '/subtitles', label: '자막 관리 (Subtitles)', icon: '📝' },
+  { path: '/copyright', label: '저작권 및 이의제기 (Copyright)', icon: '⚖️' },
   { path: '/live', label: '라이브 관제실 (Live Room)', icon: '📡' }
 ]
 </script>

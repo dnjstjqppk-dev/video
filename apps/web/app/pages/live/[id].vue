@@ -35,13 +35,23 @@ const activePoll = ref<LivePoll | null>({
   userVotedIndex: null,
 })
 
-function voteInLivePoll(idx: number) {
+async function voteInLivePoll(idx: number) {
   if (!activePoll.value || activePoll.value.userVotedIndex !== null) return
   const opt = activePoll.value.options[idx]
   if (!opt) return
   activePoll.value.userVotedIndex = idx
   opt.votes += 1
   activePoll.value.totalVotes += 1
+
+  try {
+    const apiBase = config.public.apiBaseUrl || 'http://localhost:8080'
+    await $fetch(`${apiBase}/v1/live-streams/${streamId.value}/polls/vote`, {
+      method: 'POST',
+      body: { option_index: idx },
+    })
+  } catch {
+    // Retain optimistic UI state
+  }
 }
 
 function getSuperChatBadgeClass(amount: number) {
@@ -92,21 +102,56 @@ let simTimer: ReturnType<typeof setInterval> | null = null
 
 function connectLiveChatSocket() {
   try {
-    const wsUrl = `${config.public.wsBaseUrl}/v1/live-streams/${streamId.value}/chat`
+    const wsBase = config.public.wsBaseUrl || 'ws://localhost:8080'
+    const userQuery = `userId=${encodeURIComponent(appStore.currentUser?.id || 'usr_demo_01')}&displayName=${encodeURIComponent(appStore.currentUser?.displayName || '김민준')}`
+    const wsUrl = `${wsBase}/v1/live-streams/${streamId.value}/ws?${userQuery}`
     ws = new WebSocket(wsUrl)
     ws.onopen = () => {
       wsConnected.value = true
     }
     ws.onmessage = event => {
       try {
-        const incoming = JSON.parse(event.data) as LiveChatMessage
-        messages.value.push(incoming)
+        const frame = JSON.parse(event.data) as {
+          type: string
+          room_id: string
+          payload: any
+          timestamp: string
+        }
+        if (frame.type === 'chat_message' || frame.type === 'super_chat') {
+          const p = frame.payload
+          messages.value.push({
+            id: p.id || `msg_${Date.now()}`,
+            streamId: p.stream_id || streamId.value,
+            userId: p.user_id || 'usr_anon',
+            userDisplayName: p.user_display_name || 'Anonymous',
+            isModerator: !!p.is_moderator,
+            isCreator: !!p.is_creator,
+            message: p.message || '',
+            donationAmount: p.donation_amount || (p.amount_cents ? p.amount_cents / 100 : undefined),
+            currency: p.currency || 'KRW',
+            timestamp: p.timestamp || new Date().toISOString()
+          })
+        } else if (frame.type === 'viewer_count' && frame.payload?.viewer_count) {
+          viewerCount.value = frame.payload.viewer_count
+        } else if (frame.type === 'live_poll_updated' || frame.type === 'live_poll_created') {
+          if (frame.payload && frame.payload.question) {
+            activePoll.value = {
+              question: frame.payload.question,
+              options: (frame.payload.options || []).map((o: any) => ({ text: o.text, votes: o.votes })),
+              totalVotes: frame.payload.total_votes || 0,
+              userVotedIndex: activePoll.value?.userVotedIndex ?? null,
+            }
+          }
+        }
       } catch {
         // Ignore malformed frame
       }
     }
     ws.onerror = () => {
       wsConnected.value = true // Graceful simulated fallback
+    }
+    ws.onclose = () => {
+      wsConnected.value = false
     }
   } catch {
     wsConnected.value = true
@@ -117,23 +162,33 @@ function sendChatMessage() {
   const text = chatInput.value.trim()
   if (!text) return
 
-  const msg: LiveChatMessage = {
-    id: `msg_${Date.now()}`,
-    streamId: streamId.value,
-    userId: appStore.currentUser?.id || 'usr_demo_01',
-    userDisplayName: appStore.currentUser?.displayName || '김민준',
-    isModerator: false,
-    isCreator: false,
+  const payload = {
     message: text,
-    donationAmount: superChatAmount.value > 0 ? superChatAmount.value : undefined,
+    donation_amount: superChatAmount.value > 0 ? superChatAmount.value : undefined,
     currency: superChatAmount.value > 0 ? appStore.currency : undefined,
-    timestamp: new Date().toISOString()
   }
 
-  messages.value.push(msg)
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg))
+    ws.send(JSON.stringify({
+      action: 'send_chat',
+      payload,
+    }))
+  } else {
+    // Local optimistic update if WS isn't open
+    messages.value.push({
+      id: `msg_${Date.now()}`,
+      streamId: streamId.value,
+      userId: appStore.currentUser?.id || 'usr_demo_01',
+      userDisplayName: appStore.currentUser?.displayName || '김민준',
+      isModerator: false,
+      isCreator: false,
+      message: text,
+      donationAmount: superChatAmount.value > 0 ? superChatAmount.value : undefined,
+      currency: superChatAmount.value > 0 ? appStore.currency : undefined,
+      timestamp: new Date().toISOString()
+    })
   }
+
   chatInput.value = ''
   superChatAmount.value = 0
 }
@@ -198,10 +253,12 @@ onBeforeUnmount(() => {
       <aside class="flex h-[640px] flex-col rounded-2xl border border-white/15 bg-[#161616] xl:col-span-4">
         <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-emerald-400" />
+            <span class="h-2 w-2 rounded-full" :class="wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-500'" />
             <h2 class="text-sm font-bold">Live Chat & SuperChat</h2>
           </div>
-          <span class="text-[11px] text-neutral-400">WebSocket Connected</span>
+          <span class="text-[11px] font-medium" :class="wsConnected ? 'text-emerald-400' : 'text-neutral-400'">
+            {{ wsConnected ? '● WebSocket Live' : '○ Standby' }}
+          </span>
         </div>
 
         <!-- Pinned SuperChat Horizontal Ticker -->

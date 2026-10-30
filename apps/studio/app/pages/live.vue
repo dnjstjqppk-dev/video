@@ -2,6 +2,7 @@
 import { LiveStreamStatus } from '@gvp/shared-types'
 
 const api = useStudioApi()
+const config = useRuntimeConfig()
 
 useSeoMeta({
   title: 'Live Control Room — RTMPS/SRT Ingest & Moderation'
@@ -17,12 +18,75 @@ const showStreamKey = ref(false)
 const dvrEnabled = ref(true)
 const lowLatencyMode = ref<'ultra_low' | 'normal'>('ultra_low')
 const slowModeSeconds = ref(5)
+const liveViewers = ref(14820)
+const copyToast = ref('')
+
+const telemetry = ref({
+  status: 'EXCELLENT',
+  bitrateKbps: 6800,
+  fps: 60,
+  gopSeconds: 2.0,
+  packetLossPct: 0.0,
+  audioSampleRateHz: 48000
+})
 
 const moderationFeed = ref([
   { id: 'm1', user: '@jihoon_sre', text: 'Can you share the ClickHouse Materialized View schema?', blocked: false },
   { id: 'm2', user: '@spam_bot_99', text: 'FREE CRYPTO AIRDROP CLICK HERE', blocked: true },
   { id: 'm3', user: '@sarahchen_dev', text: 'SRT ingest latency is under 1.2 seconds!', blocked: false }
 ])
+
+let ws: WebSocket | null = null
+
+onMounted(() => {
+  try {
+    const wsUrl = `${config.public.wsBaseUrl || 'ws://localhost:8080'}/v1/live-streams/${streamId.value}/ws`
+    ws = new WebSocket(wsUrl)
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        if (msg.type === 'viewer_count' && msg.payload?.viewer_count !== undefined) {
+          liveViewers.value = msg.payload.viewer_count
+        } else if (msg.type === 'chat_message' && msg.payload) {
+          moderationFeed.value.unshift({
+            id: msg.payload.id || String(Date.now()),
+            user: msg.payload.user_display_name || msg.payload.user_id || '@viewer',
+            text: msg.payload.message || '',
+            blocked: false
+          })
+          if (moderationFeed.value.length > 50) {
+            moderationFeed.value.pop()
+          }
+        } else if (msg.type === 'super_chat' && msg.payload) {
+          const userStr = msg.payload.display_name || msg.payload.user_display_name || 'VIP Supporter'
+          const amt = msg.payload.amount_cents ? msg.payload.amount_cents / 100 : (msg.payload.donation_amount || 0)
+          moderationFeed.value.unshift({
+            id: msg.payload.id || String(Date.now()),
+            user: `🔥 ${userStr} (₩${amt.toLocaleString()})`,
+            text: msg.payload.message || '',
+            blocked: false
+          })
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+  } catch {
+    // fallback
+  }
+})
+
+onUnmounted(() => {
+  if (ws) ws.close()
+})
+
+function copyToClipboard(text: string, label: string) {
+  navigator.clipboard.writeText(text)
+  copyToast.value = `${label} 클립보드에 복사되었습니다!`
+  setTimeout(() => {
+    copyToast.value = ''
+  }, 2500)
+}
 
 async function rotateKey() {
   try {
@@ -54,6 +118,7 @@ async function toggleBroadcast() {
 
 <template>
   <div>
+    <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-extrabold text-white">라이브 관제실 (Live Control Room)</h1>
@@ -65,18 +130,50 @@ async function toggleBroadcast() {
       <div class="flex items-center gap-3">
         <span
           class="rounded-full px-3 py-1 text-xs font-extrabold uppercase"
-          :class="streamStatus === LiveStreamStatus.LIVE ? 'bg-[#FF0033] text-white' : 'bg-neutral-700 text-neutral-300'"
+          :class="streamStatus === LiveStreamStatus.LIVE ? 'bg-[#FF0033] text-white animate-pulse' : 'bg-neutral-700 text-neutral-300'"
         >
-          ● {{ streamStatus }}
+          ● {{ streamStatus }} (동시 시청 {{ liveViewers.toLocaleString() }}명)
         </span>
         <button
           type="button"
-          class="rounded-xl px-4 py-2 text-xs font-bold text-white"
+          class="rounded-xl px-4 py-2 text-xs font-bold text-white transition"
           :class="streamStatus === LiveStreamStatus.LIVE ? 'bg-neutral-700 hover:bg-neutral-600' : 'bg-[#FF0033] hover:bg-[#D9002B]'"
           @click="toggleBroadcast"
         >
-          {{ streamStatus === LiveStreamStatus.LIVE ? '⏹️ End Broadcast & Archive VOD' : '🔴 Start Live Broadcast' }}
+          {{ streamStatus === LiveStreamStatus.LIVE ? '⏹️ 방송 종료 & VOD 아카이브' : '🔴 실시간 스트리밍 시작' }}
         </button>
+      </div>
+    </div>
+
+    <!-- Copy Toast -->
+    <div
+      v-if="copyToast"
+      class="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 text-xs font-semibold text-sky-300"
+    >
+      {{ copyToast }}
+    </div>
+
+    <!-- Live Telemetry Stats Bar -->
+    <div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5 rounded-2xl border border-white/10 bg-[#151822] p-4 text-xs">
+      <div>
+        <span class="text-neutral-400">인제스트 상태:</span>
+        <div class="mt-0.5 font-bold text-emerald-400">● {{ telemetry.status }}</div>
+      </div>
+      <div>
+        <span class="text-neutral-400">비트레이트:</span>
+        <div class="mt-0.5 font-bold text-white">{{ telemetry.bitrateKbps }} kbps</div>
+      </div>
+      <div>
+        <span class="text-neutral-400">프레임 레이트:</span>
+        <div class="mt-0.5 font-bold text-white">{{ telemetry.fps }} fps</div>
+      </div>
+      <div>
+        <span class="text-neutral-400">키프레임 간격 (GOP):</span>
+        <div class="mt-0.5 font-bold text-white">{{ telemetry.gopSeconds }}s</div>
+      </div>
+      <div>
+        <span class="text-neutral-400">패킷 손실률:</span>
+        <div class="mt-0.5 font-bold text-emerald-400">{{ telemetry.packetLossPct }}%</div>
       </div>
     </div>
 
@@ -96,7 +193,16 @@ async function toggleBroadcast() {
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="text-xs font-semibold text-neutral-400">Primary RTMPS Ingest URL</label>
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-neutral-400">Primary RTMPS Ingest URL</label>
+              <button
+                type="button"
+                class="text-[11px] text-[#3EA6FF] hover:underline"
+                @click="copyToClipboard(rtmpsUrl, 'RTMPS URL')"
+              >
+                복사
+              </button>
+            </div>
             <input
               :value="rtmpsUrl"
               readonly
@@ -104,7 +210,16 @@ async function toggleBroadcast() {
             />
           </div>
           <div>
-            <label class="text-xs font-semibold text-neutral-400">Low-Latency SRT Ingest URL</label>
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-neutral-400">Low-Latency SRT Ingest URL</label>
+              <button
+                type="button"
+                class="text-[11px] text-emerald-400 hover:underline"
+                @click="copyToClipboard(srtUrl, 'SRT URL')"
+              >
+                복사
+              </button>
+            </div>
             <input
               :value="srtUrl"
               readonly
@@ -114,7 +229,16 @@ async function toggleBroadcast() {
         </div>
 
         <div>
-          <label class="text-xs font-semibold text-neutral-400">Stream Key (Encrypted at Rest)</label>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-neutral-400">Stream Key (OBS 설정용 스트림 키)</label>
+            <button
+              type="button"
+              class="text-[11px] text-amber-400 hover:underline"
+              @click="copyToClipboard(streamKey, '스트림 키가')"
+            >
+              키 복사
+            </button>
+          </div>
           <div class="mt-1 flex gap-2">
             <input
               :type="showStreamKey ? 'text' : 'password'"
@@ -165,7 +289,7 @@ async function toggleBroadcast() {
           <span class="text-xs text-neutral-400">Slow Mode: {{ slowModeSeconds }}s</span>
         </div>
 
-        <div class="mt-4 space-y-3 text-xs">
+        <div class="mt-4 max-h-[380px] space-y-3 overflow-y-auto text-xs">
           <div
             v-for="msg in moderationFeed"
             :key="msg.id"
