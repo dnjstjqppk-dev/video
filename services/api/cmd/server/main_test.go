@@ -184,9 +184,10 @@ func TestPaymentWebhookIdempotencyAndDoubleEntryLedger(t *testing.T) {
 	// Verify Debit == Credit balance
 	var debitSum, creditSum int64
 	for _, entry := range memStore.Ledger {
-		if entry.Direction == "DEBIT" {
+		switch entry.Direction {
+		case "DEBIT":
 			debitSum += entry.AmountCents
-		} else if entry.Direction == "CREDIT" {
+		case "CREDIT":
 			creditSum += entry.AmountCents
 		}
 	}
