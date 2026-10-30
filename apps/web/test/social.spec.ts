@@ -22,9 +22,9 @@ describe('Phase 4: Social Web & Community Interactions', () => {
       return (b.likeCount || 0) - (a.likeCount || 0)
     })
 
-    expect(sorted[0].id).toBe('3') // Pinned comment first
-    expect(sorted[1].id).toBe('2') // Highest likes next
-    expect(sorted[2].id).toBe('1') // Lower likes
+    expect(sorted[0]?.id).toBe('3') // Pinned comment first
+    expect(sorted[1]?.id).toBe('2') // Highest likes next
+    expect(sorted[2]?.id).toBe('1') // Lower likes
   })
 
   it('correctly sorts comments by Newest (pinned first, then date descending)', () => {
@@ -39,9 +39,9 @@ describe('Phase 4: Social Web & Community Interactions', () => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
 
-    expect(sorted[0].id).toBe('3') // Pinned first
-    expect(sorted[1].id).toBe('2') // Newest next
-    expect(sorted[2].id).toBe('1') // Older
+    expect(sorted[0]?.id).toBe('3') // Pinned first
+    expect(sorted[1]?.id).toBe('2') // Newest next
+    expect(sorted[2]?.id).toBe('1') // Older
   })
 
   it('calculates community poll vote percentages dynamically upon voting', () => {
@@ -53,7 +53,7 @@ describe('Phase 4: Social Web & Community Interactions', () => {
     expect(percentages).toEqual([64, 21, 15])
 
     // Vote for option 2 (index 1)
-    pollRawVotes[1] += 1
+    pollRawVotes[1] = (pollRawVotes[1] ?? 0) + 1
     const newTotal = pollRawVotes.reduce((a, b) => a + b, 0)
     expect(newTotal).toBe(1001)
   })

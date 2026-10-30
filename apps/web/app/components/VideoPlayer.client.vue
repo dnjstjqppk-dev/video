@@ -626,14 +626,20 @@ function handleKeydown(event: KeyboardEvent) {
     const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
     const curIdx = speeds.indexOf(selectedSpeed.value)
     if (curIdx < speeds.length - 1) {
-      changeSpeed(speeds[curIdx + 1])
+      const nextSpeed = speeds[curIdx + 1]
+      if (nextSpeed !== undefined) {
+        changeSpeed(nextSpeed)
+      }
     }
   } else if (event.shiftKey && event.key === '<') {
     event.preventDefault()
     const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
     const curIdx = speeds.indexOf(selectedSpeed.value)
     if (curIdx > 0) {
-      changeSpeed(speeds[curIdx - 1])
+      const prevSpeed = speeds[curIdx - 1]
+      if (prevSpeed !== undefined) {
+        changeSpeed(prevSpeed)
+      }
     }
   }
 }

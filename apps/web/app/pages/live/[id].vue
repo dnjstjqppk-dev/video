@@ -37,8 +37,10 @@ const activePoll = ref<LivePoll | null>({
 
 function voteInLivePoll(idx: number) {
   if (!activePoll.value || activePoll.value.userVotedIndex !== null) return
+  const opt = activePoll.value.options[idx]
+  if (!opt) return
   activePoll.value.userVotedIndex = idx
-  activePoll.value.options[idx].votes += 1
+  opt.votes += 1
   activePoll.value.totalVotes += 1
 }
 

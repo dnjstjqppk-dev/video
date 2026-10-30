@@ -34,6 +34,7 @@ describe('Partner & Advertiser Engine Utilities', () => {
       if (!bids.length) return null
       const sorted = [...bids].sort((a, b) => b.cpmBidCents - a.cpmBidCents)
       const winner = sorted[0]
+      if (!winner) return null
       const secondBid = sorted[1] ? sorted[1].cpmBidCents : Math.round(winner.cpmBidCents * 0.8)
       return {
         winnerId: winner.campaignId,

@@ -689,7 +689,7 @@ const relatedVideos = [
 
                   <!-- Channel Owner controls: Heart & Pin -->
                   <button
-                    v-if="appStore.currentUser?.id === activeVideo.channel.ownerId"
+                    v-if="appStore.currentUser?.id && activeVideo.channel?.ownerId && appStore.currentUser.id === activeVideo.channel.ownerId"
                     type="button"
                     class="flex items-center gap-1 transition hover:text-white"
                     :class="cmt.isHeartedByCreator ? 'text-rose-400' : 'text-neutral-400'"
@@ -699,7 +699,7 @@ const relatedVideos = [
                     <span>{{ appStore.locale === 'ko' ? '하트' : 'Heart' }}</span>
                   </button>
                   <button
-                    v-if="appStore.currentUser?.id === activeVideo.channel.ownerId"
+                    v-if="appStore.currentUser?.id && activeVideo.channel?.ownerId && appStore.currentUser.id === activeVideo.channel.ownerId"
                     type="button"
                     class="flex items-center gap-1 transition hover:text-white"
                     :class="cmt.isPinned ? 'text-amber-300 font-semibold' : 'text-neutral-400'"

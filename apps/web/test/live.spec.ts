@@ -30,22 +30,22 @@ describe('Phase 6: Live Streaming Platform & WebSocket Chat', () => {
     // User votes for option 1 (Option B)
     if (poll.userVotedIndex === null) {
       poll.userVotedIndex = 1
-      poll.options[1].votes += 1
+      poll.options[1]!.votes += 1
       poll.totalVotes += 1
     }
 
     expect(poll.totalVotes).toBe(31)
-    expect(poll.options[1].votes).toBe(21)
+    expect(poll.options[1]!.votes).toBe(21)
     expect(poll.userVotedIndex).toBe(1)
 
     // Second vote should be blocked
     if (poll.userVotedIndex === null) {
-      poll.options[0].votes += 1
+      poll.options[0]!.votes += 1
       poll.totalVotes += 1
     }
 
     expect(poll.totalVotes).toBe(31)
-    expect(poll.options[0].votes).toBe(10)
+    expect(poll.options[0]!.votes).toBe(10)
   })
 
   it('evaluates stream health based on bitrate and GOP keyframe interval', () => {

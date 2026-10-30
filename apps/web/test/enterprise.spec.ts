@@ -37,7 +37,7 @@ describe('Phase 10: Multi-Platform Native Mobile, TV & Enterprise Scale', () => 
       { code: 'FRA', city: 'Frankfurt', rttMs: 240 },
     ]
 
-    const nearest = [...pops].sort((a, b) => a.rttMs - b.rttMs)[0]
+    const nearest = [...pops].sort((a, b) => a.rttMs - b.rttMs)[0]!
     expect(nearest.code).toBe('ICN')
     expect(nearest.rttMs).toBeLessThan(10)
   })

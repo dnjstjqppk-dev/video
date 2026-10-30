@@ -64,16 +64,16 @@ describe('Creator Studio Utilities', () => {
     items.forEach(i => {
       if (i.selected) i.visibility = 'PRIVATE'
     })
-    expect(items[0].visibility).toBe('PRIVATE')
-    expect(items[1].visibility).toBe('PUBLIC')
-    expect(items[2].visibility).toBe('PRIVATE')
+    expect(items[0]?.visibility).toBe('PRIVATE')
+    expect(items[1]?.visibility).toBe('PUBLIC')
+    expect(items[2]?.visibility).toBe('PRIVATE')
 
     // Bulk enable monetization
     items.forEach(i => {
       if (i.selected) i.monetized = true
     })
-    expect(items[0].monetized).toBe(true)
-    expect(items[1].monetized).toBe(false)
-    expect(items[2].monetized).toBe(true)
+    expect(items[0]?.monetized).toBe(true)
+    expect(items[1]?.monetized).toBe(false)
+    expect(items[2]?.monetized).toBe(true)
   })
 })

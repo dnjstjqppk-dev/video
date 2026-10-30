@@ -22,11 +22,10 @@
     "dev:admin": "pnpm --filter @gvp/admin dev",
     "build:all": "pnpm -r --filter \"./apps/*\" build",
     "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm typecheck && npx --yes cspell \"**\" --no-progress",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
   }
 }
-
