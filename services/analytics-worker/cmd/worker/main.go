@@ -13,14 +13,14 @@ import (
 )
 
 type TelemetryEvent struct {
-	EventID         string
-	EventType       string // valid_view, watch_progress, ad_impression, ad_click
-	VideoID         string
-	UserID          string
-	UserAgent       string
-	WatchSeconds    float64
-	PlaybackRate    float64
-	OccurredAt      time.Time
+	EventID      string
+	EventType    string // valid_view, watch_progress, ad_impression, ad_click
+	VideoID      string
+	UserID       string
+	UserAgent    string
+	WatchSeconds float64
+	PlaybackRate float64
+	OccurredAt   time.Time
 }
 
 type AnalyticsProcessor struct {

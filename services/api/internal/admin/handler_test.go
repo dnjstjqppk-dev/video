@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"globalvideoplatform/services/api/internal/admin"
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/store"
-	"globalvideoplatform/services/api/internal/admin"
 )
 
 func newAdminTestServer() *httptest.Server {

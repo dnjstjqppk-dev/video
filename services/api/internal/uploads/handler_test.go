@@ -108,4 +108,3 @@ func TestUploadLifecycle(t *testing.T) {
 		t.Fatalf("expected 200 for upload status, got %d", rec.Code)
 	}
 }
-

@@ -338,13 +338,13 @@ func (h *Handler) GetStrikes(w http.ResponseWriter, r *http.Request) {
 	isSuspended := user.CopyrightStrikes >= 3 || user.CommunityStrikes >= 3
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"copyright_strikes":  user.CopyrightStrikes,
-		"community_strikes":  user.CommunityStrikes,
-		"max_strikes":        3,
-		"is_suspended":       isSuspended,
-		"account_status":     user.IsActive,
-		"can_upload":         !isSuspended && user.IsActive,
-		"can_live_stream":    !isSuspended && user.IsActive && user.CommunityStrikes == 0,
+		"copyright_strikes": user.CopyrightStrikes,
+		"community_strikes": user.CommunityStrikes,
+		"max_strikes":       3,
+		"is_suspended":      isSuspended,
+		"account_status":    user.IsActive,
+		"can_upload":        !isSuspended && user.IsActive,
+		"can_live_stream":   !isSuspended && user.IsActive && user.CommunityStrikes == 0,
 	})
 }
 
@@ -359,12 +359,12 @@ func (h *Handler) RequestAccountDeletion(w http.ResponseWriter, r *http.Request)
 	user.DeletionRequestedAt = &delReq.RequestedAt
 
 	identity.WriteJSON(w, http.StatusAccepted, map[string]interface{}{
-		"status":               "deletion_requested",
-		"user_id":              user.ID,
-		"requested_at":         delReq.RequestedAt.Format(time.RFC3339),
-		"permanent_delete_at":  delReq.PermanentDeleteAt.Format(time.RFC3339),
-		"grace_period_days":    30,
-		"message":              "Your account is scheduled for permanent deletion in 30 days. You can cancel this request anytime before then by logging in.",
+		"status":              "deletion_requested",
+		"user_id":             user.ID,
+		"requested_at":        delReq.RequestedAt.Format(time.RFC3339),
+		"permanent_delete_at": delReq.PermanentDeleteAt.Format(time.RFC3339),
+		"grace_period_days":   30,
+		"message":             "Your account is scheduled for permanent deletion in 30 days. You can cancel this request anytime before then by logging in.",
 	})
 }
 

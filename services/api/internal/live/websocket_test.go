@@ -79,4 +79,3 @@ func TestWebSocketLiveChatFullDuplex(t *testing.T) {
 		t.Fatalf("expected chat_message event, got %s", chatMsg.Type)
 	}
 }
-

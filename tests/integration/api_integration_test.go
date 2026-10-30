@@ -26,7 +26,7 @@ import (
 // =============================================================================
 
 type integrationState struct {
-	mu          sync.Mutex
+	mu           sync.Mutex
 	channelOwner map[string]string
 	videoStatus  map[string]string
 	comments     map[string][]map[string]interface{}
@@ -257,11 +257,11 @@ func newIntegrationHarness() *httptest.Server {
 			var body map[string]interface{}
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			claim := map[string]interface{}{
-				"id":                 "claim-new-01",
-				"claimed_video_id":   body["videoId"],
-				"claim_action":       body["action"],
-				"status":             "pending",
-				"created_at":         time.Now().UTC().Format(time.RFC3339),
+				"id":               "claim-new-01",
+				"claimed_video_id": body["videoId"],
+				"claim_action":     body["action"],
+				"status":           "pending",
+				"created_at":       time.Now().UTC().Format(time.RFC3339),
 			}
 			state.claims = append(state.claims, claim)
 			writeJSON(w, http.StatusCreated, claim)

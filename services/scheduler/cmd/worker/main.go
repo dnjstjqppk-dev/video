@@ -19,9 +19,9 @@ type OutboxEvent struct {
 }
 
 type ScheduledVideo struct {
-	ID          string
-	Visibility  string // scheduled, public
-	PublishAt   time.Time
+	ID         string
+	Visibility string // scheduled, public
+	PublishAt  time.Time
 }
 
 type UploadSession struct {

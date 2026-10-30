@@ -71,3 +71,32 @@ func TestTossPaymentsSignatures(t *testing.T) {
 	}
 }
 
+func TestTossPaymentsConfirm(t *testing.T) {
+	adapter := &TossPaymentsAdapter{
+		SecretKey: "test_sk_sample12345",
+	}
+
+	adapter.Client = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			if r.URL.String() != "https://api.tosspayments.com/v1/payments/confirm" || r.Method != "POST" {
+				t.Fatalf("unexpected provider endpoint: %s %s", r.Method, r.URL.String())
+			}
+			if !strings.HasPrefix(r.Header.Get("Authorization"), "Basic ") {
+				t.Fatal("missing or invalid Toss basic authorization header")
+			}
+			return &http.Response{
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(`{"paymentKey":"pk_live_999","orderId":"tx_order_1","status":"DONE","totalAmount":15000,"method":"CARD"}`)),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+
+	conf, err := adapter.ConfirmPayment("pk_live_999", "tx_order_1", 15000)
+	if err != nil {
+		t.Fatalf("unexpected error during confirm: %v", err)
+	}
+	if conf.PaymentKey != "pk_live_999" || conf.Status != "DONE" || conf.TotalAmount != 15000 {
+		t.Fatalf("unexpected confirmation result: %+v", conf)
+	}
+}

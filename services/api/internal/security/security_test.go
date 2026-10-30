@@ -101,7 +101,6 @@ func TestMaskEmail(t *testing.T) {
 	}
 }
 
-
 func TestMaskPhone(t *testing.T) {
 	got := MaskPhone("+82-10-1234-5678")
 	if got != "+82-10-****-5678" {

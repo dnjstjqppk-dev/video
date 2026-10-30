@@ -180,10 +180,10 @@ func (h *Handler) SubmitDMCATakedown(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SubmitDMCACounterNotice(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		NoticeID       string `json:"notice_id"`
-		LegalFullName  string `json:"legal_full_name"`
-		Address        string `json:"address"`
-		ConsentFederal bool   `json:"consent_federal_jurisdiction"`
+		NoticeID         string `json:"notice_id"`
+		LegalFullName    string `json:"legal_full_name"`
+		Address          string `json:"address"`
+		ConsentFederal   bool   `json:"consent_federal_jurisdiction"`
 		StatementPerjury string `json:"statement_perjury"`
 	}
 

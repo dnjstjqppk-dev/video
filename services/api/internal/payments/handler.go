@@ -108,6 +108,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Group(func(pr chi.Router) {
 		pr.Use(auth.RequireAuth)
 		pr.Post("/checkout", h.CreateCheckout)
+		pr.Post("/confirm", h.ConfirmPayment)
 		pr.Get("/transactions", h.ListTransactions)
 	})
 
@@ -195,6 +196,81 @@ func (h *Handler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	h.Store.IdempotencyKeys[storeKey] = txID
 
 	identity.WriteJSON(w, http.StatusCreated, tx)
+}
+
+func (h *Handler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+
+	var payload struct {
+		Provider   string `json:"provider"`
+		PaymentKey string `json:"paymentKey"`
+		OrderID    string `json:"orderId"`
+		Amount     int64  `json:"amount"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.OrderID == "" || payload.Amount <= 0 {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Valid paymentKey, orderId and amount are required")
+		return
+	}
+
+	provider := strings.ToLower(payload.Provider)
+	if provider == "" {
+		provider = "toss"
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	tx, exists := h.Store.Transactions[payload.OrderID]
+	if !exists {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Transaction not found for orderId")
+		return
+	}
+
+	if tx.UserID != user.ID && user.Role != "super_admin" && user.Role != "admin" {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN", "Unauthorized to confirm this transaction")
+		return
+	}
+
+	if tx.Status == "succeeded" {
+		identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"idempotent_replay": true,
+			"transaction":       tx,
+		})
+		return
+	}
+
+	if adapter, ok := h.Adapters[provider]; ok {
+		if tossAdapter, isToss := adapter.(*TossPaymentsAdapter); isToss && tossAdapter.getSecretKey() != "" {
+			confirmation, err := tossAdapter.ConfirmPayment(payload.PaymentKey, payload.OrderID, payload.Amount)
+			if err != nil {
+				identity.WriteError(w, r, http.StatusPaymentRequired, "PAYMENT_FAILED", fmt.Sprintf("Toss confirmation failed: %v", err))
+				return
+			}
+			if confirmation != nil && confirmation.Status != "" && confirmation.Status != "DONE" {
+				identity.WriteError(w, r, http.StatusBadRequest, "PAYMENT_NOT_DONE", "Payment status is not DONE")
+				return
+			}
+		}
+	}
+
+	tx.Status = "succeeded"
+	entries := CreateDoubleEntryLedger(tx.ID, tx.AmountCents, tx.Currency)
+	tx.LedgerEntries = entries
+	h.Store.Ledger = append(h.Store.Ledger, entries...)
+
+	if tx.Type == "membership" || tx.Type == "premium" {
+		user.SubscriptionTier = "premium"
+	}
+
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"idempotent_replay": false,
+		"transaction":       tx,
+	})
 }
 
 // CreateDoubleEntryLedger generates balanced double-entry accounting records (70% creator, 30% platform).

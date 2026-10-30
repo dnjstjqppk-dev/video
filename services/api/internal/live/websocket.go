@@ -151,7 +151,7 @@ func (c *Client) readPump() {
 		}
 
 		var incoming struct {
-			Action  string          `json:"action"`  // send_chat, send_superchat, vote_poll
+			Action  string          `json:"action"` // send_chat, send_superchat, vote_poll
 			Payload json.RawMessage `json:"payload"`
 		}
 		if err := json.Unmarshal(message, &incoming); err != nil {
