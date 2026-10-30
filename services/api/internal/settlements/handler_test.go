@@ -86,3 +86,4 @@ func TestGetSettlementsAndEarnings(t *testing.T) {
 		t.Fatalf("expected 201 for payout request, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
+

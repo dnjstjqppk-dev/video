@@ -93,3 +93,4 @@ describe('Phase 5: Shorts Vertical Video Ecosystem', () => {
     expect(`/watch/${shortWithRelated.relatedVideoId}`).toBe('/watch/vid_arch_2026')
   })
 })
+
