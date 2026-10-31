@@ -16,6 +16,8 @@ jobs:
     strategy:
       matrix:
         app: [web, studio, partners, admin]
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,7 +43,7 @@ jobs:
           NUXT_PUBLIC_API_BASE_URL: /api
 
       - name: Deploy ${{ matrix.app }} via Wrangler
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        if: env.CF_TOKEN != ''
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
