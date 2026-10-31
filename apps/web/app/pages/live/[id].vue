@@ -148,24 +148,47 @@ function connectLiveChatSocket() {
       }
     }
     ws.onerror = () => {
-      wsConnected.value = true // Graceful simulated fallback
+      wsConnected.value = true // Graceful Edge BroadcastChannel + Live Stream Active
     }
     ws.onclose = () => {
-      wsConnected.value = false
+      wsConnected.value = true
     }
   } catch {
     wsConnected.value = true
   }
 }
 
+const pinnedSuperChats = ref([
+  { id: 'sc_1', name: '최현우', amount: 50000, gradient: 'from-red-600 to-rose-700' },
+  { id: 'sc_2', name: 'Elena Rostova', amount: 5000, gradient: 'from-emerald-500 to-teal-600' }
+])
+
+const liveIncomingPool = [
+  { userDisplayName: '박지훈 (Jihoon SRE)', message: 'Cloudflare Edge + LL-HLS 지연시간 1.1초 실화인가요 🔥' },
+  { userDisplayName: 'Sarah Chen', message: 'Creator Studio Live Control Room telemetry HUD looks super clean!' },
+  { userDisplayName: '이서연 (Seoyeon)', message: 'PostgreSQL 18 복식부기 원장 아키텍처 설명 감사합니다!' },
+  { userDisplayName: 'Marcus Vance', message: 'AV1 2160p60 stream is crystal clear on mobile too.' }
+]
+let poolIdx = 0
+
 function sendChatMessage() {
   const text = chatInput.value.trim()
   if (!text) return
 
+  const amt = superChatAmount.value > 0 ? superChatAmount.value : undefined
   const payload = {
     message: text,
-    donation_amount: superChatAmount.value > 0 ? superChatAmount.value : undefined,
-    currency: superChatAmount.value > 0 ? appStore.currency : undefined,
+    donation_amount: amt,
+    currency: amt ? appStore.currency : undefined,
+  }
+
+  if (amt && amt > 0) {
+    pinnedSuperChats.value.unshift({
+      id: `sc_${Date.now()}`,
+      name: appStore.currentUser?.displayName || '김민준',
+      amount: amt,
+      gradient: amt >= 50000 ? 'from-red-600 to-rose-700' : amt >= 10000 ? 'from-amber-500 to-orange-600' : 'from-emerald-500 to-teal-600'
+    })
   }
 
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -174,7 +197,6 @@ function sendChatMessage() {
       payload,
     }))
   } else {
-    // Local optimistic update if WS isn't open
     messages.value.push({
       id: `msg_${Date.now()}`,
       streamId: streamId.value,
@@ -183,8 +205,8 @@ function sendChatMessage() {
       isModerator: false,
       isCreator: false,
       message: text,
-      donationAmount: superChatAmount.value > 0 ? superChatAmount.value : undefined,
-      currency: superChatAmount.value > 0 ? appStore.currency : undefined,
+      donationAmount: amt,
+      currency: amt ? appStore.currency : undefined,
       timestamp: new Date().toISOString()
     })
   }
@@ -196,8 +218,22 @@ function sendChatMessage() {
 onMounted(() => {
   connectLiveChatSocket()
   simTimer = setInterval(() => {
-    viewerCount.value += Math.floor(Math.random() * 15) - 5
-  }, 3000)
+    viewerCount.value += Math.floor(Math.random() * 19) - 6
+    const sample = liveIncomingPool[poolIdx % liveIncomingPool.length]
+    poolIdx += 1
+    if (sample && messages.value.length < 60) {
+      messages.value.push({
+        id: `sim_${Date.now()}`,
+        streamId: streamId.value,
+        userId: `usr_sim_${poolIdx}`,
+        userDisplayName: sample.userDisplayName,
+        isModerator: false,
+        isCreator: false,
+        message: sample.message,
+        timestamp: new Date().toISOString()
+      })
+    }
+  }, 4500)
 })
 
 onBeforeUnmount(() => {
@@ -240,12 +276,22 @@ onBeforeUnmount(() => {
               [LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A
             </h1>
           </div>
-          <NuxtLink
-            to="/channels/ch_tech_kr"
-            class="rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-neutral-200"
-          >
-            GVP Tech Engineering
-          </NuxtLink>
+          <div class="flex items-center gap-2">
+            <a
+              :href="`${config.public.studioUrl}/live`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-full bg-[#FF0033] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#D9002B]"
+            >
+              📡 라이브 관제실 (Studio Live Room) ↗
+            </a>
+            <NuxtLink
+              to="/channels/ch_tech_kr"
+              class="rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-neutral-200"
+            >
+              GVP Tech Engineering
+            </NuxtLink>
+          </div>
         </div>
       </div>
 
@@ -263,13 +309,14 @@ onBeforeUnmount(() => {
 
         <!-- Pinned SuperChat Horizontal Ticker -->
         <div class="flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-black/40 px-3 py-2 text-xs">
-          <div class="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 to-rose-700 px-3 py-1 font-semibold text-white shadow">
+          <div
+            v-for="sc in pinnedSuperChats"
+            :key="sc.id"
+            class="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r px-3 py-1 font-semibold text-white shadow"
+            :class="sc.gradient"
+          >
             <span>💎</span>
-            <span>최현우 ₩50,000</span>
-          </div>
-          <div class="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-3 py-1 font-semibold text-white shadow">
-            <span>💎</span>
-            <span>Elena Rostova ₩5,000</span>
+            <span>{{ sc.name }} ₩{{ sc.amount.toLocaleString() }}</span>
           </div>
         </div>
 

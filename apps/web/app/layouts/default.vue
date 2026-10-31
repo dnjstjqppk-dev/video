@@ -210,12 +210,30 @@ const subscribedChannels = [
           :href="config.public.studioUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden items-center gap-1.5 rounded-full bg-[#272727] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3A3A3A] sm:flex"
+          class="hidden items-center gap-1.5 rounded-full bg-[#FF0033] px-3 py-1.5 text-xs font-bold text-white shadow transition hover:bg-[#D9002B] sm:flex"
         >
-          <svg class="h-4 w-4 text-[#FF0033]" fill="currentColor" viewBox="0 0 24 24">
+          <svg class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
             <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
           </svg>
-          <span>Studio</span>
+          <span>Creator Studio ↗</span>
+        </a>
+
+        <a
+          :href="config.public.partnersUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hidden items-center gap-1 rounded-full border border-white/15 bg-[#272727] px-3 py-1.5 text-xs font-semibold text-[#3EA6FF] transition hover:bg-[#3A3A3A] lg:flex"
+        >
+          <span>Partners ↗</span>
+        </a>
+
+        <a
+          :href="config.public.adminUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hidden items-center gap-1 rounded-full border border-red-500/30 bg-red-950/30 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-900/40 xl:flex"
+        >
+          <span>Admin ↗</span>
         </a>
 
         <div class="relative">

@@ -75,6 +75,24 @@ const navLinks = [
         >
           Public Channel ↗
         </a>
+
+        <a
+          :href="config.public.partnersUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hidden rounded-xl border border-[#3EA6FF]/30 px-3 py-2 text-xs font-semibold text-[#3EA6FF] hover:bg-white/10 md:inline-block"
+        >
+          Partners ↗
+        </a>
+
+        <a
+          :href="config.public.adminUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hidden rounded-xl border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-white/10 lg:inline-block"
+        >
+          Admin ↗
+        </a>
       </div>
     </header>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
+const config = useRuntimeConfig()
 
 export type PartnerTenantType = 'ADVERTISER' | 'MCN' | 'RIGHTS_OWNER'
 

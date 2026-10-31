@@ -2,6 +2,7 @@
 import { UserRole } from '@gvp/shared-types'
 
 const route = useRoute()
+const config = useRuntimeConfig()
 
 const activeAdminRole = useState<UserRole>('admin-role', () => UserRole.SUPER_ADMIN)
 
@@ -11,7 +12,8 @@ const navLinks = [
   { path: '/users', label: '사용자 & RBAC 거버넌스 (Users)', icon: '👥' },
   { path: '/moderation', label: '신뢰 및 안전 큐 (Moderation)', icon: '🛡️' },
   { path: '/finance', label: '정산 승인 & 유닛 이코노믹스 (Finance)', icon: '🏦' },
-  { path: '/policies', label: '정책 버전 & 킬스위치 (Policies)', icon: '⚙️' }
+  { path: '/policies', label: '정책 버전 & 킬스위치 (Policies)', icon: '⚙️' },
+  { path: '/infrastructure', label: '멀티 리전 K8s & DR 관제 (Infra)', icon: '🌐' }
 ]
 </script>
 
