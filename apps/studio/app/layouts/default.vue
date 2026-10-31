@@ -31,9 +31,8 @@ const navLinks = [
           </span>
           <div>
             <span class="text-base font-extrabold tracking-tight text-white">Creator Studio</span>
-            <span class="ml-2 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">
-              PARTNER VERIFIED
-            </span>
+            <span class="ml-2 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">PARTNER VERIFIED</span>
+            <span class="ml-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">DEMO STUDIO</span>
           </div>
         </NuxtLink>
       </div>
@@ -136,9 +135,20 @@ const navLinks = [
         </div>
       </aside>
 
-      <!-- Main Studio Workspace -->
+            <!-- Main Studio Workspace -->
       <main class="min-w-0 flex-1 p-6 lg:p-8">
+        <div class="mb-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">⚠️ 크리에이터 스튜디오 데모 모드 (Demo Sandbox)</span>
+            <span class="text-neutral-400">|</span>
+            <span class="text-neutral-300">표시된 채널 수익금, 구독자 통계 및 정산 예상액은 아키텍처 시연용 시드 데이터입니다.</span>
+          </div>
+          <span class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200">DEMO SANDBOX</span>
+        </div>
         <slot />
+        <footer class="mt-12 border-t border-white/5 pt-4 text-center text-[11px] text-neutral-400">
+          <span>StreamVerse Creator Studio · Commit <span class="font-mono text-neutral-300">3f8c1ef</span> · Architecture Prototype</span>
+        </footer>
       </main>
     </div>
   </div>

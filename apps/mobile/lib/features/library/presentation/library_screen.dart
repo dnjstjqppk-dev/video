@@ -175,7 +175,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                         await offlineNotifier
                             .validateAndStartOfflinePlayback(record.videoId);
                         if (!context.mounted) return;
-                        context.push(
+                        await context.push(
                           '/watch/${record.videoId}?title=${Uri.encodeComponent(record.title)}&channel=${Uri.encodeComponent(record.channelName)}',
                         );
                       } on OfflineAccessDeniedException catch (e) {

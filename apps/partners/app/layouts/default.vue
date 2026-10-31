@@ -8,19 +8,19 @@ const activeTenant = useState<PartnerTenantType>('partner-tenant', () => 'ADVERT
 
 const tenantOrganizations: Record<PartnerTenantType, { id: string; name: string; badge: string }> = {
   ADVERTISER: {
-    id: 'org_adv_samsung',
-    name: 'Samsung Electronics Global Media Buying',
-    badge: 'Enterprise Advertiser'
+    id: 'org_adv_apex',
+    name: 'Apex Global Media Group (Fictional Demo)',
+    badge: 'Enterprise Advertiser (Demo)'
   },
   MCN: {
     id: 'org_mcn_sandbox',
-    name: 'K-Creator MCN Alliance (42 Channels)',
-    badge: 'Certified MCN Partner'
+    name: 'Horizon Creator MCN Alliance (Demo)',
+    badge: 'Certified MCN Partner (Demo)'
   },
   RIGHTS_OWNER: {
-    id: 'org_rights_cjenm',
-    name: 'CJ Music & Cinema Rights Holder Corp.',
-    badge: 'Content ID Rights Owner'
+    id: 'org_rights_starlight',
+    name: 'Starlight Music & Cinema Rights Corp. (Fictional Demo)',
+    badge: 'Content ID Rights Owner (Demo)'
   }
 }
 
@@ -111,7 +111,18 @@ const navItems = [
 
       <!-- Main Partner Content -->
       <main class="min-w-0 flex-1 p-6 lg:p-8">
+        <div class="mb-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">⚠️ 파트너 포털 데모 모드 (Demo Sandbox)</span>
+            <span class="text-neutral-400">|</span>
+            <span class="text-neutral-300">표시된 광고비, 저작권 자산 및 복식부기 정산 금액은 가상 시연용 시드 데이터입니다.</span>
+          </div>
+          <span class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200">NON-PRODUCTION MOCK</span>
+        </div>
         <slot />
+        <footer class="mt-12 border-t border-white/5 pt-4 text-center text-[11px] text-neutral-400">
+          <span>StreamVerse Partner Console · Commit <span class="font-mono text-neutral-300">3f8c1ef</span> · Architecture Prototype</span>
+        </footer>
       </main>
     </div>
   </div>

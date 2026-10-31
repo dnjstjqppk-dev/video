@@ -20,10 +20,10 @@ const maxStrikes = 3
 
 const claims = ref<CopyrightClaimItem[]>([
   {
-    id: 'claim_cjenm_001',
+    id: 'claim_starlight_001',
     videoTitle: 'Building a 10M Concurrent Viewer Global Video Platform with Go 1.24',
     videoId: 'vid_arch_2026',
-    claimant: 'CJ ENM Music Publishing',
+    claimant: 'Starlight Music Publishing (Demo)',
     matchedAsset: 'Synthwave Skyline (Original BGM)',
     timeRange: '03:15 - 04:30',
     policy: 'MONETIZE',

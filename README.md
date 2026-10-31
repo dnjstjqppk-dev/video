@@ -1,6 +1,6 @@
 # Global Video Platform (GVP) — Enterprise Multi-Surface Video Ecosystem
 
-An end-to-end, YouTube-scale video platform monorepo built with **4 independently deployed Vue 3 / Nuxt 4 web consoles**, a **Flutter (iOS & Android) mobile application**, and a **Go Modular Monolith API + Separated Background Workers** backed by **PostgreSQL 18, Valkey 8, NATS JetStream, OpenSearch, ClickHouse, and Cloudflare R2 / Stream**.
+An enterprise-grade reference architecture video platform monorepo built with **4 independently deployed Vue 3 / Nuxt 4 web consoles**, a **Flutter (iOS & Android) mobile application**, and a **Go Modular Monolith API + Separated Background Workers** backed by **PostgreSQL 18, Valkey 8, NATS JetStream, OpenSearch, ClickHouse, and Cloudflare R2 / Stream**.
 
 ---
 
@@ -67,12 +67,12 @@ docker compose -f infra/docker/docker-compose.yml up --build -d
 
 | Surface / Service | Local URL | Default Credentials / Auth Token |
 | :--- | :--- | :--- |
-| **Go API (`/v1` & `/healthz`)** | `http://localhost:8080/healthz` | `Bearer creator-token` / `Bearer admin-token` |
+| **Go API (`/v1` & `/healthz`)** | `http://localhost:8080/healthz` | Configured via OIDC/JWT in local `.env` |
 | **User Web Portal (`apps/web`)** | `http://localhost:3000` | Public / Creator Session |
 | **Creator Studio (`apps/studio`)** | `http://localhost:3001` | Creator Session (`creator1@brand.com`) |
 | **Partner Portal (`apps/partners`)** | `http://localhost:3002` | Partner Manager Session |
 | **Admin Console (`apps/admin`)** | `http://localhost:3003` | Super Admin (`admin@brand.com`) |
-| **Prometheus / Grafana** | `http://localhost:9090` / `http://localhost:3005` | `admin` / `gvp_grafana_admin` |
+| **Prometheus / Grafana** | `http://localhost:9090` / `http://localhost:3005` | `admin` / `<configured_in_secrets>` |
 
 ### 2.2 Option B: Run Services Natively
 ```bash
@@ -116,12 +116,15 @@ k6 run tests/performance/k6-load-test.js
 
 ---
 
-## 4. Phase 0~7 Engineering Deliverables Index
+## 4. Phase 0~11 Engineering Deliverables & Remediation Index
 
-- **System Architecture & Data Flows**: [docs/architecture/SYSTEM_ARCHITECTURE.md](docs/architecture/SYSTEM_ARCHITECTURE.md)
-- **Database ERDs (Identity, Catalog, Social, Live, Analytics, Ads, Finance, Rights, Moderation, Ops)**: [docs/architecture/erd/README.md](docs/architecture/erd/README.md)
-- **Complete `/v1` API Inventory**: [docs/api/API_INVENTORY.md](docs/api/API_INVENTORY.md)
-- **Competitive Benchmark, 15-Role RBAC/ABAC & Unit Economics (Section 24)**: [docs/product/BENCHMARK_AND_BACKLOG.md](docs/product/BENCHMARK_AND_BACKLOG.md)
-- **Security, OIDC+PKCE, Signed HLS CDN & OWASP Top 10**: [docs/security/SECURITY_AND_COMPLIANCE.md](docs/security/SECURITY_AND_COMPLIANCE.md)
-- **Operations Runbook & PostgreSQL 18 PITR Disaster Recovery**: [docs/operations/RUNBOOK_AND_DR.md](docs/operations/RUNBOOK_AND_DR.md)
-- **Phase 7 Independent Release Audit Report**: [docs/audits/INDEPENDENT_RELEASE_AUDIT.md](docs/audits/INDEPENDENT_RELEASE_AUDIT.md)
+- **Phase 0~2 System Architecture & Data Flows**: [docs/architecture/SYSTEM_ARCHITECTURE.md](docs/architecture/SYSTEM_ARCHITECTURE.md)
+- **Phase 3 Database ERDs (Identity, Catalog, Social, Live, Analytics, Ads, Finance, Rights, Moderation, Ops)**: [docs/architecture/erd/README.md](docs/architecture/erd/README.md)
+- **Phase 4 Complete `/v1` API Inventory & OpenAPI 3.1 Specification**: [docs/api/API_INVENTORY.md](docs/api/API_INVENTORY.md) · [openapi/gvp-v1.yaml](openapi/gvp-v1.yaml)
+- **Phase 5 Competitive Benchmark, 15-Role RBAC/ABAC & Monthly Unit Economics**: [docs/product/BENCHMARK_AND_BACKLOG.md](docs/product/BENCHMARK_AND_BACKLOG.md)
+- **Phase 6 Security, OIDC+PKCE, Signed HLS CDN & OWASP Top 10 Controls**: [docs/security/SECURITY_AND_COMPLIANCE.md](docs/security/SECURITY_AND_COMPLIANCE.md)
+- **Phase 7 Operations Runbook & PostgreSQL 18 PITR Disaster Recovery**: [docs/operations/RUNBOOK_AND_DR.md](docs/operations/RUNBOOK_AND_DR.md)
+- **Phase 8 Cross-Platform Mobile Application (Flutter iOS/Android)**: [apps/mobile/](apps/mobile/)
+- **Phase 9 End-to-End Multi-Surface Integration & OWASP Security Verification**: [tests/](tests/)
+- **Phase 10 Multi-Surface Cloudflare Edge Deployment & Canonical Routing**: [wrangler.toml](wrangler.toml) · [.github/workflows/cloudflare-deploy.yml](.github/workflows/cloudflare-deploy.yml)
+- **Phase 11 Production Remediation, Fail-Closed Security & Governance Audit**: [docs/audits/COMMERCIAL_REMEDIATION_AUDIT.md](docs/audits/COMMERCIAL_REMEDIATION_AUDIT.md) · [docs/audits/INDEPENDENT_RELEASE_AUDIT.md](docs/audits/INDEPENDENT_RELEASE_AUDIT.md)

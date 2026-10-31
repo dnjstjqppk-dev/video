@@ -32,9 +32,9 @@ const users = ref<ManagedUserRow[]>([
   },
   {
     id: 'usr_adv_1',
-    email: 'ads@samsung-global.com',
-    username: 'samsung_media',
-    displayName: 'Samsung Electronics Media',
+    email: 'ads@apex-media-group.com',
+    username: 'apex_media',
+    displayName: 'Apex Global Media (Demo)',
     role: UserRole.ADVERTISER,
     subscriptionTier: SubscriptionTier.FREE,
     accountState: 'ACTIVE'

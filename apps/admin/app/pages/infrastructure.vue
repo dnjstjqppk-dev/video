@@ -70,9 +70,20 @@ function rollbackCanary() {
 
 <template>
   <div>
+    <!-- Infrastructure Simulation Banner (GV-07) -->
+    <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-300">
+      <div class="flex items-center gap-2 font-bold">
+        <span>⚠️ 인프라 시뮬레이션 안내 (Simulation Demonstration Mode)</span>
+        <span class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200">DEMO ONLY</span>
+      </div>
+      <p class="mt-1 text-[11px] text-neutral-300">
+        본 화면에 표시된 멀티 리전 EKS 클러스터 상태(4개 리전), 파드 수, 카나리 트래픽 시프팅, WAL 아카이빙 지표는 아키텍처 검증을 위한 목업 시뮬레이션 데이터입니다.
+        실제 EKS 클러스터와의 실시간 텔레메트리 연동 상태가 아니며, DR 훈련 버튼은 가상 타이머 시뮬레이션만을 동작시킵니다.
+      </p>
+    </div>
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-extrabold text-white">멀티 리전 K8s 클러스터, 카나리 배포 및 재해복구(DR) 관제</h1>
+        <h1 class="text-2xl font-extrabold text-white">멀티 리전 K8s 클러스터, 카나리 배포 및 재해복구(DR) 관제 (시뮬레이션)</h1>
         <p class="mt-1 text-xs text-neutral-400">
           EKS Multi-Region Topology · Canary Progressive Traffic Shifting · PITR WAL Archiving & DR Failover Drill (RTO &lt; 15m, RPO &lt; 1m)
         </p>
@@ -91,7 +102,7 @@ function rollbackCanary() {
           class="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-red-500"
           @click="triggerDrDrill"
         >
-          {{ drDrillStatus === 'RUNNING' ? 'Executing Failover...' : '모의 재해 복구 훈련 실행 (Run DR Drill)' }}
+          {{ drDrillStatus === 'RUNNING' ? 'Executing Failover...' : 'DR 페일오버 시뮬레이션 시연 (Simulation Only)' }}
         </button>
       </div>
     </div>
@@ -142,11 +153,11 @@ function rollbackCanary() {
         </div>
         <div class="mt-4 grid grid-cols-3 gap-3 text-center text-xs">
           <div class="rounded-xl bg-[#090B10] p-3">
-            <p class="text-neutral-400">Measured RTO</p>
+            <p class="text-neutral-400">시뮬레이션 RTO (Target < 15m)</p>
             <p class="mt-1 font-mono text-base font-extrabold text-emerald-400">{{ Math.floor(lastDrRtoSeconds / 60) }}m {{ lastDrRtoSeconds % 60 }}s</p>
           </div>
           <div class="rounded-xl bg-[#090B10] p-3">
-            <p class="text-neutral-400">Measured RPO</p>
+            <p class="text-neutral-400">시뮬레이션 RPO (Target < 1m)</p>
             <p class="mt-1 font-mono text-base font-extrabold text-[#3EA6FF]">0.8 sec</p>
           </div>
           <div class="rounded-xl bg-[#090B10] p-3">

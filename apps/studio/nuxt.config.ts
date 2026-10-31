@@ -15,8 +15,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     internalApiUrl: process.env.NUXT_INTERNAL_API_URL || 'http://localhost:8080',
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8080',
-      wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || 'ws://localhost:8080',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
+      wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || '',
       webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjqppk.workers.dev',
       partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjqppk.workers.dev',
       adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjqppk.workers.dev',

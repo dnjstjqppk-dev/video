@@ -38,9 +38,10 @@ jobs:
         run: pnpm --filter @gvp/${{ matrix.app }} build
         env:
           NITRO_PRESET: cloudflare-module
+          NUXT_PUBLIC_API_BASE_URL: /api
 
       - name: Deploy ${{ matrix.app }} via Wrangler
-        if: ${{ env.HAS_CF_TOKEN == 'true' }}
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -48,5 +49,5 @@ jobs:
           workingDirectory: apps/${{ matrix.app }}
           command: deploy
         env:
-          HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -1,5 +1,5 @@
 #:schema ../../node_modules/wrangler/config-schema.json
-name = "global-video-platform-web"
+name = "global-video-platform"
 main = "./.output/server/index.mjs"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]

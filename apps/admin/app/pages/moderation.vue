@@ -13,7 +13,7 @@ const fallbackQueue: ModerationCase[] = [
     id: 'mod_882',
     targetType: 'video',
     targetId: 'vid_suspect_reupload_99',
-    reporterUserId: 'usr_rights_cjenm',
+    reporterUserId: 'usr_rights_starlight',
     reason: 'Unlicensed full-length theatrical broadcast & misleading metadata',
     policyCategory: 'COPYRIGHT_AND_DECEPTIVE_CONTENT',
     status: ModerationStatus.PENDING,

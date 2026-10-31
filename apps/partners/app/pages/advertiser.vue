@@ -69,7 +69,7 @@ onMounted(() => {
           <h1 class="text-2xl font-black text-white tracking-tight">독립 광고주 포털 (Advertiser Portal)</h1>
         </div>
         <p class="mt-1 text-xs text-neutral-400">
-          Samsung Electronics Global Media Buying · Enterprise Ad Account #ADV-KR-2026-001
+          Apex Global Media Group (Demo) · Enterprise Ad Account #ADV-DEMO-2026-001
         </p>
       </div>
 

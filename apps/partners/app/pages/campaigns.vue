@@ -19,10 +19,10 @@ const targetCountries = ref('KR,US,JP')
 
 const fallbackCampaigns: AdCampaign[] = [
   {
-    id: 'cmp_samsung_01',
+    id: 'cmp_apex_01',
     advertiserId: 'usr_adv_1',
-    organizationId: 'org_adv_samsung',
-    name: 'Galaxy S26 Ultra 4K Cinema Pre-Roll Campaign',
+    organizationId: 'org_adv_apex',
+    name: 'Apex Horizon Phone 4K Cinema Pre-Roll Campaign (Demo)',
     format: AdFormat.PREROLL,
     status: CampaignStatus.ACTIVE,
     dailyBudget: 5000000,
@@ -43,8 +43,8 @@ const fallbackCampaigns: AdCampaign[] = [
   {
     id: 'cmp_gaming_shorts',
     advertiserId: 'usr_adv_1',
-    organizationId: 'org_adv_samsung',
-    name: 'Odyssey OLED G9 Vertical Shorts Sponsored Feed',
+    organizationId: 'org_adv_apex',
+    name: 'Apex Vision Curved Display Vertical Shorts Sponsored Feed (Demo)',
     format: AdFormat.SHORTS,
     status: CampaignStatus.ACTIVE,
     dailyBudget: 3000000,

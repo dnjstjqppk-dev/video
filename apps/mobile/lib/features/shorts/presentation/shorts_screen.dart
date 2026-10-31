@@ -138,7 +138,6 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
 
   late final PageController _pageController;
   late final ShortsControllerPool _pool;
-  int _currentIndex = 0;
   bool _lowBandwidthMode = false;
   final Set<int> _likedIndices = {};
   int? _heartBurstIndex;
@@ -207,7 +206,6 @@ class _ShortsScreenState extends ConsumerState<ShortsScreen> {
         itemCount: _shorts.length,
         onPageChanged: (index) {
           setState(() {
-            _currentIndex = index;
             _pool.onPageChanged(index);
           });
         },

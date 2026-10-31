@@ -17,7 +17,7 @@ export default defineNuxtConfig({
     adminSessionTimeoutMinutes: 15,
     requireWebAuthnMfa: true,
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8080',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
       webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjqppk.workers.dev',
       studioUrl: process.env.NUXT_PUBLIC_STUDIO_URL || 'https://global-video-platform-studio.dnjstjqppk.workers.dev',
       partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjqppk.workers.dev',

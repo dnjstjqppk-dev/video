@@ -13,7 +13,7 @@ const { data: overview } = await useAsyncData('partner-overview', async () => {
     return {
       organization: {
         id: 'org_partner_01',
-        name: 'Samsung Electronics / K-Creator MCN / CJ Rights',
+        name: 'Apex Global Media / Horizon MCN / Starlight Rights',
         type: activeTenant.value
       },
       campaignCount: 14,

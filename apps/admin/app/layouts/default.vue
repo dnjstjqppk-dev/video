@@ -27,14 +27,14 @@ const navLinks = [
         </span>
         <div>
           <span class="text-base font-extrabold text-white">Super Admin Governance Console</span>
-          <span class="ml-2 rounded bg-red-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-red-400">
-            MFA + IP ALLOWLIST ENFORCED
+          <span class="ml-2 rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400">
+            DEMO CONSOLE PREVIEW
           </span>
         </div>
       </div>
 
       <div class="flex items-center gap-3 text-xs">
-        <span class="text-neutral-400">Active Admin Role:</span>
+        <span class="text-neutral-400">Demo Role Preview:</span>
         <select
           v-model="activeAdminRole"
           class="rounded-xl border border-white/15 bg-[#090B10] px-3 py-1.5 font-mono text-xs font-bold text-emerald-400 outline-none"
@@ -46,7 +46,7 @@ const navLinks = [
           <option :value="UserRole.SUPPORT_AGENT">SUPPORT_AGENT</option>
         </select>
         <span class="rounded-lg bg-emerald-500/15 px-2.5 py-1 font-mono text-[11px] text-emerald-400">
-          Session TTL: 14m 52s
+          Read-Only Sandbox
         </span>
       </div>
     </header>
@@ -78,8 +78,19 @@ const navLinks = [
         </div>
       </aside>
 
-      <main class="min-w-0 flex-1 p-6 lg:p-8">
+            <main class="min-w-0 flex-1 p-6 lg:p-8">
+        <div class="mb-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">⚠️ 어드민 관제 데모 샌드박스 (Demo Sandbox Mode)</span>
+            <span class="text-neutral-400">|</span>
+            <span class="text-neutral-300">실서비스 인증 게이트웨이 연동 전 아키텍처 시연용 프리뷰 화면입니다. 실제 제어 명령 및 킬스위치는 비활성화되어 있습니다.</span>
+          </div>
+          <span class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200">SIMULATION ONLY</span>
+        </div>
         <slot />
+        <footer class="mt-12 border-t border-white/5 pt-4 text-center text-[11px] text-neutral-400">
+          <span>StreamVerse Admin Console · Commit <span class="font-mono text-neutral-300">3f8c1ef</span> · Architecture Prototype</span>
+        </footer>
       </main>
     </div>
   </div>
