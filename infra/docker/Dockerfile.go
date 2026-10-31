@@ -2,7 +2,7 @@
 # ==============================================================================
 # Stage 1: Go Builder (Hardened Static Binary Compilation)
 # ==============================================================================
-FROM golang:1.27-alpine3.20 AS builder
+FROM golang:1.23-alpine3.20 AS builder
 
 ARG SERVICE_NAME=api
 ARG CMD_PATH=./cmd/server
