@@ -126,7 +126,40 @@ const descriptionExpanded = ref(false)
 const showReportModal = ref(false)
 const reportReason = ref('copyright_or_policy')
 const reportSubmitted = ref(false)
+const reportSubmitting = ref(false)
+const reportError = ref<string | null>(null)
+const reportCaseId = ref<string | null>(null)
 const shareCopied = ref(false)
+
+function closeReportModal() {
+  showReportModal.value = false
+  reportSubmitted.value = false
+  reportError.value = null
+}
+
+function onReportModalKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeReportModal()
+}
+
+async function submitReport() {
+  if (reportSubmitting.value) return
+  reportSubmitting.value = true
+  reportError.value = null
+  try {
+    const created = await api.reportContent({
+      targetType: 'video',
+      targetId: videoId.value,
+      reason: reportReason.value,
+      policyCategory: 'general'
+    })
+    reportCaseId.value = created.id
+    reportSubmitted.value = true
+  } catch (e: unknown) {
+    reportError.value = e instanceof Error ? e.message : '신고 접수에 실패했습니다.'
+  } finally {
+    reportSubmitting.value = false
+  }
+}
 
 const newCommentText = ref('')
 const replyTargetId = ref<string | null>(null)
@@ -840,9 +873,16 @@ const relatedVideos = [
     <div
       v-if="showReportModal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+      @mousedown.self="closeReportModal"
+      @keydown="onReportModalKeydown"
     >
-      <div class="w-full max-w-md rounded-2xl border border-white/15 bg-[#212121] p-6 text-white shadow-2xl">
-        <h3 class="text-base font-bold">
+      <div
+        class="w-full max-w-md rounded-2xl border border-white/15 bg-[#212121] p-6 text-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-modal-title"
+      >
+        <h3 id="report-modal-title" class="text-base font-bold">
           {{ appStore.locale === 'ko' ? '콘텐츠 신고 (Trust & Safety Report)' : 'Report Video to Trust & Safety' }}
         </h3>
         <p class="mt-1 text-xs text-neutral-400">
@@ -862,23 +902,27 @@ const relatedVideos = [
             <span>Harmful, hateful, or age-inappropriate content</span>
           </label>
         </div>
-        <p v-if="reportSubmitted" class="mt-3 text-xs font-semibold text-emerald-400">
-          ✓ Report submitted with trace ID. Our Trust & Safety team will review it shortly.
+        <p v-if="reportSubmitted" class="mt-3 text-xs font-semibold text-emerald-400" role="status">
+          ✓ Report {{ reportCaseId }} received. Our Trust & Safety team will review it shortly.
+        </p>
+        <p v-if="reportError" class="mt-3 text-xs font-semibold text-red-400" role="alert">
+          {{ reportError }}
         </p>
         <div class="mt-5 flex justify-end gap-2">
           <button
             type="button"
             class="rounded-full px-4 py-1.5 text-xs text-neutral-300 hover:bg-white/10"
-            @click="showReportModal = false; reportSubmitted = false"
+            @click="closeReportModal"
           >
             Close
           </button>
           <button
             type="button"
-            class="rounded-full bg-[#FF0033] px-4 py-1.5 text-xs font-bold text-white"
-            @click="reportSubmitted = true"
+            :disabled="reportSubmitting || reportSubmitted"
+            class="rounded-full bg-[#FF0033] px-4 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+            @click="submitReport"
           >
-            Submit Report
+            {{ reportSubmitting ? 'Submitting…' : 'Submit Report' }}
           </button>
         </div>
       </div>

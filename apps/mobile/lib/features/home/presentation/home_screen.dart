@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_client.dart';
 
 class HomeVideoItem {
   final String id;
@@ -10,6 +11,7 @@ class HomeVideoItem {
   final String viewsText;
   final String publishedText;
   final String durationLabel;
+  final String? thumbnailUrl;
   final bool isLive;
   final Color accentColor;
 
@@ -21,22 +23,72 @@ class HomeVideoItem {
     required this.viewsText,
     required this.publishedText,
     required this.durationLabel,
+    this.thumbnailUrl,
     this.isLive = false,
     required this.accentColor,
   });
+
+  factory HomeVideoItem.fromApi(Map<String, dynamic> json) {
+    final viewCount = (json['view_count'] as num?)?.toInt() ?? 0;
+    final durationSeconds = (json['duration_seconds'] as num?)?.toInt() ?? 0;
+    final videoType = (json['video_type'] as String?) ?? 'standard';
+    final publishedRaw =
+        (json['published_at'] ?? json['created_at']) as String?;
+    return HomeVideoItem(
+      id: (json['id'] as String?) ?? '',
+      title: (json['title'] as String?) ?? '(untitled)',
+      channelName: (json['channel_name'] as String?) ?? 'Unknown channel',
+      category: (json['category'] as String?) ?? 'General',
+      viewsText: _formatViews(viewCount),
+      publishedText: _formatPublished(publishedRaw),
+      durationLabel: videoType == 'live' ? 'LIVE' : _formatDuration(durationSeconds),
+      thumbnailUrl: json['thumbnail_url'] as String?,
+      isLive: videoType == 'live',
+      accentColor: const Color(0xFFE11D48),
+    );
+  }
+
+  static String _formatViews(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M views';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K views';
+    return '$count views';
+  }
+
+  static String _formatPublished(String? iso) {
+    if (iso == null || iso.isEmpty) return '';
+    final date = DateTime.tryParse(iso);
+    if (date == null) return '';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 30) return '${diff.inDays}d ago';
+    return '${date.year}.${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
+  }
+
+  static String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
 }
 
 class HomeFeedState {
   final String selectedCategory;
   final List<HomeVideoItem> items;
+  final bool isLoading;
   final bool isLoadingMore;
   final int page;
+  final bool hasMore;
+  final String? errorMessage;
 
   const HomeFeedState({
     this.selectedCategory = 'All',
     this.items = const [],
+    this.isLoading = true,
     this.isLoadingMore = false,
     this.page = 1,
+    this.hasMore = true,
+    this.errorMessage,
   });
 
   List<HomeVideoItem> get filteredItems {
@@ -50,25 +102,34 @@ class HomeFeedState {
   HomeFeedState copyWith({
     String? selectedCategory,
     List<HomeVideoItem>? items,
+    bool? isLoading,
     bool? isLoadingMore,
     int? page,
+    bool? hasMore,
+    String? Function()? errorMessage,
   }) {
     return HomeFeedState(
       selectedCategory: selectedCategory ?? this.selectedCategory,
       items: items ?? this.items,
+      isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
     );
   }
 }
 
 final homeFeedProvider =
     StateNotifierProvider<HomeFeedNotifier, HomeFeedState>((ref) {
-  return HomeFeedNotifier()..loadInitial();
+  final api = ref.watch(apiClientProvider);
+  return HomeFeedNotifier(api)..loadInitial();
 });
 
 class HomeFeedNotifier extends StateNotifier<HomeFeedState> {
-  HomeFeedNotifier() : super(const HomeFeedState());
+  final ApiClient _api;
+
+  HomeFeedNotifier(this._api) : super(const HomeFeedState());
 
   static const List<String> categories = [
     'All',
@@ -80,8 +141,27 @@ class HomeFeedNotifier extends StateNotifier<HomeFeedState> {
     'AI & Cloud',
   ];
 
-  void loadInitial() {
-    state = state.copyWith(items: _generateItemsForPage(1), page: 1);
+  static const int _pageSize = 20;
+
+  Future<void> loadInitial() async {
+    state = state.copyWith(isLoading: true, errorMessage: () => null);
+    try {
+      final res = await _api.get<Map<String, dynamic>>(
+        '/feed/home',
+        queryParameters: {'page': 1, 'limit': _pageSize},
+      );
+      final data = res.data ?? {};
+      final items = _parseItems(data);
+      final total = (data['total'] as num?)?.toInt() ?? items.length;
+      state = state.copyWith(
+        items: items,
+        page: 1,
+        hasMore: items.length < total,
+        isLoading: false,
+      );
+    } on ApiErrorException catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: () => e.message);
+    }
   }
 
   void selectCategory(String category) {
@@ -89,70 +169,55 @@ class HomeFeedNotifier extends StateNotifier<HomeFeedState> {
   }
 
   Future<void> refreshFeed() async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    state = state.copyWith(items: _generateItemsForPage(1), page: 1);
+    state = state.copyWith(errorMessage: () => null);
+    try {
+      final res = await _api.get<Map<String, dynamic>>(
+        '/feed/home',
+        queryParameters: {'page': 1, 'limit': _pageSize},
+      );
+      final data = res.data ?? {};
+      final items = _parseItems(data);
+      final total = (data['total'] as num?)?.toInt() ?? items.length;
+      state = state.copyWith(items: items, page: 1, hasMore: items.length < total);
+    } on ApiErrorException catch (e) {
+      state = state.copyWith(errorMessage: () => e.message);
+    }
   }
 
   Future<void> loadNextPage() async {
-    if (state.isLoadingMore) return;
+    if (state.isLoadingMore || !state.hasMore) return;
     state = state.copyWith(isLoadingMore: true);
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    final nextPage = state.page + 1;
-    state = state.copyWith(
-      items: [...state.items, ..._generateItemsForPage(nextPage)],
-      page: nextPage,
-      isLoadingMore: false,
-    );
+    try {
+      final nextPage = state.page + 1;
+      final res = await _api.get<Map<String, dynamic>>(
+        '/feed/home',
+        queryParameters: {'page': nextPage, 'limit': _pageSize},
+      );
+      final data = res.data ?? {};
+      final items = _parseItems(data);
+      final total = (data['total'] as num?)?.toInt() ?? 0;
+      final merged = [...state.items, ...items];
+      state = state.copyWith(
+        items: merged,
+        page: nextPage,
+        hasMore: merged.length < total,
+        isLoadingMore: false,
+      );
+    } on ApiErrorException catch (e) {
+      state = state.copyWith(isLoadingMore: false, errorMessage: () => e.message);
+    }
   }
 
-  List<HomeVideoItem> _generateItemsForPage(int page) {
-    final base = (page - 1) * 4;
-    return [
-      HomeVideoItem(
-        id: 'vid_home_${base + 1}',
-        title:
-            'Global Video Mesh: Sub-Second LL-HLS & AV1 Edge Transcoding (#${base + 1})',
-        channelName: 'GVP Engineering',
-        category: 'Engineering',
-        viewsText: '284K views',
-        publishedText: '3 hours ago',
-        durationLabel: '24:18',
-        accentColor: const Color(0xFFE11D48),
-      ),
-      HomeVideoItem(
-        id: 'live_home_${base + 2}',
-        title: 'LIVE: Global Creator Summit 2026 - 4K60 Keynote Broadcast',
-        channelName: 'GVP Official Live',
-        category: 'Live',
-        viewsText: '19.4K watching',
-        publishedText: 'STREAMING NOW',
-        durationLabel: 'LIVE',
-        isLive: true,
-        accentColor: const Color(0xFFEF4444),
-      ),
-      HomeVideoItem(
-        id: 'vid_home_${base + 3}',
-        title: 'Patagonia Dolby Vision 4K 60fps HDR Mastering Showcase',
-        channelName: 'Cinema4K HDR Lab',
-        category: 'Cinema 4K',
-        viewsText: '1.2M views',
-        publishedText: '2 days ago',
-        durationLabel: '18:05',
-        accentColor: const Color(0xFF6366F1),
-      ),
-      HomeVideoItem(
-        id: 'vid_home_${base + 4}',
-        title:
-            'Distributed ClickHouse Analytics: Real-Time QoE Telemetry at Scale',
-        channelName: 'Cloud Native Foundry',
-        category: 'AI & Cloud',
-        viewsText: '92K views',
-        publishedText: '5 days ago',
-        durationLabel: '31:42',
-        accentColor: const Color(0xFF0EA5E9),
-      ),
-    ];
+  List<HomeVideoItem> _parseItems(Map<String, dynamic> data) {
+    final raw = data['items'];
+    if (raw is! List) return [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(HomeVideoItem.fromApi)
+        .where((item) => item.id.isNotEmpty)
+        .toList();
   }
+
 }
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -257,24 +322,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => ref.read(homeFeedProvider.notifier).refreshFeed(),
-              child: ListView.builder(
-                key: const Key('home_feed_list'),
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 90),
-                itemCount: items.length + (feed.isLoadingMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final video = items[index];
-                  return _VideoFeedCard(video: video);
-                },
-              ),
+            child: Builder(
+              builder: (context) {
+                if (feed.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (feed.errorMessage != null && items.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.wifi_off_rounded, size: 48),
+                          const SizedBox(height: 12),
+                          Text(
+                            feed.errorMessage!,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: () => ref
+                                .read(homeFeedProvider.notifier)
+                                .refreshFeed(),
+                            child: const Text('다시 시도'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                if (items.isEmpty) {
+                  return const Center(
+                    child: Text('표시할 영상이 없습니다.'),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(homeFeedProvider.notifier).refreshFeed(),
+                  child: ListView.builder(
+                    key: const Key('home_feed_list'),
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 90),
+                    itemCount: items.length + (feed.isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index >= items.length) {
+                        return const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final video = items[index];
+                      return _VideoFeedCard(video: video);
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -312,25 +415,42 @@ class _VideoFeedCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          video.accentColor.withValues(alpha: 0.45),
-                          const Color(0xFF181826),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  if (video.thumbnailUrl != null &&
+                      video.thumbnailUrl!.isNotEmpty)
+                    Image.network(
+                      video.thumbnailUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: const Color(0xFF181826),
+                        child: const Center(
+                          child: Icon(
+                            Icons.play_circle_outline_rounded,
+                            size: 54,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            video.accentColor.withValues(alpha: 0.45),
+                            const Color(0xFF181826),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.play_circle_outline_rounded,
+                          size: 54,
+                          color: Colors.white70,
+                        ),
                       ),
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.play_circle_outline_rounded,
-                        size: 54,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ),
                   Positioned(
                     right: 10,
                     bottom: 10,

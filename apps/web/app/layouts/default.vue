@@ -89,14 +89,32 @@ const subscribedChannels = [
   { id: 'ch_esports_global', name: 'Global Esports Arena', handle: '@esports', isLive: true },
   { id: 'ch_kfood_master', name: 'K-Food Studio', handle: '@kfood', isLive: false }
 ]
+
+onMounted(() => {
+  if (!appStore.currentUser && !appStore.authLoading) {
+    void appStore.fetchSession(api)
+  }
+})
+
+async function logout() {
+  showUserMenu.value = false
+  try {
+    await $fetch('/auth/logout', { method: 'POST' })
+  } catch {
+    // Session cookies are cleared server-side; continue locally regardless.
+  }
+  const tokenCookie = useCookie('gvp_access_token')
+  tokenCookie.value = null
+  appStore.clearSession()
+  await navigateTo('/')
+}
 </script>
 
 <template>
   <div class="flex min-h-screen flex-col">
     <!-- Top Navbar -->
     <header
-      class="sticky top-0 z-50 flex h-14 items-center justify-between border-b px-4 backdrop-blur-md transition-colors"
-      :class="appStore.theme === 'dark' ? 'border-white/10 bg-[#0F0F0F]/95' : 'border-black/10 bg-white/95'"
+      class="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/10 bg-[#0F0F0F]/95 px-4 backdrop-blur-md transition-colors"
     >
       <!-- Left: Hamburger & Brand Logo -->
       <div class="flex items-center gap-3">
@@ -132,8 +150,7 @@ const subscribedChannels = [
               v-model="searchQuery"
               type="search"
               :placeholder="appStore.locale === 'ko' ? '검색어를 입력하세요 (동영상, 쇼츠, 라이브, 채널)...' : 'Search videos, Shorts, live streams, channels...'"
-              class="h-10 w-full rounded-l-full border px-4 text-sm outline-none transition focus:border-[#3EA6FF]"
-              :class="appStore.theme === 'dark' ? 'border-white/20 bg-[#121212] text-white placeholder-neutral-400' : 'border-neutral-300 bg-neutral-100 text-black placeholder-neutral-500'"
+              class="h-10 w-full rounded-l-full border border-white/20 bg-[#121212] px-4 text-sm text-white outline-none transition placeholder:text-neutral-400 focus:border-[#3EA6FF]"
               @focus="showSuggestions = true; onSearchInput()"
               @input="onSearchInput"
               @blur="onSearchBlur"
@@ -141,8 +158,7 @@ const subscribedChannels = [
           </div>
           <button
             type="submit"
-            class="flex h-10 w-16 items-center justify-center rounded-r-full border border-l-0 transition"
-            :class="appStore.theme === 'dark' ? 'border-white/20 bg-[#272727] text-white hover:bg-[#3A3A3A]' : 'border-neutral-300 bg-neutral-200 text-black hover:bg-neutral-300'"
+            class="flex h-10 w-16 items-center justify-center rounded-r-full border border-l-0 border-white/20 bg-[#272727] text-white transition hover:bg-[#3A3A3A]"
             aria-label="Search"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -155,8 +171,7 @@ const subscribedChannels = [
         <!-- Autocomplete Dropdown -->
         <div
           v-if="showSuggestions && suggestions.length > 0"
-          class="absolute left-0 top-12 z-50 w-full overflow-hidden rounded-2xl border py-2 shadow-2xl"
-          :class="appStore.theme === 'dark' ? 'border-white/10 bg-[#212121] text-white' : 'border-black/10 bg-white text-black'"
+          class="absolute left-0 top-12 z-50 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#212121] py-2 text-white shadow-2xl"
         >
           <button
             v-for="item in suggestions"
@@ -192,20 +207,6 @@ const subscribedChannels = [
           {{ appStore.currency }}
         </button>
 
-        <button
-          type="button"
-          class="rounded-full p-2 transition hover:bg-white/10"
-          :title="appStore.theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-          @click="appStore.toggleTheme()"
-        >
-          <svg v-if="appStore.theme === 'dark'" class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <svg v-else class="h-5 w-5 text-slate-700" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-          </svg>
-        </button>
-
         <a
           :href="config.public.studioUrl"
           target="_blank"
@@ -238,6 +239,7 @@ const subscribedChannels = [
 
         <div class="relative">
           <button
+            v-if="appStore.currentUser"
             type="button"
             class="flex items-center gap-2 rounded-full p-1 transition hover:ring-2 hover:ring-[#3EA6FF]"
             @click="showUserMenu = !showUserMenu"
@@ -248,15 +250,21 @@ const subscribedChannels = [
               class="h-8 w-8 rounded-full object-cover"
             />
           </button>
+          <NuxtLink
+            v-else
+            to="/login"
+            class="flex items-center gap-2 rounded-full border border-[#3EA6FF]/50 px-4 py-1.5 text-xs font-bold text-[#3EA6FF] transition hover:bg-[#3EA6FF]/10"
+          >
+            {{ appStore.locale === 'ko' ? '로그인' : 'Sign in' }}
+          </NuxtLink>
 
           <div
-            v-if="showUserMenu"
-            class="absolute right-0 top-11 z-50 w-64 rounded-2xl border p-3 shadow-2xl"
-            :class="appStore.theme === 'dark' ? 'border-white/10 bg-[#212121] text-white' : 'border-black/10 bg-white text-black'"
+            v-if="showUserMenu && appStore.currentUser"
+            class="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-white/10 bg-[#212121] p-3 text-white shadow-2xl"
           >
             <div class="border-b border-white/10 pb-3">
               <p class="font-semibold">{{ appStore.currentUser?.displayName }}</p>
-              <p class="text-xs text-neutral-400">@{{ appStore.currentUser?.username }} · {{ appStore.currentUser?.subscriptionTier.toUpperCase() }}</p>
+              <p class="text-xs text-neutral-400">@{{ appStore.currentUser?.username }} · {{ appStore.currentUser?.subscriptionTier?.toUpperCase() }}</p>
             </div>
             <div class="mt-2 flex flex-col gap-1 text-sm">
               <NuxtLink to="/channels/ch_tech_kr" class="rounded-lg px-3 py-2 hover:bg-white/10" @click="showUserMenu = false">
@@ -265,6 +273,13 @@ const subscribedChannels = [
               <NuxtLink to="/premium" class="rounded-lg px-3 py-2 text-[#3EA6FF] hover:bg-white/10" @click="showUserMenu = false">
                 {{ appStore.locale === 'ko' ? 'StreamVerse Premium 멤버십' : 'StreamVerse Premium' }}
               </NuxtLink>
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 text-left text-neutral-400 hover:bg-white/10"
+                @click="logout"
+              >
+                {{ appStore.locale === 'ko' ? '로그아웃' : 'Sign out' }}
+              </button>
             </div>
           </div>
         </div>
@@ -275,11 +290,8 @@ const subscribedChannels = [
     <div class="flex flex-1">
       <!-- Left Collapsible Sidebar -->
       <aside
-        class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r transition-all md:block"
-        :class="[
-          appStore.sidebarCollapsed ? 'w-20 px-2' : 'w-60 px-3',
-          appStore.theme === 'dark' ? 'border-white/10 bg-[#0F0F0F]' : 'border-black/10 bg-white'
-        ]"
+        class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-white/10 bg-[#0F0F0F] transition-all md:block"
+        :class="[appStore.sidebarCollapsed ? 'w-20 px-2' : 'w-60 px-3']"
       >
         <nav class="mt-3 flex flex-col gap-1">
           <NuxtLink
@@ -289,7 +301,7 @@ const subscribedChannels = [
             class="flex items-center gap-4 rounded-xl px-3 py-2.5 text-sm font-medium transition"
             :class="[
               route.path === item.path
-                ? (appStore.theme === 'dark' ? 'bg-[#272727] text-white font-semibold' : 'bg-neutral-200 text-black font-semibold')
+                ? 'bg-[#272727] text-white font-semibold'
                 : 'hover:bg-white/10 text-neutral-300'
             ]"
           >
@@ -331,6 +343,16 @@ const subscribedChannels = [
       <!-- Main Content -->
       <main class="min-w-0 flex-1">
         <slot />
+        <footer class="mt-12 border-t border-white/10 px-4 py-8 sm:px-6">
+          <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-400" aria-label="서비스 정보">
+            <span class="font-bold text-neutral-200">StreamVerse</span>
+            <NuxtLink to="/terms" class="hover:text-white hover:underline">이용약관</NuxtLink>
+            <NuxtLink to="/privacy" class="hover:text-white hover:underline">개인정보처리방침</NuxtLink>
+            <NuxtLink to="/premium" class="hover:text-white hover:underline">Premium</NuxtLink>
+            <a :href="config.public.studioUrl" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline">크리에이터 스튜디오</a>
+          </nav>
+          <p class="mt-3 text-[11px] text-neutral-500">© 2026 StreamVerse Global Video Platform. 모든 영상·채널 데이터는 계정 삭제 요청 시 30일 유예 후 파기됩니다.</p>
+        </footer>
       </main>
     </div>
   </div>

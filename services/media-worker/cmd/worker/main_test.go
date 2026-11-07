@@ -1,6 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -132,5 +137,147 @@ func TestAudioNormalizationAndQualityGates(t *testing.T) {
 	approved, grade = EvaluateVideoQuality(75.0, 32.0, 0.85)
 	if approved || grade != "POOR" {
 		t.Fatalf("expected POOR rejected, got %v / %s", approved, grade)
+	}
+}
+
+func postIntake(t *testing.T, srv *healthServer, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/jobs/transcode", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	srv.handleTranscodeIntake(rec, req)
+	return rec
+}
+
+func TestTranscodeIntakeExecutesJob(t *testing.T) {
+	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
+	payload := `{"jobId":"job-intake-1","videoId":"vid-intake-1","sourceR2Key":"raw/user1/vid-intake-1.mp4",` +
+		`"width":1920,"height":1080,"durationSeconds":120,"videoCodec":"h264","hasVideoStream":true}`
+	rec := postIntake(t, srv, payload)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var result struct {
+		State  string `json:"state"`
+		Probed bool   `json:"probed"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatalf("invalid intake response: %v", err)
+	}
+	if result.State != "READY" || !result.Probed {
+		t.Fatalf("expected READY/probed response, got %+v", result)
+	}
+	if srv.worker.States["vid-intake-1"] != StateReady {
+		t.Fatalf("expected worker state READY, got %s", srv.worker.States["vid-intake-1"])
+	}
+}
+
+func TestTranscodeIntakeAssumedProfileAndValidation(t *testing.T) {
+	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
+
+	// No probe metadata: dev default assumes the 1080p source profile.
+	rec := postIntake(t, srv, `{"jobId":"job-intake-2","videoId":"vid-intake-2","sourceR2Key":"raw/user1/v.mp4"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 with assumed profile, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"probed":false`) {
+		t.Fatalf("expected probed=false flag, got %s", rec.Body.String())
+	}
+
+	// Production gate rejects unprobed jobs.
+	t.Setenv("REQUIRE_PROBED_SOURCE", "true")
+	rec = postIntake(t, srv, `{"jobId":"job-intake-3","videoId":"vid-intake-3","sourceR2Key":"raw/user1/v.mp4"}`)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 under REQUIRE_PROBED_SOURCE, got %d", rec.Code)
+	}
+	if os.Getenv("REQUIRE_PROBED_SOURCE") != "true" {
+		t.Fatal("expected env gate to hold during test")
+	}
+
+	// Missing identifiers are a bad request, not a job failure.
+	rec = postIntake(t, srv, `{"videoId":"vid-no-key"}`)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing sourceR2Key, got %d", rec.Code)
+	}
+
+	// Non-POST methods are rejected.
+	req := httptest.NewRequest(http.MethodGet, "/jobs/transcode", nil)
+	getRec := httptest.NewRecorder()
+	srv.handleTranscodeIntake(getRec, req)
+	if getRec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405 for GET, got %d", getRec.Code)
+	}
+}
+
+func TestEditRenderIntakeExecutesEDL(t *testing.T) {
+	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
+	payload := `{"jobId":"job-edit-1","videoId":"vid-edit-1","sourceR2Key":"raw/user1/vid-edit-1.mp4",` +
+		`"height":1080,"durationSeconds":1900,"edl":{"trimStartSec":12,"trimEndSec":1820,` +
+		`"splitPoints":[310,890],"replacementAudio":"Royalty-Free Synthwave","blurRegions":` +
+		`[{"id":"blur_1","label":"plate","x":42,"y":68,"startSec":120,"endSec":165}],` +
+		`"mutedSegments":[{"startSec":410,"endSec":445,"reason":"copyrighted music"}]}}`
+	req := httptest.NewRequest(http.MethodPost, "/jobs/edit-render", strings.NewReader(payload))
+	rec := httptest.NewRecorder()
+	srv.handleEditRenderIntake(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"state":"READY"`) {
+		t.Fatalf("expected READY state, got %s", rec.Body.String())
+	}
+	if srv.worker.States["vid-edit-1"] != StateReady {
+		t.Fatalf("expected worker state READY, got %s", srv.worker.States["vid-edit-1"])
+	}
+	found := false
+	for _, key := range srv.worker.R2Uploaded["vid-edit-1"] {
+		if strings.Contains(key, "/edited/master.m3u8") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected edited HLS master artifact, got %v", srv.worker.R2Uploaded["vid-edit-1"])
+	}
+}
+
+func TestEditRenderIntakeRejectsBadEDL(t *testing.T) {
+	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
+
+	// Inverted trim range.
+	payload := `{"jobId":"job-edit-2","videoId":"vid-edit-2","sourceR2Key":"raw/u/v.mp4",` +
+		`"edl":{"trimStartSec":500,"trimEndSec":100}}`
+	req := httptest.NewRequest(http.MethodPost, "/jobs/edit-render", strings.NewReader(payload))
+	rec := httptest.NewRecorder()
+	srv.handleEditRenderIntake(rec, req)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for inverted trim, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if srv.worker.States["vid-edit-2"] != StateFailed {
+		t.Fatalf("expected worker state FAILED, got %s", srv.worker.States["vid-edit-2"])
+	}
+
+	// Pure validator: descending splits and out-of-range blur.
+	if err := ValidateEDL(EditDecisionList{TrimStartSec: 0, TrimEndSec: 100, SplitPoints: []int{80, 40}}, 200); err == nil {
+		t.Fatal("expected error for descending split points")
+	}
+	badBlur := EditDecisionList{TrimStartSec: 0, TrimEndSec: 100,
+		BlurRegions: []BlurRegion{{ID: "b1", X: 150, Y: 10, StartSec: 5, EndSec: 10}}}
+	if err := ValidateEDL(badBlur, 200); err == nil {
+		t.Fatal("expected error for out-of-range blur coordinates")
+	}
+	if err := ValidateEDL(EditDecisionList{TrimStartSec: 0, TrimEndSec: 500}, 200); err == nil {
+		t.Fatal("expected error when trimEnd exceeds known duration")
+	}
+}
+
+func TestTranscodeIntakeRejectsTraversalKey(t *testing.T) {
+	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
+	var buf bytes.Buffer
+	buf.WriteString(`{"jobId":"job-intake-4","videoId":"vid-intake-4","sourceR2Key":"../../etc/passwd",`)
+	buf.WriteString(`"width":1920,"height":1080,"durationSeconds":60,"videoCodec":"h264","hasVideoStream":true}`)
+	rec := postIntake(t, srv, buf.String())
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for traversal key, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if srv.worker.States["vid-intake-4"] != StateFailed {
+		t.Fatalf("expected worker state FAILED, got %s", srv.worker.States["vid-intake-4"])
 	}
 }

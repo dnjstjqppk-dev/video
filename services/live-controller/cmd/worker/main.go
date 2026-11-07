@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -154,10 +155,59 @@ func main() {
 	defer stop()
 
 	ctrl := NewLiveController()
-	_ = ctrl
 
-	select {
-	case <-ctx.Done():
-	case <-time.After(100 * time.Millisecond):
+	health := newHealthServer("live-controller", ctrl)
+	go func() {
+		if err := health.listenAndServe(ctx); err != nil {
+			slog.Error("Health server failure", "error", err)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("Shutting down Live Controller gracefully")
+}
+
+// healthServer exposes liveness, readiness and Prometheus metrics so the
+// worker is observable behind Docker/Kubernetes health checks.
+type healthServer struct {
+	name  string
+	start time.Time
+	ctrl  *LiveController
+}
+
+func newHealthServer(name string, ctrl *LiveController) *healthServer {
+	return &healthServer{name: name, start: time.Now(), ctrl: ctrl}
+}
+
+func (h *healthServer) listenAndServe(ctx context.Context) error {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"UP","worker":%q,"uptime_seconds":%d}`, h.name, int64(time.Since(h.start).Seconds()))
+	})
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"READY","worker":%q}`, h.name)
+	})
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		fmt.Fprintf(w, "# HELP gvp_worker_uptime_seconds Worker uptime in seconds\n# TYPE gvp_worker_uptime_seconds gauge\ngvp_worker_uptime_seconds{worker=%q} %d\n", h.name, int64(time.Since(h.start).Seconds()))
+	})
+	h.registerIntakeRoutes(mux)
+	server := &http.Server{Addr: ":" + port, Handler: mux, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+	slog.Info("Worker health server listening", "worker", h.name, "port", port)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }

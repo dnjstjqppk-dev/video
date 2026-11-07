@@ -30,6 +30,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	// Sessions (TASK-059)
 	r.Get("/me/sessions", h.GetSessions)
 	r.Post("/me/sessions/{id}/revoke", h.RevokeSession)
+	r.Delete("/me/sessions/{id}", h.RevokeSession)
 
 	// History
 	r.Get("/me/history", h.GetHistory)
@@ -88,6 +89,7 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	if payload.Bio != "" {
 		user.Bio = payload.Bio
 	}
+	h.Store.PersistUser(user)
 
 	identity.WriteJSON(w, http.StatusOK, user)
 }
@@ -118,14 +120,13 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetHistory(w http.ResponseWriter, r *http.Request) {
+	page, limit := identity.ParsePagination(r, 20)
 	var list []*store.Video
 	for _, v := range h.Store.Videos {
 		list = append(list, v)
 	}
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": list,
-		"total": len(list),
-	})
+	window, total := identity.PaginateSlice(list, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) ClearHistory(w http.ResponseWriter, r *http.Request) {

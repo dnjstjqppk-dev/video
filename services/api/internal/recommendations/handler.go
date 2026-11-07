@@ -31,6 +31,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 
 func (h *Handler) GetHomeFeed(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
+	page, limit := identity.ParsePagination(r, 24)
 	var feed []*store.Video
 
 	for _, v := range h.Store.Videos {
@@ -42,13 +43,12 @@ func (h *Handler) GetHomeFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": feed,
-		"total": len(feed),
-	})
+	window, total := identity.PaginateSlice(feed, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) GetShortsFeed(w http.ResponseWriter, r *http.Request) {
+	page, limit := identity.ParsePagination(r, 10)
 	var shorts []*store.Video
 	for _, v := range h.Store.Videos {
 		if v.Visibility == "public" && v.Status == "READY" && v.VideoType == "shorts" {
@@ -56,24 +56,28 @@ func (h *Handler) GetShortsFeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": shorts,
-		"total": len(shorts),
-	})
+	window, total := identity.PaginateSlice(shorts, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) GetSubscriptionsFeed(w http.ResponseWriter, r *http.Request) {
+	page, limit := identity.ParsePagination(r, 24)
+	user := identity.GetUserFromContext(r.Context())
 	var feed []*store.Video
 	for _, v := range h.Store.Videos {
-		if v.Visibility == "public" && v.Status == "READY" {
-			feed = append(feed, v)
+		if v.Visibility != "public" || v.Status != "READY" {
+			continue
 		}
+		if user != nil {
+			if subs, ok := h.Store.Subscriptions[user.ID]; !ok || !subs[v.ChannelID] {
+				continue
+			}
+		}
+		feed = append(feed, v)
 	}
 
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": feed,
-		"total": len(feed),
-	})
+	window, total := identity.PaginateSlice(feed, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) Feedback(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +92,7 @@ func (h *Handler) Feedback(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
+	page, limit := identity.ParsePagination(r, 20)
 	var matchedVideos []*store.Video
 	var matchedChannels []*store.Channel
 
@@ -105,10 +110,14 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	videoWindow, _ := identity.PaginateSlice(matchedVideos, page, limit)
+	channelWindow, _ := identity.PaginateSlice(matchedChannels, page, limit)
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"videos":   matchedVideos,
-		"channels": matchedChannels,
+		"videos":   videoWindow,
+		"channels": channelWindow,
 		"total":    len(matchedVideos) + len(matchedChannels),
+		"page":     page,
+		"limit":    limit,
 	})
 }
 

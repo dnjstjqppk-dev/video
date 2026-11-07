@@ -1,9 +1,38 @@
 <script setup lang="ts">
+import type { UserProfile } from '@gvp/shared-types'
+
 const route = useRoute()
 const config = useRuntimeConfig()
+const api = useStudioApi()
 
 const currency = useState<'KRW' | 'USD'>('studio-currency', () => 'KRW')
-const selectedRole = useState<string>('studio-role', () => 'Channel Owner (Full Access)')
+const sessionUser = useState<UserProfile | null>('studio-session', () => null)
+const mobileNavOpen = ref(false)
+
+watch(() => route.path, () => {
+  mobileNavOpen.value = false
+})
+
+onMounted(async () => {
+  if (sessionUser.value) return
+  try {
+    sessionUser.value = await api.getMe()
+  } catch {
+    sessionUser.value = null
+  }
+})
+
+async function logout() {
+  try {
+    await $fetch('/auth/logout', { method: 'POST' })
+  } catch {
+    // Session cookies are cleared server-side; continue locally regardless.
+  }
+  const tokenCookie = useCookie('gvp_studio_token')
+  tokenCookie.value = null
+  sessionUser.value = null
+  await navigateTo('/login')
+}
 
 const navLinks = [
   { path: '/', label: '대시보드 (Dashboard)', icon: '📊' },
@@ -23,31 +52,61 @@ const navLinks = [
 <template>
   <div class="flex min-h-screen flex-col">
     <!-- Top Studio Header -->
-    <header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/10 bg-[#12151E]/95 px-6 backdrop-blur">
-      <div class="flex items-center gap-4">
+    <header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/10 bg-[#12151E]/95 px-4 backdrop-blur sm:px-6">
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          class="rounded-lg p-2 text-neutral-300 hover:bg-white/10 md:hidden"
+          aria-label="메뉴 열기"
+          :aria-expanded="mobileNavOpen"
+          @click="mobileNavOpen = !mobileNavOpen"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
         <NuxtLink to="/" class="flex items-center gap-2.5">
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF0033] font-black text-white">
             S
           </span>
           <div>
             <span class="text-base font-extrabold tracking-tight text-white">Creator Studio</span>
-            <span class="ml-2 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400">PARTNER VERIFIED</span>
-            <span class="ml-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">DEMO STUDIO</span>
+            <span
+              v-if="sessionUser"
+              class="ml-2 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400"
+            >
+              {{ sessionUser.role }}
+            </span>
+            <NuxtLink
+              v-else
+              to="/login"
+              class="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300 hover:bg-amber-500/30"
+            >
+              LOGIN REQUIRED
+            </NuxtLink>
           </div>
         </NuxtLink>
       </div>
 
-      <div class="flex items-center gap-3">
-        <!-- Channel Role Selector (Owner, Manager, Editor, Analyst) -->
-        <select
-          v-model="selectedRole"
-          class="rounded-xl border border-white/15 bg-[#1B1F2B] px-3 py-1.5 text-xs font-medium text-neutral-200 outline-none"
+      <div class="flex min-w-0 items-center gap-2 overflow-x-auto sm:gap-3">
+        <span v-if="sessionUser" class="hidden text-xs text-neutral-300 md:inline">
+          {{ sessionUser.displayName }}
+        </span>
+        <button
+          v-if="sessionUser"
+          type="button"
+          class="rounded-xl border border-white/15 bg-[#1B1F2B] px-3 py-1.5 text-xs font-bold text-neutral-300 hover:bg-white/10"
+          @click="logout"
         >
-          <option>Channel Owner (Full Access)</option>
-          <option>Channel Manager</option>
-          <option>Channel Video Editor</option>
-          <option>Channel Analyst (Read-Only)</option>
-        </select>
+          로그아웃
+        </button>
+        <NuxtLink
+          v-else
+          to="/login"
+          class="rounded-xl bg-[#FF0033] px-4 py-2 text-xs font-bold text-white hover:bg-[#D9002B]"
+        >
+          로그인
+        </NuxtLink>
 
         <!-- Currency Switcher -->
         <button
@@ -63,7 +122,7 @@ const navLinks = [
           class="flex items-center gap-1.5 rounded-xl bg-[#FF0033] px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-[#D9002B]"
         >
           <span>＋</span>
-          <span>새 동영상 업로드 (Upload)</span>
+          <span class="hidden sm:inline">새 동영상 업로드 (Upload)</span>
         </NuxtLink>
 
         <a
@@ -95,19 +154,35 @@ const navLinks = [
       </div>
     </header>
 
+    <div
+      v-if="mobileNavOpen"
+      class="fixed inset-0 z-40 bg-black/60 md:hidden"
+      aria-hidden="true"
+      @click="mobileNavOpen = false"
+    />
     <div class="flex flex-1">
       <!-- Studio Left Navigation Sidebar -->
-      <aside class="w-64 shrink-0 border-r border-white/10 bg-[#12151E] p-4">
+      <aside
+        class="fixed inset-y-0 left-0 z-50 w-72 shrink-0 overflow-y-auto border-r border-white/10 bg-[#12151E] p-4 transition-transform md:static md:z-auto md:w-64 md:translate-x-0"
+        :class="mobileNavOpen ? 'translate-x-0' : '-translate-x-full'"
+      >
         <!-- Creator Channel Badge -->
         <div class="mb-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#181C28] p-3">
           <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&q=80"
-            alt="GVP Tech Engineering"
+            v-if="sessionUser?.avatarUrl"
+            :src="sessionUser.avatarUrl"
+            :alt="sessionUser.displayName"
             class="h-11 w-11 rounded-full object-cover ring-2 ring-[#FF0033]"
           />
+          <span
+            v-else
+            class="flex h-11 w-11 items-center justify-center rounded-full bg-[#FF0033]/20 text-sm font-black text-[#FF0033] ring-2 ring-[#FF0033]"
+          >
+            ?
+          </span>
           <div class="min-w-0">
-            <p class="truncate text-xs font-bold text-white">GVP Tech Engineering</p>
-            <p class="text-[11px] text-neutral-400">284,000 subscribers</p>
+            <p class="truncate text-xs font-bold text-white">{{ sessionUser?.displayName || '미로그인 크리에이터' }}</p>
+            <p class="text-[11px] text-neutral-400">{{ sessionUser ? `@${sessionUser.username}` : '로그인 후 채널 표시' }}</p>
           </div>
         </div>
 
@@ -137,17 +212,22 @@ const navLinks = [
 
             <!-- Main Studio Workspace -->
       <main class="min-w-0 flex-1 p-6 lg:p-8">
-        <div class="mb-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+        <div
+          v-if="!sessionUser && route.path !== '/login'"
+          class="mb-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300"
+        >
           <div class="flex items-center gap-2">
-            <span class="font-bold">⚠️ 크리에이터 스튜디오 데모 모드 (Demo Sandbox)</span>
+            <span class="font-bold">로그인이 필요합니다</span>
             <span class="text-neutral-400">|</span>
-            <span class="text-neutral-300">표시된 채널 수익금, 구독자 통계 및 정산 예상액은 아키텍처 시연용 시드 데이터입니다.</span>
+            <span class="text-neutral-300">실제 채널 데이터를 보려면 로그인하세요. 미인증 상태에서는 샘플 화면이 표시될 수 있습니다.</span>
           </div>
-          <span class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200">DEMO SANDBOX</span>
+          <NuxtLink to="/login" class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200 hover:bg-amber-500/30">
+            LOGIN
+          </NuxtLink>
         </div>
         <slot />
         <footer class="mt-12 border-t border-white/5 pt-4 text-center text-[11px] text-neutral-400">
-          <span>StreamVerse Creator Studio · Commit <span class="font-mono text-neutral-300">3f8c1ef</span> · Architecture Prototype</span>
+          <span>StreamVerse Creator Studio</span>
         </footer>
       </main>
     </div>

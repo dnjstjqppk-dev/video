@@ -18,7 +18,7 @@ func TestStudioRoutes(t *testing.T) {
 	auth := identity.NewAuthMiddleware(s)
 	router := auth.Authenticate(h.Routes(auth))
 
-	for _, path := range []string{"/dashboard", "/videos", "/analytics", "/comments"} {
+	for _, path := range []string{"/dashboard", "/videos", "/analytics", "/comments", "/claims"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		req.Header.Set("Authorization", "Bearer creator-token")
 		rec := httptest.NewRecorder()

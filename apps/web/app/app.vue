@@ -5,7 +5,7 @@ const appStore = useAppStore()
 </script>
 
 <template>
-  <div :class="[appStore.theme === 'dark' ? 'dark bg-[#0F0F0F] text-[#F1F1F1]' : 'bg-[#FFFFFF] text-[#0F0F0F]', 'min-h-screen antialiased selection:bg-[#FF0033] selection:text-white']">
+  <div class="dark min-h-screen bg-[#0F0F0F] text-[#F1F1F1] antialiased selection:bg-[#FF0033] selection:text-white">
     <NuxtRouteAnnouncer />
     <NuxtLoadingIndicator color="#FF0033" :height="3" />
     <NuxtLayout>

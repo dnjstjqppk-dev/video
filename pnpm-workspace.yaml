@@ -4,6 +4,7 @@ packages:
   - 'apps/partners'
   - 'apps/admin'
   - 'packages/*'
+  - 'tests'
 
 allowBuilds:
   esbuild: set this to true or false

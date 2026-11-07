@@ -244,6 +244,82 @@ type MediaJob struct {
 	Error        string     `json:"error,omitempty"`
 }
 
+// EditBlurRegion is one percent-coordinate blur box inside an edit job.
+type EditBlurRegion struct {
+	ID       string `json:"id"`
+	Label    string `json:"label"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	StartSec int    `json:"startSec"`
+	EndSec   int    `json:"endSec"`
+}
+
+// EditMutedSegment is one muted time range inside an edit job.
+type EditMutedSegment struct {
+	StartSec int    `json:"startSec"`
+	EndSec   int    `json:"endSec"`
+	Reason   string `json:"reason"`
+}
+
+// EditDecisionList is the non-destructive edit dispatched to the media worker.
+type EditDecisionList struct {
+	TrimStartSec     int                `json:"trimStartSec"`
+	TrimEndSec       int                `json:"trimEndSec"`
+	SplitPoints      []int              `json:"splitPoints"`
+	BlurRegions      []EditBlurRegion   `json:"blurRegions"`
+	MutedSegments    []EditMutedSegment `json:"mutedSegments"`
+	ReplacementAudio string             `json:"replacementAudio"`
+}
+
+// EditJob tracks one studio editor render dispatched to the media worker.
+type EditJob struct {
+	ID          string           `json:"id"`
+	VideoID     string           `json:"video_id"`
+	ChannelID   string           `json:"channel_id"`
+	EDL         EditDecisionList `json:"edl"`
+	Status      string           `json:"status"` // QUEUED, PROCESSING, READY, FAILED
+	ProgressPct int              `json:"progress_pct"`
+	CreatedAt   time.Time        `json:"created_at"`
+	CompletedAt *time.Time       `json:"completed_at,omitempty"`
+	Error       string           `json:"error,omitempty"`
+}
+
+type FeatureFlag struct {
+	Key         string    `json:"key"`
+	Label       string    `json:"label"`
+	Description string    `json:"description"`
+	Enabled     bool      `json:"enabled"`
+	UpdatedBy   string    `json:"updated_by"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type PolicyConfig struct {
+	Version                string    `json:"version"`
+	MaxUploadSizeGB        int64     `json:"max_upload_size_gb"`
+	MaxVideoDurationHours  int       `json:"max_video_duration_hours"`
+	CreatorRevenueSharePct int       `json:"creator_revenue_share_pct"`
+	UpdatedBy              string    `json:"updated_by"`
+	UpdatedAt              time.Time `json:"updated_at"`
+}
+
+type UploadSession struct {
+	ID            string         `json:"id"`
+	VideoID       string         `json:"video_id"`
+	UserID        string         `json:"user_id"`
+	R2Key         string         `json:"r2_key"`
+	Mode          string         `json:"mode"` // s3 or local
+	S3UploadID    string         `json:"s3_upload_id,omitempty"`
+	TotalParts    int            `json:"total_parts"`
+	PartSize      int64          `json:"part_size"`
+	FileSizeBytes int64          `json:"file_size_bytes"`
+	MimeType      string         `json:"mime_type"`
+	Completed     bool           `json:"completed"`
+	StoredPath    string         `json:"stored_path,omitempty"`
+	Chunks        map[int][]byte `json:"-"`
+	CreatedAt     time.Time      `json:"created_at"`
+	CompletedAt   *time.Time     `json:"completed_at,omitempty"`
+}
+
 type CopyrightClaim struct {
 	ID                string     `json:"id"`
 	ClaimedVideoID    string     `json:"claimed_video_id"`
@@ -325,6 +401,21 @@ type PaymentTransaction struct {
 	CreatedAt      time.Time     `json:"created_at"`
 }
 
+type PartnerContract struct {
+	ID               string     `json:"id"`
+	ChannelID        string     `json:"channel_id"`
+	ChannelName      string     `json:"channel_name"`
+	ChannelHandle    string     `json:"channel_handle"`
+	PartnerType      string     `json:"partner_type"` // MCN, ADVERTISER
+	CreatorSplitPct  int        `json:"creator_split_pct"`
+	PartnerSplitPct  int        `json:"partner_split_pct"`
+	RevenueShareRate float64    `json:"revenue_share_rate"`
+	Status           string     `json:"status"` // active, revoked, expired
+	ValidUntil       string     `json:"valid_until"`
+	RevokedAt        *time.Time `json:"revoked_at,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+}
+
 type MemoryStore struct {
 	mu              sync.RWMutex
 	DB              *PostgresStore // Backing PostgreSQL 18 store
@@ -344,6 +435,10 @@ type MemoryStore struct {
 	AdDecisions     map[string]*AdDeliveryDecision
 	AdEvents        []*AdDeliveryEvent
 	MediaJobs       map[string]*MediaJob
+	EditJobs        map[string]*EditJob
+	UploadSessions  map[string]*UploadSession
+	FeatureFlags    map[string]*FeatureFlag
+	Policy          PolicyConfig
 	Claims          map[string]*CopyrightClaim
 	DMCANotices     map[string]*DMCATakedownNotice
 	Moderation      map[string]*ModerationCase
@@ -352,6 +447,7 @@ type MemoryStore struct {
 	IdempotencyKeys map[string]string // idempotencyKey -> transactionID
 	Ledger          []LedgerEntry
 	AuditLogs       []map[string]interface{}
+	Contracts       map[string]*PartnerContract
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -377,6 +473,9 @@ func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 		AdDecisions:     make(map[string]*AdDeliveryDecision),
 		AdEvents:        make([]*AdDeliveryEvent, 0),
 		MediaJobs:       make(map[string]*MediaJob),
+		EditJobs:        make(map[string]*EditJob),
+		UploadSessions:  make(map[string]*UploadSession),
+		FeatureFlags:    make(map[string]*FeatureFlag),
 		Claims:          make(map[string]*CopyrightClaim),
 		DMCANotices:     make(map[string]*DMCATakedownNotice),
 		Moderation:      make(map[string]*ModerationCase),
@@ -385,13 +484,78 @@ func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 		IdempotencyKeys: make(map[string]string),
 		Ledger:          make([]LedgerEntry, 0),
 		AuditLogs:       make([]map[string]interface{}, 0),
+		Contracts:       make(map[string]*PartnerContract),
 	}
 	s.seedDefaults()
 	return s
 }
 
+// ChannelForUser returns the first channel owned by the given user, or nil.
+func (s *MemoryStore) ChannelForUser(userID string) *Channel {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, c := range s.Channels {
+		if c.OwnerID == userID {
+			return c
+		}
+	}
+	return nil
+}
+
+// EnsureUserChannel returns the user's channel, provisioning a default one
+// on first upload so creators always own their content (BOLA-safe).
+func (s *MemoryStore) EnsureUserChannel(user *User) *Channel {
+	if ch := s.ChannelForUser(user.ID); ch != nil {
+		return ch
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	handle := "@" + user.Username
+	if handle == "@" {
+		handle = "@creator"
+	}
+	ch := &Channel{
+		ID:                  "ch-" + user.ID,
+		OwnerID:             user.ID,
+		Handle:              handle,
+		Name:                user.DisplayName,
+		Description:         "",
+		AvatarURL:           user.AvatarURL,
+		SubscriberCount:     0,
+		VideoCount:          0,
+		IsVerified:          false,
+		MonetizationEnabled: false,
+		CreatedAt:           time.Now(),
+	}
+	if ch.Name == "" {
+		ch.Name = user.Username
+	}
+	s.Channels[ch.ID] = ch
+	return ch
+}
+
 func (s *MemoryStore) seedDefaults() {
 	now := time.Now()
+
+	s.Policy = PolicyConfig{
+		Version:                "v4.3.0",
+		MaxUploadSizeGB:        128,
+		MaxVideoDurationHours:  12,
+		CreatorRevenueSharePct: 55,
+		UpdatedBy:              "system",
+		UpdatedAt:              now,
+	}
+	for _, flag := range []FeatureFlag{
+		{Key: "GLOBAL_PUBLIC_SIGNUP_ENABLED", Label: "Global Public User Registration", Description: "Disable immediately during botnet registration attacks", Enabled: true},
+		{Key: "MULTIPART_R2_UPLOAD_INGEST", Label: "R2 Multipart Video Upload Ingest", Description: "Pause new video uploads during storage maintenance", Enabled: true},
+		{Key: "LIVE_STREAM_RTMPS_INGEST", Label: "Global RTMPS / SRT Live Streaming Ingest", Description: "Emergency circuit breaker for live broadcast ingest nodes", Enabled: true},
+		{Key: "AUTOMATED_LEDGER_PAYOUT_DISPATCH", Label: "Automated Bank Payout Clearing", Description: "Freeze outgoing bank transfers if reconciliation anomaly detected", Enabled: true},
+	} {
+		f := flag
+		f.UpdatedBy = "system"
+		f.UpdatedAt = now
+		s.FeatureFlags[f.Key] = &f
+	}
 
 	adminUser := &User{
 		ID:               "11111111-1111-1111-1111-111111111111",
@@ -647,4 +811,23 @@ func (s *MemoryStore) seedDefaults() {
 		CreatedAt:      now.Add(-2 * time.Hour),
 	}
 	s.LiveStreams[liveStream1.ID] = liveStream1
+
+	seedContracts := []*PartnerContract{
+		{
+			ID:               "ct-2026-001",
+			ChannelID:        channel1.ID,
+			ChannelName:      channel1.Name,
+			ChannelHandle:    channel1.Handle,
+			PartnerType:      "MCN",
+			CreatorSplitPct:  85,
+			PartnerSplitPct:  15,
+			RevenueShareRate: 0.85,
+			Status:           "active",
+			ValidUntil:       "2027-12-31",
+			CreatedAt:        now.Add(-90 * 24 * time.Hour),
+		},
+	}
+	for _, c := range seedContracts {
+		s.Contracts[c.ID] = c
+	}
 }

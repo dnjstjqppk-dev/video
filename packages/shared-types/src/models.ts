@@ -293,6 +293,42 @@ export interface LedgerEntry {
   createdAt: string;
 }
 
+export interface StudioEditBlurRegion {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  startSec: number;
+  endSec: number;
+}
+
+export interface StudioEditMutedSegment {
+  startSec: number;
+  endSec: number;
+  reason: string;
+}
+
+export interface StudioEditDecisionList {
+  trimStartSec: number;
+  trimEndSec: number;
+  splitPoints: number[];
+  blurRegions: StudioEditBlurRegion[];
+  mutedSegments: StudioEditMutedSegment[];
+  replacementAudio: string;
+}
+
+export type StudioEditJobStatus = 'QUEUED' | 'PROCESSING' | 'READY' | 'FAILED';
+
+export interface StudioEditJob {
+  jobId: string;
+  videoId: string;
+  status: StudioEditJobStatus;
+  progressPct: number;
+  outputPrefix: string;
+  error: string;
+  createdAt: string;
+}
+
 export interface Payout {
   id: string;
   channelId: string;
@@ -306,6 +342,21 @@ export interface Payout {
   netAmount: number;
   approvedBy?: string;
   paidAt?: string;
+  createdAt: string;
+}
+
+export interface PartnerContract {
+  id: string;
+  channelId: string;
+  channelName: string;
+  channelHandle: string;
+  partnerType: string;
+  creatorSplitPct: number;
+  partnerSplitPct: number;
+  revenueShareRate: number;
+  status: string;
+  validUntil: string;
+  revokedAt?: string;
   createdAt: string;
 }
 

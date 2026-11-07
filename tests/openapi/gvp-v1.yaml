@@ -1,0 +1,322 @@
+openapi: 3.1.0
+info:
+  title: StreamVerse (Global Video Platform) API
+  version: 1.0.0
+  description: |
+    Public v1 API for the StreamVerse video ecosystem: identity, channels,
+    videos, feeds, uploads, live, studio, payments, moderation and admin.
+    Every error response uses the standard ApiError envelope.
+servers:
+  - url: https://api.brand.com/v1
+    description: Production
+  - url: http://localhost:8080/v1
+    description: Local development
+security:
+  - BearerAuth: []
+paths:
+  /me:
+    get:
+      summary: Current authenticated user
+      operationId: getMe
+      responses:
+        '200':
+          description: Authenticated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/playback:
+    get:
+      summary: Playback manifest and sources for a video
+      operationId: getVideoPlayback
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Playback info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaybackInfo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{id}/captions:
+    get:
+      summary: List captions for a video
+      operationId: listVideoCaptions
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Caption list
+    post:
+      summary: Add a caption track
+      operationId: createVideoCaption
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '201':
+          description: Caption created
+  /feed/home:
+    get:
+      summary: Ranked home feed
+      operationId: getHomeFeed
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Ranked video list
+  /feed/shorts:
+    get:
+      summary: Shorts feed
+      operationId: getShortsFeed
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Shorts video list
+  /uploads:
+    post:
+      summary: Create a multipart upload session
+      operationId: createUploadSession
+      responses:
+        '201':
+          description: Upload session created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /uploads/{id}/parts:
+    post:
+      summary: Get a part upload URL
+      operationId: getPartUploadUrl
+      responses:
+        '200':
+          description: Part URL issued
+  /uploads/{id}/chunks/{partNumber}:
+    put:
+      summary: PUT chunk bytes (local relay mode)
+      operationId: putUploadChunk
+      responses:
+        '200':
+          description: Chunk stored
+  /uploads/{id}/complete:
+    post:
+      summary: Complete a multipart upload and queue transcoding
+      operationId: completeUpload
+      responses:
+        '200':
+          description: Upload completed, transcode queued
+  /uploads/{id}/status:
+    get:
+      summary: Upload and transcode status
+      operationId: getUploadStatus
+      responses:
+        '200':
+          description: Status report
+  /events/analytics:
+    post:
+      summary: Ingest a playback analytics event
+      operationId: ingestAnalyticsEvent
+      responses:
+        '202':
+          description: Event accepted
+  /studio/videos:
+    get:
+      summary: Authenticated creator video list
+      operationId: getStudioVideos
+      responses:
+        '200':
+          description: Studio video list
+  /studio/videos/{id}/edit-jobs:
+    post:
+      summary: Dispatch a non-destructive EDL render job
+      operationId: createStudioEditJob
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '202':
+          description: Edit job queued
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /studio/videos/{id}/edit-jobs/{jobId}:
+    get:
+      summary: Poll an EDL render job
+      operationId: getStudioEditJob
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Edit job status
+  /studio/comments:
+    get:
+      summary: Studio comment moderation queue
+      operationId: getStudioComments
+      responses:
+        '200':
+          description: Comment list
+  /studio/claims:
+    get:
+      summary: Copyright claims on owned content
+      operationId: getStudioClaims
+      responses:
+        '200':
+          description: Claim list
+  /studio/earnings:
+    get:
+      summary: Earnings summary
+      operationId: getStudioEarnings
+      responses:
+        '200':
+          description: Earnings report
+  /studio/settlements:
+    get:
+      summary: Payout settlements
+      operationId: getStudioSettlements
+      responses:
+        '200':
+          description: Settlement list
+  /payments/checkout:
+    post:
+      summary: Create a checkout session (Stripe/Toss)
+      operationId: createCheckout
+      responses:
+        '201':
+          description: Checkout created
+  /channels/{id}:
+    get:
+      summary: Channel profile
+      operationId: getChannel
+      responses:
+        '200':
+          description: Channel profile
+    patch:
+      summary: Update channel branding
+      operationId: updateChannelBranding
+      responses:
+        '200':
+          description: Channel updated
+  /moderation/reports:
+    get:
+      summary: List moderation reports
+      operationId: listModerationReports
+      responses:
+        '200':
+          description: Report list
+    post:
+      summary: File a moderation report
+      operationId: createModerationReport
+      responses:
+        '201':
+          description: Report filed
+  /partners/contracts:
+    get:
+      summary: List MCN contracts
+      operationId: listPartnerContracts
+      responses:
+        '200':
+          description: Contract list
+    post:
+      summary: Create an MCN contract
+      operationId: createPartnerContract
+      responses:
+        '201':
+          description: Contract created
+  /admin/finance/settlements:
+    get:
+      summary: Finance settlement overview
+      operationId: getFinanceSettlements
+      responses:
+        '200':
+          description: Settlement overview
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OIDC JWT in production, dev tokens in test/development only
+  parameters:
+    VideoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+          example: UNAUTHENTICATED
+        message:
+          type: string
+          example: Authentication required
+        request_id:
+          type: string
+          example: req_01J9X8Z2M4K1
+        field:
+          type: string
+          example: title
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ApiError'
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    PlaybackInfo:
+      type: object
+      properties:
+        videoId:
+          type: string
+        hlsMasterUrl:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'

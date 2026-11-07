@@ -24,9 +24,11 @@ import (
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/live"
 	"globalvideoplatform/services/api/internal/moderation"
+	"globalvideoplatform/services/api/internal/observability"
 	"globalvideoplatform/services/api/internal/partners"
 	"globalvideoplatform/services/api/internal/payments"
 	"globalvideoplatform/services/api/internal/playlists"
+	"globalvideoplatform/services/api/internal/policies"
 	"globalvideoplatform/services/api/internal/recommendations"
 	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/settlements"
@@ -52,7 +54,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(observability.Middleware)
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	// Security hardening headers (HSTS, CSP nonce, X-Frame-Options, etc.)
@@ -66,7 +68,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*", "https://*.brand.com"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Request-Id", "X-Idempotency-Key", "X-Webhook-Signature"},
-		ExposedHeaders:   []string{"Link", "X-Request-Id"},
+		ExposedHeaders:   []string{"Link", "X-Request-Id", "ETag"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
@@ -144,6 +146,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	playlistH := playlists.NewHandler(memStore)
 	subH := subscriptions.NewHandler(memStore)
 	payH := payments.NewHandler(memStore)
+	policiesH := policies.NewHandler(memStore)
 
 	// API v1 Routing Tree
 	r.Route("/v1", func(v1 chi.Router) {
@@ -188,23 +191,37 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		// Studio
 		v1.Mount("/studio", studioH.Routes(authMiddleware))
 		v1.With(authMiddleware.RequireAuth).Get("/studio/earnings", settleH.GetEarnings)
+		v1.With(authMiddleware.RequireAuth).Get("/studio/settlements", settleH.GetSettlements)
 
 		// Partners
 		v1.Mount("/partners", partnerH.Routes(authMiddleware))
 		v1.With(authMiddleware.RequireAuth).Get("/partners/campaigns", adsH.ListCampaigns)
 		v1.With(authMiddleware.RequireAuth).Post("/partners/campaigns", adsH.CreateCampaign)
 		v1.With(authMiddleware.RequireAuth).Get("/partners/settlements", settleH.GetSettlements)
+		v1.With(authMiddleware.RequireAuth).Get("/partners/settlements/earnings-summary", settleH.GetEarnings)
+		v1.With(authMiddleware.RequireAuth).Post("/partners/settlements/payout", settleH.RequestPayout)
 		v1.With(authMiddleware.RequireAuth).Get("/partners/rights/claims", copyH.ListClaims)
 		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/claims", copyH.CreateClaim)
+		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/claims/{id}/dispute", copyH.DisputeClaim)
+		v1.With(authMiddleware.RequireRole("super_admin", "platform_admin", "moderator")).Post("/partners/rights/claims/{id}/resolve", copyH.ResolveClaim)
+		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/dmca-takedown", copyH.SubmitDMCATakedown)
+		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/dmca-counter-notice", copyH.SubmitDMCACounterNotice)
 
 		// Admin
 		v1.Group(func(admin chi.Router) {
 			admin.Use(adminGuard.IPWhitelistMiddleware)
 			admin.Mount("/admin", adminH.Routes(authMiddleware))
-			admin.Get("/admin/ads/delivery-diagnostics", adsH.GetDeliveryDiagnostics)
-			admin.With(authMiddleware.RequireRole("super_admin", "moderator")).Get("/admin/moderation", modH.ListQueue)
-			admin.With(authMiddleware.RequireRole("super_admin", "moderator")).Post("/admin/moderation/{id}/resolve", modH.ResolveCase)
+			admin.With(authMiddleware.RequireRole("super_admin", "platform_admin")).Get("/admin/ads/delivery-diagnostics", adsH.GetDeliveryDiagnostics)
+			admin.With(authMiddleware.RequireRole("super_admin", "platform_admin", "moderator", "support_agent")).Get("/admin/moderation", modH.ListQueue)
+			admin.With(authMiddleware.RequireRole("super_admin", "platform_admin", "moderator", "support_agent")).Post("/admin/moderation/{id}/resolve", modH.ResolveCase)
+			admin.With(authMiddleware.RequireRole("super_admin", "platform_admin", "finance_admin")).Get("/admin/finance/summary", adminH.GetFinanceSummary)
+			admin.With(authMiddleware.RequireRole("super_admin", "platform_admin", "finance_admin")).Get("/admin/finance/settlements", settleH.GetSettlements)
+			admin.With(authMiddleware.RequireRole("super_admin", "platform_admin")).Post("/admin/finance/batches/approve", adminH.ApproveBatch)
+			admin.Mount("/admin/policies", policiesH.Routes(authMiddleware))
 		})
+
+		// User-facing trust & safety reports (land in the admin moderation queue)
+		v1.With(authMiddleware.RequireAuth).Post("/moderation/reports", modH.ReportContent)
 
 		// Events & Analytics Ingestion
 		v1.Mount("/events", eventH.Routes())
@@ -220,6 +237,32 @@ func main() {
 	slog.SetDefault(logger)
 
 	cfg := config.Load()
+
+	if err := observability.Init(os.Getenv("SENTRY_DSN"), os.Getenv("GVP_ENV")); err != nil {
+		slog.Error("Sentry initialization failed", "error", err)
+		os.Exit(1)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		slog.Error("Configuration validation failed", "error", err)
+		os.Exit(1)
+	}
+	if oidc := config.LoadOIDC(); oidc.Issuer != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+		err := config.ProbeOIDCDiscovery(ctx, oidc.Issuer)
+		cancel()
+		if err != nil {
+			if config.IsProduction() {
+				slog.Error("OIDC issuer unreachable, refusing to boot", "error", err)
+				os.Exit(1)
+			}
+			slog.Warn("OIDC issuer probe failed; continuing with local auth only", "error", err)
+		} else {
+			slog.Info("OIDC issuer discovery verified", "issuer", oidc.Issuer)
+		}
+	} else if !config.IsProduction() {
+		slog.Warn("OIDC_ISSUER unset; external login disabled outside development tokens")
+	}
 
 	var pgStore *store.PostgresStore
 	if cfg.DatabaseURL != "" {
@@ -270,6 +313,7 @@ func main() {
 	if err := server.Shutdown(ctx); err != nil {
 		slog.Error("Server forced shutdown", "error", err)
 	}
+	observability.Flush()
 	slog.Info("Server stopped cleanly")
 	fmt.Println("Server stopped")
 }

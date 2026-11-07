@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GvpBanner from '@gvp/ui/src/components/GvpBanner.vue'
 import type { Video } from '@gvp/shared-types'
 import { VideoProcessingStatus, VideoType, VideoVisibility } from '@gvp/shared-types'
 import { useAppStore } from '~/stores/app'
@@ -177,13 +178,17 @@ const fallbackVideos: Video[] = [
   }
 ]
 
+const isShowingFallback = ref(false)
+
 const { data: feedData, pending, error, refresh } = await useAsyncData(
   () => `home-feed-${selectedCategory.value}`,
   async () => {
     try {
       const res = await api.getHomeFeed(1, 24, selectedCategory.value)
+      isShowingFallback.value = !res.items?.length
       return res.items?.length ? res.items : fallbackVideos
     } catch {
+      isShowingFallback.value = true
       return fallbackVideos
     }
   },
@@ -351,6 +356,10 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
         {{ appStore.locale === 'ko' ? cat.labelKo : cat.labelEn }}
       </button>
     </div>
+
+    <GvpBanner v-if="isShowingFallback && !pending" tone="warning" dismissible class="mb-4">
+      피드를 불러오지 못해 캐시된 추천 영상을 보여주고 있습니다. <button type="button" class="font-bold underline" @click="refresh()">다시 시도</button>
+    </GvpBanner>
 
     <!-- Toast Notification for Feed Feedback -->
     <div

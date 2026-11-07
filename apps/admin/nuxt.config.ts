@@ -12,8 +12,14 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt'
   ],
+  css: ['@gvp/design-tokens/src/gvp.css'],
   runtimeConfig: {
     internalApiUrl: process.env.NUXT_INTERNAL_API_URL || 'http://localhost:8080',
+    oidc: {
+      issuer: process.env.NUXT_OIDC_ISSUER || '',
+      clientId: process.env.NUXT_OIDC_CLIENT_ID || '',
+      clientSecret: process.env.NUXT_OIDC_CLIENT_SECRET || ''
+    },
     adminSessionTimeoutMinutes: 15,
     requireWebAuthnMfa: true,
     public: {
@@ -33,6 +39,14 @@ export default defineNuxtConfig({
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'robots', content: 'noindex, nofollow, noarchive' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap' }
       ]
     }
   },

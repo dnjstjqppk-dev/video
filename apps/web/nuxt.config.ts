@@ -13,11 +13,20 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
-    '@nuxtjs/i18n'
+    '@nuxtjs/i18n',
+    '@sentry/nuxt/module'
   ],
+  css: ['@gvp/design-tokens/src/gvp.css'],
   runtimeConfig: {
     internalApiUrl: process.env.NUXT_INTERNAL_API_URL || 'http://localhost:8080',
+    sentryDsn: process.env.SENTRY_DSN || '',
+    oidc: {
+      issuer: process.env.NUXT_OIDC_ISSUER || '',
+      clientId: process.env.NUXT_OIDC_CLIENT_ID || '',
+      clientSecret: process.env.NUXT_OIDC_CLIENT_SECRET || ''
+    },
     public: {
+      sentryDsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
       wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || '',
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://global-video-platform.dnjstjqppk.workers.dev',
@@ -60,7 +69,12 @@ export default defineNuxtConfig({
         { name: 'twitter:card', content: 'summary_large_image' }
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap' }
       ]
     }
   },

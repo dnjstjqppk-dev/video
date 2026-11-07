@@ -86,6 +86,20 @@ func TestContentIDClaimsAndDisputeWorkflow(t *testing.T) {
 	}
 }
 
+func TestDisputeOwnershipEnforced(t *testing.T) {
+	srv, _ := newCopyrightTestServer()
+	defer srv.Close()
+
+	// A viewer who does not own the claimed video must be rejected.
+	req, rec := copyReq(http.MethodPost, "/copyright/claims/claim-1/dispute", "viewer-token", map[string]string{
+		"reason": "fair_use",
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for cross-owner dispute, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestDMCATakedownAndCounterNoticeWorkflow(t *testing.T) {
 	srv, memStore := newCopyrightTestServer()
 	defer srv.Close()

@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -61,16 +62,15 @@ func (h *Handler) GetChannel(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetChannelVideos(w http.ResponseWriter, r *http.Request) {
 	channelID := chi.URLParam(r, "id")
+	page, limit := identity.ParsePagination(r, 20)
 	var videos []*store.Video
 	for _, v := range h.Store.Videos {
 		if v.ChannelID == channelID {
 			videos = append(videos, v)
 		}
 	}
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": videos,
-		"total": len(videos),
-	})
+	window, total := identity.PaginateSlice(videos, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) CreateChannel(w http.ResponseWriter, r *http.Request) {
@@ -121,13 +121,21 @@ func (h *Handler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		AvatarURL   string `json:"avatarUrl"`
+		BannerURL   string `json:"bannerUrl"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
 		if payload.Name != "" {
-			channel.Name = payload.Name
+			channel.Name = security.SanitizeUserText(payload.Name, 120)
 		}
 		if payload.Description != "" {
-			channel.Description = payload.Description
+			channel.Description = security.SanitizeUserText(payload.Description, 2000)
+		}
+		if payload.AvatarURL != "" {
+			channel.AvatarURL = security.SanitizeUserText(payload.AvatarURL, 2048)
+		}
+		if payload.BannerURL != "" {
+			channel.BannerURL = security.SanitizeUserText(payload.BannerURL, 2048)
 		}
 	}
 

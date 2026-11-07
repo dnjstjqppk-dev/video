@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -36,6 +37,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
 	videoID := chi.URLParam(r, "id")
 	sortBy := r.URL.Query().Get("sort") // "top" or "newest"
+	page, limit := identity.ParsePagination(r, 20)
 
 	rawList := h.Store.Comments[videoID]
 	if rawList == nil {
@@ -86,10 +88,8 @@ func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": rootComments,
-		"total": len(rawList),
-	})
+	window, total := identity.PaginateSlice(rootComments, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +106,11 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.Content == "" {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Comment content is required")
+		return
+	}
+	payload.Content = security.SanitizeUserText(payload.Content, 2000)
+	if payload.Content == "" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Comment content must not be empty")
 		return
 	}
 

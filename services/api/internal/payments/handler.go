@@ -193,6 +193,7 @@ func (h *Handler) CreateCheckout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Store.Transactions[txID] = tx
+	h.Store.PersistTransaction(tx)
 	h.Store.IdempotencyKeys[storeKey] = txID
 
 	identity.WriteJSON(w, http.StatusCreated, tx)
@@ -231,7 +232,7 @@ func (h *Handler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if tx.UserID != user.ID && user.Role != "super_admin" && user.Role != "admin" {
+	if tx.UserID != user.ID && user.Role != "super_admin" && user.Role != "platform_admin" {
 		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN", "Unauthorized to confirm this transaction")
 		return
 	}

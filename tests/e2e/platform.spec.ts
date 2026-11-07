@@ -88,6 +88,21 @@ test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suit
     const partBody = await partRes.json();
     expect(partBody.uploadUrl).toContain('partNumber=2');
 
+    // 2.2b Upload real chunk bytes for every part (local relay mode)
+    for (const partNumber of [1, 2, 3]) {
+      const urlRes = await request.post(`${API_BASE_URL}/uploads/${session.uploadId}/parts`, {
+        headers,
+        data: { partNumber },
+      });
+      expect(urlRes.status()).toBe(200);
+      const { uploadUrl } = await urlRes.json();
+      const putRes = await request.put(uploadUrl, {
+        headers,
+        data: Buffer.from(`e2e-chunk-bytes-part-${partNumber}`),
+      });
+      expect(putRes.status()).toBe(200);
+    }
+
     // 2.3 Complete Multipart Upload & Trigger FFmpeg Transcoding Worker
     const completeRes = await request.post(`${API_BASE_URL}/uploads/${session.uploadId}/complete`, {
       headers,

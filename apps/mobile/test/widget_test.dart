@@ -137,7 +137,30 @@ void main() {
   });
 
   testWidgets('GVP Mobile App renders Home feed and bottom navigation bar', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: GvpMobileApp()));
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          handler.resolve(
+            Response(
+              requestOptions: options,
+              statusCode: 200,
+              data: {'items': [], 'total': 0},
+            ),
+          );
+        },
+      ),
+    );
+    final stubApi = ApiClient(
+      authService: OidcAuthService(store: InMemorySecureTokenStore()),
+      customDio: dio,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [apiClientProvider.overrideWithValue(stubApi)],
+        child: const GvpMobileApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('GVP'), findsOneWidget);

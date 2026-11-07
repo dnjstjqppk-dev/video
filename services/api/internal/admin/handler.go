@@ -20,12 +20,14 @@ func NewHandler(s *store.MemoryStore) *Handler {
 
 func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r := chi.NewRouter()
-	r.Use(auth.RequireRole("super_admin", "platform_admin"))
 
-	r.Get("/dashboard", h.GetDashboard)
-	r.Get("/users", h.ListUsers)
-	r.Patch("/users/{id}/status", h.UpdateUserStatus)
-	r.Get("/audit-logs", h.GetAuditLogs)
+	// Read-only governance views: all trust & safety roles.
+	r.With(auth.RequireRole("super_admin", "platform_admin", "finance_admin", "moderator", "support_agent")).Get("/dashboard", h.GetDashboard)
+	r.With(auth.RequireRole("super_admin", "platform_admin", "finance_admin", "moderator", "support_agent")).Get("/users", h.ListUsers)
+	r.With(auth.RequireRole("super_admin", "platform_admin", "finance_admin", "moderator", "support_agent")).Get("/audit-logs", h.GetAuditLogs)
+
+	// Mutations: platform operators only.
+	r.With(auth.RequireRole("super_admin", "platform_admin")).Patch("/users/{id}/status", h.UpdateUserStatus)
 
 	return r
 }
@@ -65,14 +67,13 @@ func (h *Handler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	page, limit := identity.ParsePagination(r, 20)
 	var list []*store.User
 	for _, u := range h.Store.Users {
 		list = append(list, u)
 	}
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": list,
-		"total": len(list),
-	})
+	window, total := identity.PaginateSlice(list, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
 func (h *Handler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
@@ -107,8 +108,11 @@ func (h *Handler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
-	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"items": h.Store.AuditLogs,
-		"total": len(h.Store.AuditLogs),
-	})
+	page, limit := identity.ParsePagination(r, 50)
+	logs := h.Store.AuditLogs
+	if logs == nil {
+		logs = []map[string]interface{}{}
+	}
+	window, total := identity.PaginateSlice(logs, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }

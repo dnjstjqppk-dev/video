@@ -16,16 +16,19 @@ const isAgeRestricted = ref(false)
 const scheduledPublishAt = ref('')
 const chaptersInput = ref('00:00 Introduction\n03:30 Multipart S3/R2 Presigned Upload\n09:15 FFmpeg Worker Transcoding Ladder\n15:40 Summary')
 
-const selectedFileName = ref('go_hls_pipeline_4k60_master.mp4')
-const selectedFileSizeBytes = ref(524_288_000) // 500 MB
+const selectedFile = ref<File | null>(null)
+const selectedFileName = ref('선택된 파일 없음 (Select a video file)')
+const selectedFileSizeBytes = ref(0)
 const uploadId = ref<string | null>(null)
 const videoId = ref<string | null>(null)
+const partSizeBytes = ref(10 * 1024 * 1024)
 
-const totalParts = ref(10)
+const totalParts = ref(0)
 const uploadedParts = ref(0)
 const isUploading = ref(false)
 const isPaused = ref(false)
 const uploadError = ref<string | null>(null)
+const completedEtags = ref<Record<number, string>>({})
 
 const transcodeSteps: VideoProcessingStatus[] = [
   VideoProcessingStatus.UPLOADED,
@@ -36,40 +39,55 @@ const transcodeSteps: VideoProcessingStatus[] = [
 ]
 const currentStatus = ref<VideoProcessingStatus>(VideoProcessingStatus.CREATED)
 
-let uploadInterval: ReturnType<typeof setInterval> | null = null
+let cancelled = false
 
 const progressPercent = computed(() =>
-  Math.min(100, Math.round((uploadedParts.value / totalParts.value) * 100))
+  totalParts.value === 0 ? 0 : Math.min(100, Math.round((uploadedParts.value / totalParts.value) * 100))
 )
 
 function onFileSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (file) {
-    selectedFileName.value = file.name
-    selectedFileSizeBytes.value = file.size
-    totalParts.value = Math.max(4, Math.ceil(file.size / (10 * 1024 * 1024)))
-  }
+  if (!file) return
+  selectedFile.value = file
+  selectedFileName.value = file.name
+  selectedFileSizeBytes.value = file.size
+  totalParts.value = Math.max(1, Math.ceil(file.size / partSizeBytes.value))
+  uploadedParts.value = 0
+  completedEtags.value = {}
+  uploadId.value = null
+  videoId.value = null
+  uploadError.value = null
+  currentStatus.value = VideoProcessingStatus.CREATED
 }
 
 async function startMultipartUpload() {
+  if (!selectedFile.value) {
+    uploadError.value = '먼저 업로드할 동영상 파일을 선택하세요.'
+    return
+  }
   uploadError.value = null
   isUploading.value = true
   isPaused.value = false
+  cancelled = false
   currentStatus.value = VideoProcessingStatus.UPLOADING
 
   try {
     const session = await api.createUploadSession({
       title: title.value,
       description: description.value,
-      fileSizeBytes: selectedFileSizeBytes.value,
-      mimeType: 'video/mp4',
+      fileSizeBytes: selectedFile.value.size,
+      mimeType: selectedFile.value.type || 'video/mp4',
       videoType: 'standard'
     })
     uploadId.value = session.uploadId
     videoId.value = session.videoId
-    totalParts.value = session.totalParts || 10
-    runChunkLoop()
+    partSizeBytes.value = session.partSize || partSizeBytes.value
+    totalParts.value = session.totalParts || 1
+    await uploadMissingParts()
+    if (!cancelled && !uploadError.value) {
+      await finalizeMultipartUpload()
+    }
   } catch (err: any) {
     isUploading.value = false
     uploadError.value = `Upload session initialization failed: ${err?.message || 'Server connection error'}`
@@ -77,29 +95,69 @@ async function startMultipartUpload() {
   }
 }
 
-function runChunkLoop() {
-  if (uploadInterval) clearInterval(uploadInterval)
-  uploadInterval = setInterval(async () => {
-    if (isPaused.value) return
-    if (uploadedParts.value < totalParts.value) {
-      const nextPart = uploadedParts.value + 1
-      try {
-        if (uploadId.value) {
-          await api.getUploadPartUrls(uploadId.value, nextPart)
-        }
-        uploadedParts.value = nextPart
-      } catch (err: any) {
-        if (uploadInterval) clearInterval(uploadInterval)
-        isUploading.value = false
-        uploadError.value = `Part ${nextPart} presigned URL generation failed: ${err?.message || 'Network error'}`
-        return
+const studioToken = useCookie<string | null>('gvp_studio_token')
+
+async function putPartBytes(uploadUrl: string, blob: Blob): Promise<string> {
+  const headers: Record<string, string> = {
+    'Content-Type': selectedFile.value?.type || 'video/mp4'
+  }
+  // Local relay chunks need the studio bearer token; S3 presigned URLs carry
+  // their own SigV4 authorization and must not receive it.
+  if (!uploadUrl.includes('X-Amz-Signature') && studioToken.value) {
+    headers['Authorization'] = `Bearer ${studioToken.value}`
+  }
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: blob,
+        headers,
+        credentials: 'omit'
+      })
+      if (!res.ok) {
+        throw new Error(`Chunk PUT failed with HTTP ${res.status}`)
       }
-    } else {
-      if (uploadInterval) clearInterval(uploadInterval)
-      isUploading.value = false
-      await finalizeMultipartUpload()
+      const etag = (res.headers.get('etag') || '').replace(/"/g, '')
+      if (!etag) {
+        throw new Error('Storage did not return a part ETag')
+      }
+      return etag
+    } catch (err) {
+      lastError = err
+      await new Promise(resolve => setTimeout(resolve, attempt * 500))
     }
-  }, 350)
+  }
+  throw lastError instanceof Error ? lastError : new Error('Chunk PUT failed')
+}
+
+async function uploadMissingParts() {
+  const file = selectedFile.value
+  if (!file || !uploadId.value) return
+  for (let part = 1; part <= totalParts.value; part++) {
+    if (cancelled) return
+    while (isPaused.value && !cancelled) {
+      await new Promise(resolve => setTimeout(resolve, 250))
+    }
+    if (completedEtags.value[part]) {
+      uploadedParts.value = Math.max(uploadedParts.value, part)
+      continue
+    }
+    try {
+      const { uploadUrl } = await api.getUploadPartUrls(uploadId.value, part)
+      const start = (part - 1) * partSizeBytes.value
+      const chunk = file.slice(start, start + partSizeBytes.value)
+      const etag = await putPartBytes(uploadUrl, chunk)
+      completedEtags.value[part] = etag
+      uploadedParts.value = part
+    } catch (err: any) {
+      isUploading.value = false
+      uploadError.value = `Part ${part} upload failed: ${err?.message || 'Network error'}`
+      currentStatus.value = VideoProcessingStatus.FAILED
+      return
+    }
+  }
+  currentStatus.value = VideoProcessingStatus.UPLOADED
 }
 
 function togglePauseResume() {
@@ -107,29 +165,44 @@ function togglePauseResume() {
 }
 
 function retryUpload() {
+  if (!selectedFile.value || !uploadId.value) return
   uploadError.value = null
   isPaused.value = false
-  runChunkLoop()
+  cancelled = false
+  isUploading.value = true
+  currentStatus.value = VideoProcessingStatus.UPLOADING
+  void (async () => {
+    await uploadMissingParts()
+    if (!cancelled && !uploadError.value) {
+      await finalizeMultipartUpload()
+    } else {
+      isUploading.value = false
+    }
+  })()
 }
 
 async function finalizeMultipartUpload() {
   try {
     if (uploadId.value) {
-      const parts = Array.from({ length: totalParts.value }, (_, idx) => ({
-        partNumber: idx + 1,
-        etag: `"etag_part_${idx + 1}_sha256"`
-      }))
+      const parts = Object.entries(completedEtags.value)
+        .map(([partNumber, etag]) => ({ partNumber: Number(partNumber), etag }))
+        .sort((a, b) => a.partNumber - b.partNumber)
       const res = await api.completeUpload(uploadId.value, parts)
-      currentStatus.value = res.status as VideoProcessingStatus || VideoProcessingStatus.QUEUED
+      currentStatus.value = (res.status as VideoProcessingStatus) || VideoProcessingStatus.QUEUED
+      if (res.videoId) {
+        videoId.value = res.videoId
+      }
     }
   } catch (err: any) {
     uploadError.value = `Multipart upload finalization failed: ${err?.message || 'Media queue error'}`
     currentStatus.value = VideoProcessingStatus.FAILED
+  } finally {
+    isUploading.value = false
   }
 }
 
 onBeforeUnmount(() => {
-  if (uploadInterval) clearInterval(uploadInterval)
+  cancelled = true
 })
 </script>
 
@@ -148,7 +221,7 @@ onBeforeUnmount(() => {
         <div>
           <p class="text-sm font-bold text-white">📄 {{ selectedFileName }}</p>
           <p class="mt-1 text-xs text-neutral-400">
-            Size: {{ (selectedFileSizeBytes / (1024 * 1024)).toFixed(1) }} MB · {{ totalParts }} Multipart Chunks · SHA-256 Verified
+            Size: {{ (selectedFileSizeBytes / (1024 * 1024)).toFixed(1) }} MB · {{ totalParts }} Multipart Chunks · ETag Verified
           </p>
         </div>
 

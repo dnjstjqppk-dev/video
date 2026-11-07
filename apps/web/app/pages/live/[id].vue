@@ -12,10 +12,14 @@ useSeoMeta({
   description: 'Watch live in ultra-low latency HLS with real-time WebSocket chat and SuperChat support.'
 })
 
-const viewerCount = ref(14820)
+const viewerCount = ref(0)
+const viewerCountKnown = ref(false)
 const chatInput = ref('')
 const superChatAmount = ref<number>(0)
-const wsConnected = ref(true)
+const wsConnected = ref(false)
+const chatStatus = ref<'connecting' | 'live' | 'reconnecting' | 'offline'>('connecting')
+const reconnectAttempts = ref(0)
+const queuedOutbox = ref(0)
 
 interface LivePoll {
   question: string
@@ -98,7 +102,24 @@ const messages = ref<LiveChatMessage[]>([
 ])
 
 let ws: WebSocket | null = null
-let simTimer: ReturnType<typeof setInterval> | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let intentionalClose = false
+const outbox: Array<{ action: string; payload: Record<string, unknown> }> = []
+
+const MAX_RECONNECT_ATTEMPTS = 10
+
+function scheduleReconnect() {
+  if (intentionalClose) return
+  if (reconnectAttempts.value >= MAX_RECONNECT_ATTEMPTS) {
+    chatStatus.value = 'offline'
+    return
+  }
+  chatStatus.value = 'reconnecting'
+  const delayMs = Math.min(1000 * 2 ** reconnectAttempts.value, 30000)
+  reconnectAttempts.value += 1
+  if (reconnectTimer) clearTimeout(reconnectTimer)
+  reconnectTimer = setTimeout(() => connectLiveChatSocket(), delayMs)
+}
 
 function connectLiveChatSocket() {
   try {
@@ -108,6 +129,13 @@ function connectLiveChatSocket() {
     ws = new WebSocket(wsUrl)
     ws.onopen = () => {
       wsConnected.value = true
+      chatStatus.value = 'live'
+      reconnectAttempts.value = 0
+      while (outbox.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
+        const frame = outbox.shift()
+        if (frame) ws.send(JSON.stringify(frame))
+      }
+      queuedOutbox.value = outbox.length
     }
     ws.onmessage = event => {
       try {
@@ -131,8 +159,9 @@ function connectLiveChatSocket() {
             currency: p.currency || 'KRW',
             timestamp: p.timestamp || new Date().toISOString()
           })
-        } else if (frame.type === 'viewer_count' && frame.payload?.viewer_count) {
+        } else if (frame.type === 'viewer_count' && typeof frame.payload?.viewer_count === 'number') {
           viewerCount.value = frame.payload.viewer_count
+          viewerCountKnown.value = true
         } else if (frame.type === 'live_poll_updated' || frame.type === 'live_poll_created') {
           if (frame.payload && frame.payload.question) {
             activePoll.value = {
@@ -148,28 +177,29 @@ function connectLiveChatSocket() {
       }
     }
     ws.onerror = () => {
-      wsConnected.value = true // Graceful Edge BroadcastChannel + Live Stream Active
+      wsConnected.value = false
+      ws?.close()
     }
     ws.onclose = () => {
-      wsConnected.value = true
+      wsConnected.value = false
+      scheduleReconnect()
     }
   } catch {
-    wsConnected.value = true
+    wsConnected.value = false
+    scheduleReconnect()
   }
+}
+
+function retryChatConnection() {
+  reconnectAttempts.value = 0
+  chatStatus.value = 'connecting'
+  connectLiveChatSocket()
 }
 
 const pinnedSuperChats = ref([
   { id: 'sc_1', name: '최현우', amount: 50000, gradient: 'from-red-600 to-rose-700' },
   { id: 'sc_2', name: 'Elena Rostova', amount: 5000, gradient: 'from-emerald-500 to-teal-600' }
 ])
-
-const liveIncomingPool = [
-  { userDisplayName: '박지훈 (Jihoon SRE)', message: 'Cloudflare Edge + LL-HLS 지연시간 1.1초 실화인가요 🔥' },
-  { userDisplayName: 'Sarah Chen', message: 'Creator Studio Live Control Room telemetry HUD looks super clean!' },
-  { userDisplayName: '이서연 (Seoyeon)', message: 'PostgreSQL 18 복식부기 원장 아키텍처 설명 감사합니다!' },
-  { userDisplayName: 'Marcus Vance', message: 'AV1 2160p60 stream is crystal clear on mobile too.' }
-]
-let poolIdx = 0
 
 function sendChatMessage() {
   const text = chatInput.value.trim()
@@ -191,24 +221,13 @@ function sendChatMessage() {
     })
   }
 
+  const frame = { action: 'send_chat', payload }
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({
-      action: 'send_chat',
-      payload,
-    }))
+    ws.send(JSON.stringify(frame))
   } else {
-    messages.value.push({
-      id: `msg_${Date.now()}`,
-      streamId: streamId.value,
-      userId: appStore.currentUser?.id || 'usr_demo_01',
-      userDisplayName: appStore.currentUser?.displayName || '김민준',
-      isModerator: false,
-      isCreator: false,
-      message: text,
-      donationAmount: amt,
-      currency: amt ? appStore.currency : undefined,
-      timestamp: new Date().toISOString()
-    })
+    outbox.push(frame)
+    queuedOutbox.value = outbox.length
+    if (chatStatus.value === 'offline') retryChatConnection()
   }
 
   chatInput.value = ''
@@ -217,27 +236,11 @@ function sendChatMessage() {
 
 onMounted(() => {
   connectLiveChatSocket()
-  simTimer = setInterval(() => {
-    viewerCount.value += Math.floor(Math.random() * 19) - 6
-    const sample = liveIncomingPool[poolIdx % liveIncomingPool.length]
-    poolIdx += 1
-    if (sample && messages.value.length < 60) {
-      messages.value.push({
-        id: `sim_${Date.now()}`,
-        streamId: streamId.value,
-        userId: `usr_sim_${poolIdx}`,
-        userDisplayName: sample.userDisplayName,
-        isModerator: false,
-        isCreator: false,
-        message: sample.message,
-        timestamp: new Date().toISOString()
-      })
-    }
-  }, 4500)
 })
 
 onBeforeUnmount(() => {
-  if (simTimer) clearInterval(simTimer)
+  intentionalClose = true
+  if (reconnectTimer) clearTimeout(reconnectTimer)
   ws?.close()
 })
 </script>
@@ -264,8 +267,11 @@ onBeforeUnmount(() => {
               <span class="rounded bg-[#FF0033] px-2 py-0.5 text-xs font-extrabold uppercase text-white">
                 LIVE
               </span>
-              <span class="text-xs font-semibold text-emerald-400">
+              <span v-if="viewerCountKnown" class="text-xs font-semibold text-emerald-400">
                 ● {{ viewerCount.toLocaleString() }} watching now
+              </span>
+              <span v-else class="text-xs font-semibold text-neutral-400">
+                ◌ 시청자 수 집계 중
               </span>
               <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
                 6.8 Mbps · 60 fps · 2.0s GOP · 0% Loss
@@ -302,10 +308,27 @@ onBeforeUnmount(() => {
             <span class="h-2 w-2 rounded-full" :class="wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-500'" />
             <h2 class="text-sm font-bold">Live Chat & SuperChat</h2>
           </div>
-          <span class="text-[11px] font-medium" :class="wsConnected ? 'text-emerald-400' : 'text-neutral-400'">
-            {{ wsConnected ? '● WebSocket Live' : '○ Standby' }}
+          <span class="flex items-center gap-2">
+            <span
+              class="text-[11px] font-medium"
+              :class="chatStatus === 'live' ? 'text-emerald-400' : chatStatus === 'offline' ? 'text-red-400' : 'text-amber-400'"
+              role="status"
+            >
+              {{ chatStatus === 'live' ? '● WebSocket Live' : chatStatus === 'connecting' ? '◌ 연결 중…' : chatStatus === 'reconnecting' ? `◌ 재연결 중… (${reconnectAttempts})` : '○ 연결 끊김' }}
+            </span>
+            <button
+              v-if="chatStatus === 'offline' || chatStatus === 'reconnecting'"
+              type="button"
+              class="rounded-full border border-white/15 px-2.5 py-1 text-[11px] font-bold text-neutral-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#3EA6FF]"
+              @click="retryChatConnection"
+            >
+              다시 연결
+            </button>
           </span>
         </div>
+        <p v-if="queuedOutbox > 0" class="border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-[11px] text-amber-300" role="status">
+          연결이 복구되면 대기 중인 메시지 {{ queuedOutbox }}건이 전송됩니다.
+        </p>
 
         <!-- Pinned SuperChat Horizontal Ticker -->
         <div class="flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-black/40 px-3 py-2 text-xs">

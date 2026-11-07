@@ -7,3 +7,4 @@ export default defineEventHandler((event) => {
     return sendRedirect(event, target, 301)
   }
 })
+

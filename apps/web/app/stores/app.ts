@@ -1,29 +1,34 @@
 import { defineStore } from 'pinia'
 import type { UserProfile } from '@gvp/shared-types'
-import { SubscriptionTier, UserRole } from '@gvp/shared-types'
+import type { ApiClient } from '@gvp/ts-api-client'
 
 export const useAppStore = defineStore('gvp-web-app', () => {
   const sidebarCollapsed = ref(false)
   const locale = ref<'ko' | 'en'>('ko')
   const currency = ref<'KRW' | 'USD'>('KRW')
-  const theme = ref<'dark' | 'light'>('dark')
   const sessionId = ref(`sess_${Math.random().toString(36).slice(2, 11)}`)
 
-  const currentUser = ref<UserProfile | null>({
-    id: 'usr_demo_01',
-    email: 'viewer@gvp.media',
-    username: 'kim_viewer',
-    displayName: '김민준 (Minjun Kim)',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&q=80',
-    role: UserRole.REGISTERED_USER,
-    subscriptionTier: SubscriptionTier.FREE,
-    isVerified: true,
-    twoFactorEnabled: true,
-    subscriberCount: 412,
-    totalViews: 15820,
-    createdAt: '2025-01-10T00:00:00Z',
-    updatedAt: '2025-05-01T00:00:00Z'
-  })
+  const currentUser = ref<UserProfile | null>(null)
+  const authLoading = ref(false)
+  const authError = ref<string | null>(null)
+
+  async function fetchSession(api: ApiClient) {
+    authLoading.value = true
+    authError.value = null
+    try {
+      currentUser.value = await api.getMe()
+    } catch (err: any) {
+      currentUser.value = null
+      authError.value = err?.message || 'Session lookup failed'
+    } finally {
+      authLoading.value = false
+    }
+  }
+
+  function clearSession() {
+    currentUser.value = null
+    authError.value = null
+  }
 
   const watchProgressMap = ref<Record<string, number>>({})
   const hiddenVideoIds = ref<Set<string>>(new Set())
@@ -39,13 +44,6 @@ export const useAppStore = defineStore('gvp-web-app', () => {
 
   function toggleCurrency() {
     currency.value = currency.value === 'KRW' ? 'USD' : 'KRW'
-  }
-
-  function toggleTheme() {
-    theme.value = theme.value === 'dark' ? 'light' : 'dark'
-    if (import.meta.client) {
-      document.documentElement.classList.toggle('dark', theme.value === 'dark')
-    }
   }
 
   function saveWatchProgress(videoId: string, seconds: number) {
@@ -85,16 +83,18 @@ export const useAppStore = defineStore('gvp-web-app', () => {
     sidebarCollapsed,
     locale,
     currency,
-    theme,
     sessionId,
     currentUser,
+    authLoading,
+    authError,
+    fetchSession,
+    clearSession,
     watchProgressMap,
     hiddenVideoIds,
     blockedChannelIds,
     toggleSidebar,
     toggleLocale,
     toggleCurrency,
-    toggleTheme,
     saveWatchProgress,
     getWatchProgress,
     formatCurrency

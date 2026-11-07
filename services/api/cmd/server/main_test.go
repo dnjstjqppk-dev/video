@@ -382,6 +382,7 @@ func TestAdDecisionTelemetryAndDiagnostics(t *testing.T) {
 
 	// 4. Admin Delivery Diagnostics
 	req = httptest.NewRequest(http.MethodGet, "/v1/admin/ads/delivery-diagnostics", nil)
+	req.Header.Set("Authorization", "Bearer admin-token")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -520,7 +521,16 @@ func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
 	}
 
 	// 6. Verify real-time audit via Delivery Inspector & Advertiser Reports
+	// Delivery diagnostics require a platform operator role.
+	diagAnon := httptest.NewRequest(http.MethodGet, "/v1/admin/ads/delivery-diagnostics", nil)
+	diagAnonRec := httptest.NewRecorder()
+	router.ServeHTTP(diagAnonRec, diagAnon)
+	if diagAnonRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for anonymous delivery diagnostics, got %d", diagAnonRec.Code)
+	}
+
 	diagReq := httptest.NewRequest(http.MethodGet, "/v1/admin/ads/delivery-diagnostics", nil)
+	diagReq.Header.Set("Authorization", "Bearer "+"admin-token")
 	diagRec := httptest.NewRecorder()
 	router.ServeHTTP(diagRec, diagReq)
 	if diagRec.Code != http.StatusOK {

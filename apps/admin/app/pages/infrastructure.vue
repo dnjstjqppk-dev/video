@@ -1,212 +1,151 @@
 <script setup lang="ts">
+import GvpBanner from '@gvp/ui/src/components/GvpBanner.vue'
+
+const api = useAdminApi()
+
 useSeoMeta({
-  title: 'Multi-Region K8s, Canary Rollout & DR Drill — Super Admin'
+  title: 'Platform Health & Service Status — Super Admin'
 })
 
-const canaryTrafficPct = ref(25)
-const maintenanceMode = ref(false)
-const drDrillStatus = ref<'IDLE' | 'RUNNING' | 'VERIFIED'>('VERIFIED')
-const lastDrRtoSeconds = ref(412) // 6m 52s (< 15m target)
+const autoRefresh = ref(true)
+let timer: ReturnType<typeof setInterval> | null = null
 
-const regions = ref([
-  {
-    id: 'ap-northeast-2',
-    name: 'Seoul Primary (EKS ap-northeast-2)',
-    role: 'PRIMARY_ACTIVE',
-    pods: 64,
-    cpuPct: 42,
-    memPct: 58,
-    cacheHitRatio: '98.9%',
-    p99LatencyMs: 6.4,
-    status: 'HEALTHY'
-  },
-  {
-    id: 'ap-northeast-1',
-    name: 'Tokyo Edge Failover (EKS ap-northeast-1)',
-    role: 'HOT_STANDBY',
-    pods: 32,
-    cpuPct: 28,
-    memPct: 41,
-    cacheHitRatio: '98.4%',
-    p99LatencyMs: 11.2,
-    status: 'HEALTHY'
-  },
-  {
-    id: 'us-west-2',
-    name: 'Oregon Global POP (EKS us-west-2)',
-    role: 'ACTIVE_REPLICA',
-    pods: 48,
-    cpuPct: 37,
-    memPct: 52,
-    cacheHitRatio: '97.8%',
-    p99LatencyMs: 19.5,
-    status: 'HEALTHY'
-  },
-  {
-    id: 'eu-central-1',
-    name: 'Frankfurt EU GDPR Node (EKS eu-central-1)',
-    role: 'ACTIVE_REPLICA',
-    pods: 40,
-    cpuPct: 35,
-    memPct: 49,
-    cacheHitRatio: '98.1%',
-    p99LatencyMs: 15.8,
-    status: 'HEALTHY'
-  }
-])
+const { data: health, pending: healthPending, error: healthError, refresh: refreshHealth } = await useAsyncData(
+  'admin-service-health',
+  async () => await api.getServiceHealth()
+)
 
-function triggerDrDrill() {
-  drDrillStatus.value = 'RUNNING'
-  setTimeout(() => {
-    lastDrRtoSeconds.value = 385
-    drDrillStatus.value = 'VERIFIED'
-  }, 1200)
+const { data: dashboard, pending: dashPending, error: dashError, refresh: refreshDashboard } = await useAsyncData(
+  'admin-infra-dashboard',
+  async () => await api.getAdminDashboard()
+)
+
+function refreshAll() {
+  refreshHealth()
+  refreshDashboard()
 }
 
-function rollbackCanary() {
-  canaryTrafficPct.value = 0
-}
+onMounted(() => {
+  timer = setInterval(() => {
+    if (autoRefresh.value && !document.hidden) refreshAll()
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer)
+})
+
+const apiAlive = computed(() => health.value?.alive?.status === 'UP')
+const apiReady = computed(() => health.value?.ready?.ready === true)
 </script>
 
 <template>
   <div>
-    <!-- Infrastructure Simulation Banner (GV-07) -->
-    <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-300">
-      <div class="flex items-center gap-2 font-bold">
-        <span>⚠️ 인프라 시뮬레이션 안내 (Simulation Demonstration Mode)</span>
-        <span class="rounded bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] text-amber-200">DEMO ONLY</span>
-      </div>
-      <p class="mt-1 text-[11px] text-neutral-300">
-        본 화면에 표시된 멀티 리전 EKS 클러스터 상태(4개 리전), 파드 수, 카나리 트래픽 시프팅, WAL 아카이빙 지표는 아키텍처 검증을 위한 목업 시뮬레이션 데이터입니다.
-        실제 EKS 클러스터와의 실시간 텔레메트리 연동 상태가 아니며, DR 훈련 버튼은 가상 타이머 시뮬레이션만을 동작시킵니다.
-      </p>
-    </div>
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-extrabold text-white">멀티 리전 K8s 클러스터, 카나리 배포 및 재해복구(DR) 관제 (시뮬레이션)</h1>
+        <h1 class="text-2xl font-extrabold text-white">플랫폼 헬스 및 서비스 상태 (Service Health)</h1>
         <p class="mt-1 text-xs text-neutral-400">
-          EKS Multi-Region Topology · Canary Progressive Traffic Shifting · PITR WAL Archiving & DR Failover Drill (RTO &lt; 15m, RPO &lt; 1m)
+          Live API liveness/readiness probes · Platform totals · 30초 자동 새로고침
         </p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 text-xs">
+        <label class="flex items-center gap-2 text-neutral-300">
+          <input v-model="autoRefresh" type="checkbox" class="rounded accent-red-600" />
+          자동 새로고침 (30s)
+        </label>
         <button
           type="button"
-          class="rounded-xl border px-4 py-2 text-xs font-bold transition"
-          :class="maintenanceMode ? 'border-amber-400 bg-amber-500/20 text-amber-300' : 'border-white/15 bg-[#131722] text-neutral-300'"
-          @click="maintenanceMode = !maintenanceMode"
+          class="rounded-xl border border-white/15 px-4 py-2 font-bold text-neutral-200 hover:bg-white/10"
+          @click="refreshAll"
         >
-          {{ maintenanceMode ? '⚠️ Maintenance Mode ACTIVE' : '정기 점검 모드 전환 (Maintenance Mode)' }}
-        </button>
-        <button
-          type="button"
-          class="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-red-500"
-          @click="triggerDrDrill"
-        >
-          {{ drDrillStatus === 'RUNNING' ? 'Executing Failover...' : 'DR 페일오버 시뮬레이션 시연 (Simulation Only)' }}
+          새로고침
         </button>
       </div>
     </div>
 
-    <!-- Canary Rollout & PITR Backup Bar -->
-    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <!-- Liveness / Readiness -->
+    <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
       <div class="rounded-2xl border border-white/10 bg-[#131722] p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-bold text-white">카나리 점진적 배포 제어 (Canary Deployment v2026.10.30)</h2>
-            <p class="text-[11px] text-neutral-400">Cosign OIDC Verified · Trivy CVE Critical: 0 · SonarQube Coverage: 91.4%</p>
-          </div>
-          <span class="rounded bg-[#3EA6FF]/20 px-2.5 py-1 font-mono text-xs font-bold text-[#3EA6FF]">
-            Traffic: {{ canaryTrafficPct }}%
+        <h2 class="text-sm font-bold text-white">API Liveness (`/healthz`)</h2>
+        <div v-if="healthPending" class="mt-3 h-16 animate-pulse rounded-xl bg-white/5" role="status" aria-label="불러오는 중" />
+        <GvpBanner v-else-if="healthError" tone="danger" class="mt-3">
+          헬스 정보를 불러오지 못했습니다. <button type="button" class="font-bold underline" @click="refreshAll()">다시 시도</button>
+        </GvpBanner>
+        <div v-else class="mt-3 flex items-center gap-3">
+          <span
+            class="rounded px-2.5 py-1 font-mono text-xs font-extrabold"
+            :class="apiAlive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-300'"
+            role="status"
+          >
+            {{ health?.alive?.status || 'UNKNOWN' }}
           </span>
-        </div>
-
-        <div class="mt-4 flex items-center gap-2">
-          <button
-            v-for="pct in [0, 5, 25, 50, 100]"
-            :key="pct"
-            type="button"
-            class="flex-1 rounded-xl border py-2 text-xs font-bold transition"
-            :class="canaryTrafficPct === pct ? 'border-[#3EA6FF] bg-[#3EA6FF] text-black' : 'border-white/10 bg-[#090B10] text-neutral-300'"
-            @click="canaryTrafficPct = pct"
-          >
-            {{ pct }}%
-          </button>
-          <button
-            type="button"
-            class="rounded-xl border border-red-500/40 bg-red-950/40 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-900/50"
-            @click="rollbackCanary"
-          >
-            Instant Rollback
-          </button>
+          <span class="font-mono text-xs text-neutral-400">v{{ health?.alive?.version || '?' }} · {{ health?.alive?.timestamp || '-' }}</span>
         </div>
       </div>
 
       <div class="rounded-2xl border border-white/10 bg-[#131722] p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-bold text-white">PostgreSQL 18 PITR 백업 & 재해 복구(DR) 지표</h2>
-            <p class="text-[11px] text-neutral-400">Hourly WAL Archiving to Cloudflare R2 · Cross-Region Synchronous Replication</p>
+        <h2 class="text-sm font-bold text-white">API Readiness (`/ready`)</h2>
+        <div v-if="healthPending" class="mt-3 h-16 animate-pulse rounded-xl bg-white/5" role="status" aria-label="불러오는 중" />
+        <div v-else-if="!healthError" class="mt-3">
+          <div class="flex items-center gap-3">
+            <span
+              class="rounded px-2.5 py-1 font-mono text-xs font-extrabold"
+              :class="apiReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-300'"
+              role="status"
+            >
+              {{ health?.ready?.status || 'NOT READY' }}
+            </span>
+            <span class="font-mono text-xs text-neutral-400">{{ health?.ready?.timestamp || '-' }}</span>
           </div>
-          <span class="rounded bg-emerald-500/20 px-2.5 py-1 font-mono text-xs font-bold text-emerald-400">
-            {{ drDrillStatus }}
-          </span>
-        </div>
-        <div class="mt-4 grid grid-cols-3 gap-3 text-center text-xs">
-          <div class="rounded-xl bg-[#090B10] p-3">
-            <p class="text-neutral-400">시뮬레이션 RTO (Target < 15m)</p>
-            <p class="mt-1 font-mono text-base font-extrabold text-emerald-400">{{ Math.floor(lastDrRtoSeconds / 60) }}m {{ lastDrRtoSeconds % 60 }}s</p>
-          </div>
-          <div class="rounded-xl bg-[#090B10] p-3">
-            <p class="text-neutral-400">시뮬레이션 RPO (Target < 1m)</p>
-            <p class="mt-1 font-mono text-base font-extrabold text-[#3EA6FF]">0.8 sec</p>
-          </div>
-          <div class="rounded-xl bg-[#090B10] p-3">
-            <p class="text-neutral-400">Global CDN Hit Ratio</p>
-            <p class="mt-1 font-mono text-base font-extrabold text-white">98.7%</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Multi-Region Kubernetes Clusters -->
-    <div class="mt-6 rounded-2xl border border-white/10 bg-[#131722] p-5">
-      <h2 class="text-sm font-bold text-white">글로벌 멀티 리전 쿠버네티스 클러스터 토폴로지 (Multi-Region K8s Fleet)</h2>
-      <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div
-          v-for="reg in regions"
-          :key="reg.id"
-          class="rounded-xl border border-white/10 bg-[#090B10] p-4 text-xs"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="font-bold text-white">{{ reg.name }}</p>
-              <p class="font-mono text-[11px] text-neutral-400">{{ reg.id }} · {{ reg.role }}</p>
-            </div>
-            <span class="rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
-              {{ reg.status }}
+          <div v-if="health?.ready?.subsystems" class="mt-3 flex flex-wrap gap-2 text-xs">
+            <span
+              v-for="(state, name) in health.ready.subsystems"
+              :key="name"
+              class="rounded-lg bg-white/5 px-2.5 py-1 font-mono text-neutral-300"
+            >
+              {{ name }}: <strong :class="state === 'operational' ? 'text-emerald-400' : 'text-red-300'">{{ state }}</strong>
             </span>
           </div>
-          <div class="mt-3 grid grid-cols-4 gap-2 border-t border-white/10 pt-3 text-center">
-            <div>
-              <p class="text-[10px] text-neutral-400">Active Pods</p>
-              <p class="font-mono font-bold text-white">{{ reg.pods }}</p>
-            </div>
-            <div>
-              <p class="text-[10px] text-neutral-400">CPU / Mem</p>
-              <p class="font-mono font-bold text-neutral-200">{{ reg.cpuPct }}% / {{ reg.memPct }}%</p>
-            </div>
-            <div>
-              <p class="text-[10px] text-neutral-400">Edge Cache Hit</p>
-              <p class="font-mono font-bold text-emerald-400">{{ reg.cacheHitRatio }}</p>
-            </div>
-            <div>
-              <p class="text-[10px] text-neutral-400">P99 Latency</p>
-              <p class="font-mono font-bold text-[#3EA6FF]">{{ reg.p99LatencyMs }}ms</p>
-            </div>
-          </div>
         </div>
       </div>
+    </div>
+
+    <!-- Platform Totals -->
+    <div class="mt-6 rounded-2xl border border-white/10 bg-[#131722] p-5">
+      <h2 class="text-sm font-bold text-white">플랫폼 현황 (Live Totals)</h2>
+      <div v-if="dashPending" class="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4" role="status" aria-label="불러오는 중">
+        <div v-for="n in 4" :key="n" class="h-20 animate-pulse rounded-xl bg-white/5" />
+      </div>
+      <GvpBanner v-else-if="dashError" tone="danger" class="mt-4">
+        현황을 불러오지 못했습니다. <button type="button" class="font-bold underline" @click="refreshAll()">다시 시도</button>
+      </GvpBanner>
+      <div v-else-if="dashboard" class="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4" role="status">
+        <div class="rounded-xl bg-[#090B10] p-4">
+          <p class="text-xs text-neutral-400">총 사용자</p>
+          <p class="mt-1 font-mono text-xl font-extrabold text-white">{{ dashboard.metrics.totalUsers.toLocaleString() }}</p>
+        </div>
+        <div class="rounded-xl bg-[#090B10] p-4">
+          <p class="text-xs text-neutral-400">총 영상</p>
+          <p class="mt-1 font-mono text-xl font-extrabold text-white">{{ dashboard.metrics.totalVideos.toLocaleString() }}</p>
+        </div>
+        <div class="rounded-xl bg-[#090B10] p-4">
+          <p class="text-xs text-neutral-400">진행 중 라이브</p>
+          <p class="mt-1 font-mono text-xl font-extrabold text-[#FF0033]">{{ dashboard.metrics.liveStreamsActive.toLocaleString() }}</p>
+        </div>
+        <div class="rounded-xl bg-[#090B10] p-4">
+          <p class="text-xs text-neutral-400">시스템 상태</p>
+          <p class="mt-1 font-mono text-xl font-extrabold text-emerald-400">{{ dashboard.metrics.systemHealth }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deep Observability -->
+    <div class="mt-6 rounded-2xl border border-white/10 bg-[#131722] p-5 text-xs text-neutral-300">
+      <h2 class="text-sm font-bold text-white">심층 관측 (Deep Observability)</h2>
+      <p class="mt-1 text-neutral-400">
+        CPU·메모리·파드·카나리·WAL 지표는 Prometheus/Grafana에서 확인하세요. Compose 스택은
+        <span class="font-mono">prometheus:9090</span>·<span class="font-mono">grafana:3000</span>으로 노출됩니다.
+      </p>
     </div>
   </div>
 </template>
-

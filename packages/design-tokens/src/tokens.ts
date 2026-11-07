@@ -7,7 +7,7 @@ export const tokens = {
       300: '#fca5a5',
       400: '#f87171',
       500: '#ef4444',
-      600: '#dc2626', // Brand Red
+      600: '#dc2626',
       700: '#b91c1c',
       800: '#991b1b',
       900: '#7f1d1d',
@@ -24,14 +24,79 @@ export const tokens = {
       700: '#3f3f46',
       800: '#27272a',
       900: '#18181b',
-      950: '#09090b', // Deep Dark Canvas
+      950: '#09090b',
     },
     accent: {
       cyan: '#06b6d4',
       purple: '#a855f7',
       green: '#22c55e',
       amber: '#f59e0b',
-    }
+    },
+    brand: {
+      DEFAULT: '#FF0033',
+      hover: '#D9002B',
+      active: '#B80026',
+      soft: 'rgba(255, 0, 51, 0.14)',
+      contrast: '#ffffff',
+    },
+    link: {
+      DEFAULT: '#3EA6FF',
+      hover: '#65B8FF',
+      soft: 'rgba(62, 166, 255, 0.14)',
+    },
+    semantic: {
+      success: '#22C55E',
+      successSoft: 'rgba(34, 197, 94, 0.14)',
+      warning: '#F59E0B',
+      warningSoft: 'rgba(245, 158, 11, 0.14)',
+      danger: '#EF4444',
+      dangerSoft: 'rgba(239, 68, 68, 0.14)',
+      info: '#3EA6FF',
+      infoSoft: 'rgba(62, 166, 255, 0.14)',
+    },
+  },
+  surfaces: {
+    canvas: '#0F0F0F',
+    s1: '#161616',
+    s2: '#1F1F1F',
+    s3: '#272727',
+    overlay: 'rgba(0, 0, 0, 0.75)',
+    border: 'rgba(255, 255, 255, 0.10)',
+    borderStrong: 'rgba(255, 255, 255, 0.16)',
+  },
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#D4D4D8',
+    muted: '#A1A1AA',
+    faint: '#71717A',
+    inverse: '#09090B',
+  },
+  spacing: {
+    xs: '0.25rem',
+    sm: '0.5rem',
+    md: '1rem',
+    lg: '1.5rem',
+    xl: '2rem',
+    '2xl': '3rem',
+    '3xl': '4rem',
+  },
+  radius: {
+    sm: '0.375rem',
+    md: '0.75rem',
+    lg: '1rem',
+    xl: '1.5rem',
+    pill: '9999px',
+  },
+  shadow: {
+    sm: '0 1px 2px rgba(0, 0, 0, 0.45)',
+    md: '0 4px 16px rgba(0, 0, 0, 0.45)',
+    lg: '0 12px 40px rgba(0, 0, 0, 0.55)',
+  },
+  motion: {
+    fast: '120ms',
+    base: '200ms',
+    slow: '320ms',
+    ease: 'cubic-bezier(0.2, 0, 0, 1)',
   },
   breakpoints: {
     xs: '360px',
@@ -42,10 +107,9 @@ export const tokens = {
     '2xl': '1920px'
   },
   typography: {
-    fontSans: 'Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+    fontSans: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
     fontMono: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
   }
 } as const;
 
 export type DesignTokens = typeof tokens;
-

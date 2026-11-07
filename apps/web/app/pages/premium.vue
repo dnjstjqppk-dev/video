@@ -23,15 +23,15 @@ async function activatePremium() {
 
   try {
     const apiBase = config.public.apiBaseUrl
-    if (!apiBase || apiBase.includes('localhost')) {
+    if (!apiBase) {
       throw new Error(
         appStore.locale === 'ko'
-          ? '운영 결제 게이트웨이가 활성화되지 않았습니다. 현재 테스트베드 환경으로 실제 청구가 발생하지 않으며, 무결성 보호(Fail-Closed) 정책에 따라 결제가 승인되지 않습니다.'
-          : 'Payment gateway is not currently active on this environment. Transactions are blocked under Fail-Closed policy.'
+          ? '결제 API 주소가 설정되지 않았습니다. 관리자에게 문의하세요.'
+          : 'Payment API base URL is not configured. Please contact support.'
       )
     }
 
-    // 서버 주문 생성
+    // 서버 주문 생성 (실패 시 Fail-Closed: 티어 변경 없음)
     const checkoutRes = await $fetch<{ id: string; checkout_url?: string }>(`${apiBase}/v1/payments/checkout`, {
       method: 'POST',
       body: {
@@ -118,7 +118,7 @@ async function activatePremium() {
       <div v-if="checkoutComplete" class="text-emerald-400">
         <p class="text-lg font-bold">🎉 Welcome to StreamVerse Premium!</p>
         <p class="mt-1 text-xs text-neutral-300">
-          Your account tier is now <strong>{{ appStore.currentUser?.subscriptionTier.toUpperCase() }}</strong>. Ad-free 4K playback is active immediately.
+          Your account tier is now <strong>{{ appStore.currentUser?.subscriptionTier?.toUpperCase() }}</strong>. Ad-free 4K playback is active immediately.
         </p>
         <p v-if="transactionId" class="mt-2 font-mono text-[11px] text-neutral-400">
           Receipt ID: {{ transactionId }} · Provider: {{ selectedProvider.toUpperCase() }} · Double-Entry Ledger Verified
@@ -151,12 +151,15 @@ async function activatePremium() {
 
         <button
           type="button"
-          :disabled="true"
-          class="cursor-not-allowed rounded-full bg-neutral-700 px-8 py-3 text-sm font-bold text-neutral-400 opacity-60 shadow"
+          :disabled="processing"
+          class="rounded-full bg-[#FF0033] px-8 py-3 text-sm font-bold text-white shadow transition hover:bg-[#D9002B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF0033] disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400 disabled:opacity-60"
+          @click="activatePremium"
         >
-          {{ appStore.locale === 'ko' ? '결제 연동 준비 중 (Fail-Closed: 안전 검증 진행 중)' : 'Payment Gateway Under Maintenance (Fail-Closed)' }}
+          {{ processing
+            ? (appStore.locale === 'ko' ? '결제 승인 중…' : 'Processing…')
+            : (appStore.locale === 'ko' ? `${appStore.formatCurrency(selectedPlan === 'family' ? 23900 : 14900)}로 Premium 시작하기` : `Start Premium — ${appStore.formatCurrency(selectedPlan === 'family' ? 23900 : 14900)}/mo`) }}
         </button>
-        <p class="mt-2 text-xs text-neutral-400">결제 게이트웨이 보안 검증 완료 후 공식 활성화됩니다 · 계정 등급 불변</p>
+        <p class="mt-2 text-xs text-neutral-400">서버 승인 없이 등급이 변경되지 않습니다 (Fail-Closed) · {{ selectedProvider === 'toss' ? 'TossPayments' : 'Stripe' }} 안전결제</p>
       </div>
     </div>
   </div>

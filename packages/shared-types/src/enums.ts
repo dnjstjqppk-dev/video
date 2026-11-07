@@ -68,16 +68,20 @@ export enum LiveStreamStatus {
 export enum AdFormat {
   PREROLL = 'preroll',
   MIDROLL = 'midroll',
-  FEED = 'feed',
-  SHORTS = 'shorts',
+  FEED = 'feed_banner',
+  SHORTS = 'shorts_sponsored',
+  BANNER = 'banner',
   DISPLAY = 'display'
 }
 
 export enum CampaignStatus {
   DRAFT = 'draft',
   PENDING_REVIEW = 'pending_review',
+  APPROVED = 'approved',
+  SCHEDULED = 'scheduled',
   ACTIVE = 'active',
   PAUSED = 'paused',
+  EXHAUSTED = 'exhausted',
   COMPLETED = 'completed',
   REJECTED = 'rejected'
 }
@@ -86,6 +90,7 @@ export enum ModerationStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  RESOLVED = 'resolved',
   APPEALED = 'appealed',
   ESCALATED = 'escalated'
 }
@@ -101,6 +106,9 @@ export enum CopyrightClaimStatus {
   ACTIVE = 'active',
   DISPUTED = 'disputed',
   RESOLVED = 'resolved',
+  RELEASED = 'released',
+  UPHELD = 'upheld',
+  TAKEDOWN = 'takedown',
   WITHDRAWN = 'withdrawn'
 }
 
@@ -116,6 +124,7 @@ export enum PayoutStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
   PROCESSING = 'processing',
+  SCHEDULED = 'scheduled',
   PAID = 'paid',
   FAILED = 'failed',
   ON_HOLD = 'on_hold'
@@ -124,6 +133,7 @@ export enum PayoutStatus {
 export enum SubscriptionTier {
   FREE = 'free',
   PREMIUM = 'premium',
-  PREMIUM_FAMILY = 'premium_family'
+  PREMIUM_FAMILY = 'premium_family',
+  ENTERPRISE = 'enterprise'
 }
 

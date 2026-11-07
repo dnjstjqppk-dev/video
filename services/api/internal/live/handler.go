@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/policies"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -50,18 +51,29 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 }
 
 func (h *Handler) CreateStream(w http.ResponseWriter, r *http.Request) {
+	if !policies.FlagEnabled(h.Store, policies.FlagLiveIngest) {
+		identity.WriteError(w, r, http.StatusForbidden, "POLICY_DISABLED", "Live streaming ingest is paused by platform policy")
+		return
+	}
 	var payload struct {
 		Title       string `json:"title"`
 		Description string `json:"description"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&payload)
 
+	user := identity.GetUserFromContext(r.Context())
+	channel := h.Store.ChannelForUser(user.ID)
+	if channel == nil {
+		identity.WriteError(w, r, http.StatusNotFound, "CHANNEL_NOT_FOUND", "Create a channel before going live")
+		return
+	}
+
 	streamID := uuid.NewString()
 	streamKey := fmt.Sprintf("live_%s_%d", uuid.NewString()[:8], time.Now().Unix())
 
 	stream := &store.LiveStream{
 		ID:             streamID,
-		ChannelID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+		ChannelID:      channel.ID,
 		Title:          payload.Title,
 		Description:    payload.Description,
 		ThumbnailURL:   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800",
@@ -271,7 +283,7 @@ func (h *Handler) SendLiveChatMessage(w http.ResponseWriter, r *http.Request) {
 		DisplayName: user.DisplayName,
 		AvatarURL:   user.AvatarURL,
 		Message:     payload.Message,
-		IsModerator: user.Role == "admin",
+		IsModerator: user.Role == "moderator" || user.Role == "super_admin" || user.Role == "platform_admin",
 		IsCreator:   isCreator,
 		CreatedAt:   time.Now(),
 	}

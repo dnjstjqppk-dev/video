@@ -1,0 +1,16 @@
+{
+  "name": "@gvp/e2e-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test contract/openapi_contract.test.ts security/owasp_api_security.test.ts",
+    "test:e2e": "playwright test",
+    "test:all": "pnpm test && pnpm test:e2e"
+  },
+  "devDependencies": {
+    "@gvp/tsconfig": "workspace:*",
+    "@playwright/test": "^1.65.0",
+    "typescript": "^5.7.0"
+  }
+}

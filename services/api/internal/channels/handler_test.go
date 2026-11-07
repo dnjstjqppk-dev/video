@@ -92,6 +92,39 @@ func TestUpdateChannel_OwnerCanUpdate(t *testing.T) {
 	}
 }
 
+func TestUpdateChannel_BrandingAndSanitization(t *testing.T) {
+	srv := newChannelsTestServer()
+	defer srv.Close()
+
+	channelID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	req, rec := channelsReq(http.MethodPatch, "/channels/"+channelID, "creator-token", map[string]string{
+		"name":        "Brand <b>New</b>",
+		"description": "Line one<script>alert(1)</script>",
+		"avatarUrl":   "https://cdn.example.com/a.png",
+		"bannerUrl":   "https://cdn.example.com/b.png",
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var updated struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		AvatarURL   string `json:"avatar_url"`
+		BannerURL   string `json:"banner_url"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &updated); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if updated.Name != "Brand New" || updated.Description != "Line onealert(1)" {
+		t.Fatalf("expected sanitized fields, got %+v", updated)
+	}
+	if updated.AvatarURL != "https://cdn.example.com/a.png" || updated.BannerURL != "https://cdn.example.com/b.png" {
+		t.Fatalf("expected branding URLs persisted, got %+v", updated)
+	}
+}
+
 func TestUpdateChannel_BOLA_OtherUserCannotUpdate(t *testing.T) {
 	srv := newChannelsTestServer()
 	defer srv.Close()

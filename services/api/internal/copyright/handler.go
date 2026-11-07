@@ -67,6 +67,17 @@ func (h *Handler) DisputeClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user := identity.GetUserFromContext(r.Context())
+	if video, ok := h.Store.Videos[claim.ClaimedVideoID]; ok {
+		if channel, ok := h.Store.Channels[video.ChannelID]; ok {
+			isOperator := user.Role == "super_admin" || user.Role == "platform_admin" || user.Role == "moderator"
+			if channel.OwnerID != user.ID && !isOperator {
+				identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only the channel owner can dispute this claim")
+				return
+			}
+		}
+	}
+
 	var payload struct {
 		Reason      string `json:"reason"`      // fair_use, license_held, public_domain, original_content
 		Explanation string `json:"explanation"` // statement
@@ -113,7 +124,7 @@ func (h *Handler) ResolveClaim(w http.ResponseWriter, r *http.Request) {
 		claim.Status = "takedown"
 		// Block claimed video
 		if vid, ok := h.Store.Videos[claim.ClaimedVideoID]; ok {
-			vid.Visibility = "BLOCKED"
+			vid.Status = "BLOCKED"
 		}
 	default:
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid resolution")
@@ -157,7 +168,7 @@ func (h *Handler) SubmitDMCATakedown(w http.ResponseWriter, r *http.Request) {
 	// Block video immediately
 	var strikeIssuedToUserID string
 	if vid, ok := h.Store.Videos[payload.VideoID]; ok {
-		vid.Visibility = "BLOCKED"
+		vid.Status = "BLOCKED"
 		// Check channel owner
 		if ch, ok := h.Store.Channels[vid.ChannelID]; ok {
 			strikeIssuedToUserID = ch.OwnerID

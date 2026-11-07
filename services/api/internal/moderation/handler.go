@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -64,4 +66,55 @@ func (h *Handler) ResolveCase(w http.ResponseWriter, r *http.Request) {
 	mCase.ActionTaken = payload.Action
 
 	identity.WriteJSON(w, http.StatusOK, mCase)
+}
+
+// ReportContent files a user report against a video, comment, or channel.
+// The case lands in the admin moderation queue for human review.
+func (h *Handler) ReportContent(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+	var payload struct {
+		TargetType     string `json:"targetType"`
+		TargetID       string `json:"targetId"`
+		Reason         string `json:"reason"`
+		PolicyCategory string `json:"policyCategory"`
+		Details        string `json:"details"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid request body")
+		return
+	}
+	targetType := security.SanitizeUserText(payload.TargetType, 32)
+	targetID := security.SanitizeUserText(payload.TargetID, 128)
+	reason := security.SanitizeUserText(payload.Reason, 2000)
+	if targetType == "" || targetID == "" || reason == "" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "targetType, targetId, and reason are required")
+		return
+	}
+	switch targetType {
+	case "video", "comment", "channel":
+	default:
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "targetType must be video, comment, or channel")
+		return
+	}
+	mCase := &store.ModerationCase{
+		ID:             "mod-" + uuid.NewString()[:8],
+		TargetType:     targetType,
+		TargetID:       targetID,
+		Reason:         reason,
+		PolicyCategory: security.SanitizeUserText(payload.PolicyCategory, 64),
+		Status:         "pending",
+		CreatedAt:      time.Now(),
+	}
+	if mCase.PolicyCategory == "" {
+		mCase.PolicyCategory = "general"
+	}
+	if details := security.SanitizeUserText(payload.Details, 2000); details != "" {
+		mCase.Reason = reason + " | details: " + details
+	}
+	h.Store.Moderation[mCase.ID] = mCase
+	identity.WriteJSON(w, http.StatusCreated, mCase)
 }

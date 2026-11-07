@@ -1,6 +1,7 @@
 package settlements
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -108,7 +109,32 @@ func (h *Handler) RequestPayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var payload struct {
+		ChannelID string `json:"channelId"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&payload)
+
+	if payload.ChannelID != "" {
+		channel, ok := h.Store.Channels[payload.ChannelID]
+		if !ok {
+			identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+			return
+		}
+		isFinanceOperator := user.Role == "super_admin" || user.Role == "platform_admin" || user.Role == "finance_admin"
+		if channel.OwnerID != user.ID && !isFinanceOperator {
+			identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot request payouts for another creator's channel")
+			return
+		}
+	}
+
 	payoutID := "payout_" + time.Now().Format("20060102150405")
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        payoutID,
+		"actorId":   user.ID,
+		"action":    "REQUEST_PAYOUT",
+		"target":    payload.ChannelID,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
 	identity.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"payout_id": payoutID,
 		"status":    "scheduled",

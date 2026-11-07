@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const api = usePartnerApi()
-const activeTenant = useState<'ADVERTISER' | 'MCN' | 'RIGHTS_OWNER'>('partner-tenant', () => 'ADVERTISER')
+const activeOrg = useState<{ id: string; name: string; type: string }>('partner-org', () => ({
+  id: '',
+  name: '',
+  type: ''
+}))
 
 useSeoMeta({
   title: 'Partner Organization Overview'
@@ -8,13 +12,15 @@ useSeoMeta({
 
 const { data: overview } = await useAsyncData('partner-overview', async () => {
   try {
-    return await api.getPartnerOverview()
+    const res = await api.getPartnerOverview()
+    activeOrg.value = { ...res.organization }
+    return res
   } catch {
     return {
       organization: {
         id: 'org_partner_01',
         name: 'Apex Global Media / Horizon MCN / Starlight Rights',
-        type: activeTenant.value
+        type: 'advertiser_and_mcn'
       },
       campaignCount: 14,
       activeChannelsCount: 42,
@@ -29,7 +35,7 @@ const { data: overview } = await useAsyncData('partner-overview', async () => {
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-extrabold text-white">
-          파트너 조직 종합 대시보드 ({{ activeTenant }} Console)
+          파트너 조직 종합 대시보드 ({{ overview?.organization?.name || 'Partner' }})
         </h1>
         <p class="mt-1 text-xs text-neutral-400">
           Multi-tenant RBAC isolation · Real-time ad pacing, MCN channel roster, Content ID claims, and ledger settlements

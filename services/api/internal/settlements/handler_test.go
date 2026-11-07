@@ -85,4 +85,13 @@ func TestGetSettlementsAndEarnings(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("expected 201 for payout request, got %d: %s", rec.Code, rec.Body.String())
 	}
+
+	// 4. Cross-owner channel payout is rejected
+	req, rec = settleReq(http.MethodPost, "/settlements/payout", "viewer-token", map[string]string{
+		"channelId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for cross-owner payout, got %d: %s", rec.Code, rec.Body.String())
+	}
 }

@@ -235,7 +235,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: task.visibility,
+            initialValue: task.visibility,
             decoration: const InputDecoration(
               labelText: 'Visibility',
               border: OutlineInputBorder(),

@@ -455,9 +455,13 @@ func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	campID := "camp-" + uuid.NewString()
 
+	advertiserID := "44444444-4444-4444-4444-444444444444"
+	if user := identity.GetUserFromContext(r.Context()); user != nil {
+		advertiserID = user.ID
+	}
 	campaign := &store.AdCampaign{
 		ID:               campID,
-		AdvertiserID:     "44444444-4444-4444-4444-444444444444",
+		AdvertiserID:     advertiserID,
 		Name:             payload.Name,
 		Format:           payload.Format,
 		Status:           "active", // Activated upon creation in demo/testing

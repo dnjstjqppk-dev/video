@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -61,6 +63,68 @@ type ProbeMetadata struct {
 	VideoCodec      string
 	AudioCodec      string
 	HasVideoStream  bool
+}
+
+// EditDecisionList is the non-destructive edit the studio editor dispatches.
+// Times are seconds from the source head; blur boxes are percent coordinates.
+type EditDecisionList struct {
+	TrimStartSec     int
+	TrimEndSec       int
+	SplitPoints      []int
+	BlurRegions      []BlurRegion
+	MutedSegments    []MutedSegment
+	ReplacementAudio string
+}
+
+type BlurRegion struct {
+	ID       string
+	Label    string
+	X        int
+	Y        int
+	StartSec int
+	EndSec   int
+}
+
+type MutedSegment struct {
+	StartSec int
+	EndSec   int
+	Reason   string
+}
+
+// ValidateEDL enforces structural edit rules. When durationSec is positive it
+// additionally bounds every timestamp to the source length; a zero duration
+// (unprobed source) skips the upper-bound checks but still enforces ordering.
+func ValidateEDL(edl EditDecisionList, durationSec float64) error {
+	if edl.TrimStartSec < 0 || edl.TrimEndSec <= edl.TrimStartSec {
+		return errors.New("invalid trim range: trimEnd must exceed trimStart from 0")
+	}
+	if durationSec > 0 && float64(edl.TrimEndSec) > durationSec {
+		return fmt.Errorf("trimEnd %ds exceeds source duration %.0fs", edl.TrimEndSec, durationSec)
+	}
+	prev := edl.TrimStartSec
+	for _, sp := range edl.SplitPoints {
+		if sp <= prev || sp >= edl.TrimEndSec {
+			return fmt.Errorf("split points must be ascending inside the trim range, got %d", sp)
+		}
+		prev = sp
+	}
+	for _, b := range edl.BlurRegions {
+		if b.ID == "" {
+			return errors.New("blur region id is required")
+		}
+		if b.X < 0 || b.X > 100 || b.Y < 0 || b.Y > 100 {
+			return fmt.Errorf("blur region %q coordinates must be 0-100 percent", b.ID)
+		}
+		if b.StartSec < edl.TrimStartSec || b.EndSec > edl.TrimEndSec || b.EndSec <= b.StartSec {
+			return fmt.Errorf("blur region %q must sit inside the trim range", b.ID)
+		}
+	}
+	for _, m := range edl.MutedSegments {
+		if m.StartSec < edl.TrimStartSec || m.EndSec > edl.TrimEndSec || m.EndSec <= m.StartSec {
+			return errors.New("muted segments must sit inside the trim range")
+		}
+	}
+	return nil
 }
 
 type MediaWorker struct {
@@ -415,6 +479,59 @@ func (w *MediaWorker) ProcessJob(job TranscodeJob, meta ProbeMetadata) error {
 	return w.Transition(job.VideoID, StateReady)
 }
 
+// ProcessEditJob executes a non-destructive edit render: the source stays
+// untouched and a new edited HLS/DASH rendition set is emitted from the EDL.
+func (w *MediaWorker) ProcessEditJob(job TranscodeJob, meta ProbeMetadata, edl EditDecisionList) error {
+	if _, err := w.SanitizeWorkspacePath(job.SourceR2Key); err != nil {
+		_ = w.Transition(job.VideoID, StateUploaded)
+		_ = w.Transition(job.VideoID, StateFailed)
+		w.sendToDLQ(job)
+		return err
+	}
+	if err := w.Transition(job.VideoID, StateUploaded); err != nil {
+		return err
+	}
+	if err := w.Transition(job.VideoID, StateValidating); err != nil {
+		return err
+	}
+	if err := ValidateEDL(edl, meta.DurationSeconds); err != nil {
+		_ = w.Transition(job.VideoID, StateFailed)
+		w.sendToDLQ(job)
+		return err
+	}
+	if err := w.Transition(job.VideoID, StateQueued); err != nil {
+		return err
+	}
+	if err := w.Transition(job.VideoID, StateProcessing); err != nil {
+		return err
+	}
+
+	edited := []string{
+		fmt.Sprintf("hls/%s/edited/master.m3u8", job.VideoID),
+		fmt.Sprintf("dash/%s/edited/manifest.mpd", job.VideoID),
+		fmt.Sprintf("edl/%s/edit.json", job.VideoID),
+	}
+	ladder := SelectABRLadder(meta.Height)
+	if meta.Height <= 0 {
+		ladder = SelectABRLadder(1080)
+	}
+	for _, r := range ladder {
+		edited = append(edited, fmt.Sprintf("hls/%s/edited/%s/index.m3u8", job.VideoID, r.Name))
+	}
+
+	w.mu.Lock()
+	// Preserve any earlier transcode artifacts; the edited set supersedes them.
+	w.R2Uploaded[job.VideoID] = append(w.R2Uploaded[job.VideoID], edited...)
+	w.mu.Unlock()
+
+	if !w.VerifyR2Upload(job.VideoID, len(ladder)+3) {
+		_ = w.Transition(job.VideoID, StateFailed)
+		w.sendToDLQ(job)
+		return errors.New("R2 upload verification failed")
+	}
+	return w.Transition(job.VideoID, StateReady)
+}
+
 func (w *MediaWorker) VerifyR2Upload(videoID string, expectedCount int) bool {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -438,12 +555,227 @@ func main() {
 	defer stop()
 
 	worker := NewMediaWorker(os.TempDir())
-	_ = worker
 
-	select {
-	case <-ctx.Done():
-		slog.Info("Shutting down Media Worker gracefully")
-	case <-time.After(100 * time.Millisecond):
-		slog.Info("Media Worker ready")
+	health := newHealthServer("media-worker", worker)
+	go func() {
+		if err := health.listenAndServe(ctx); err != nil {
+			slog.Error("Health server failure", "error", err)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("Shutting down Media Worker gracefully")
+}
+
+// healthServer exposes liveness, readiness and Prometheus metrics so the
+// worker is observable behind Docker/Kubernetes health checks. It also
+// serves the job intake endpoint the API dispatches transcode jobs to.
+// (Production transport is NATS JetStream subject media.jobs.transcode;
+// the HTTP intake keeps local and composed stacks executable without it.)
+type healthServer struct {
+	name   string
+	start  time.Time
+	worker *MediaWorker
+}
+
+func newHealthServer(name string, worker *MediaWorker) *healthServer {
+	return &healthServer{name: name, start: time.Now(), worker: worker}
+}
+
+// transcodeIntakeRequest is the job envelope the API POSTs per completed upload.
+type transcodeIntakeRequest struct {
+	JobID           string  `json:"jobId"`
+	VideoID         string  `json:"videoId"`
+	SourceR2Key     string  `json:"sourceR2Key"`
+	Width           int     `json:"width"`
+	Height          int     `json:"height"`
+	DurationSeconds float64 `json:"durationSeconds"`
+	VideoCodec      string  `json:"videoCodec"`
+	HasVideoStream  bool    `json:"hasVideoStream"`
+	Attempt         int     `json:"attempt"`
+	MaxAttempts     int     `json:"maxAttempts"`
+}
+
+// DefaultSourceProfile is the assumed source profile used when the dispatcher
+// ships no probe metadata (local/dev stacks without an ffprobe stage).
+// Production sets REQUIRE_PROBED_SOURCE=true to reject such jobs instead.
+func DefaultSourceProfile() ProbeMetadata {
+	return ProbeMetadata{
+		Width:           1920,
+		Height:          1080,
+		DurationSeconds: 60,
+		VideoCodec:      "h264",
+		AudioCodec:      "aac",
+		HasVideoStream:  true,
 	}
+}
+
+func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var req transcodeIntakeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.VideoID == "" || req.SourceR2Key == "" {
+		http.Error(w, `{"error":"videoId and sourceR2Key are required"}`, http.StatusBadRequest)
+		return
+	}
+	maxAttempts := req.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 3
+	}
+	job := TranscodeJob{
+		JobID:       req.JobID,
+		VideoID:     req.VideoID,
+		SourceR2Key: req.SourceR2Key,
+		Attempt:     req.Attempt,
+		MaxAttempts: maxAttempts,
+	}
+	meta := ProbeMetadata{
+		Width:           req.Width,
+		Height:          req.Height,
+		DurationSeconds: req.DurationSeconds,
+		VideoCodec:      req.VideoCodec,
+		HasVideoStream:  req.HasVideoStream,
+	}
+	probed := true
+	if err := ValidateFFprobe(meta); err != nil {
+		if os.Getenv("REQUIRE_PROBED_SOURCE") == "true" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"FAILED","error":%q}`, req.JobID, req.VideoID, "probed source metadata is required: "+err.Error())
+			return
+		}
+		probed = false
+		meta = DefaultSourceProfile()
+		slog.Warn("Transcode intake using assumed source profile", "videoId", req.VideoID, "jobId", req.JobID)
+	}
+	if err := h.worker.ProcessJob(job, meta); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"FAILED","error":%q}`, req.JobID, req.VideoID, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"READY","probed":%v}`, req.JobID, req.VideoID, probed)
+}
+
+// editRenderIntakeRequest carries the studio EDL plus the source reference.
+type editRenderIntakeRequest struct {
+	JobID           string  `json:"jobId"`
+	VideoID         string  `json:"videoId"`
+	SourceR2Key     string  `json:"sourceR2Key"`
+	Height          int     `json:"height"`
+	DurationSeconds float64 `json:"durationSeconds"`
+	Attempt         int     `json:"attempt"`
+	MaxAttempts     int     `json:"maxAttempts"`
+	EDL             struct {
+		TrimStartSec     int    `json:"trimStartSec"`
+		TrimEndSec       int    `json:"trimEndSec"`
+		SplitPoints      []int  `json:"splitPoints"`
+		ReplacementAudio string `json:"replacementAudio"`
+		BlurRegions      []struct {
+			ID       string `json:"id"`
+			Label    string `json:"label"`
+			X        int    `json:"x"`
+			Y        int    `json:"y"`
+			StartSec int    `json:"startSec"`
+			EndSec   int    `json:"endSec"`
+		} `json:"blurRegions"`
+		MutedSegments []struct {
+			StartSec int    `json:"startSec"`
+			EndSec   int    `json:"endSec"`
+			Reason   string `json:"reason"`
+		} `json:"mutedSegments"`
+	} `json:"edl"`
+}
+
+func (h *healthServer) handleEditRenderIntake(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var req editRenderIntakeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.VideoID == "" || req.SourceR2Key == "" {
+		http.Error(w, `{"error":"videoId and sourceR2Key are required"}`, http.StatusBadRequest)
+		return
+	}
+	maxAttempts := req.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 3
+	}
+	job := TranscodeJob{
+		JobID:       req.JobID,
+		VideoID:     req.VideoID,
+		SourceR2Key: req.SourceR2Key,
+		Attempt:     req.Attempt,
+		MaxAttempts: maxAttempts,
+	}
+	meta := ProbeMetadata{Height: req.Height, DurationSeconds: req.DurationSeconds}
+	edl := EditDecisionList{
+		TrimStartSec:     req.EDL.TrimStartSec,
+		TrimEndSec:       req.EDL.TrimEndSec,
+		SplitPoints:      req.EDL.SplitPoints,
+		ReplacementAudio: req.EDL.ReplacementAudio,
+	}
+	for _, b := range req.EDL.BlurRegions {
+		edl.BlurRegions = append(edl.BlurRegions, BlurRegion{
+			ID: b.ID, Label: b.Label, X: b.X, Y: b.Y, StartSec: b.StartSec, EndSec: b.EndSec,
+		})
+	}
+	for _, m := range req.EDL.MutedSegments {
+		edl.MutedSegments = append(edl.MutedSegments, MutedSegment{
+			StartSec: m.StartSec, EndSec: m.EndSec, Reason: m.Reason,
+		})
+	}
+	if err := h.worker.ProcessEditJob(job, meta, edl); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"FAILED","error":%q}`, req.JobID, req.VideoID, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"READY"}`, req.JobID, req.VideoID)
+}
+
+func (h *healthServer) listenAndServe(ctx context.Context) error {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"UP","worker":%q,"uptime_seconds":%d}`, h.name, int64(time.Since(h.start).Seconds()))
+	})
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"READY","worker":%q}`, h.name)
+	})
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		fmt.Fprintf(w, "# HELP gvp_worker_uptime_seconds Worker uptime in seconds\n# TYPE gvp_worker_uptime_seconds gauge\ngvp_worker_uptime_seconds{worker=%q} %d\n", h.name, int64(time.Since(h.start).Seconds()))
+	})
+	mux.HandleFunc("/jobs/transcode", h.handleTranscodeIntake)
+	mux.HandleFunc("/jobs/edit-render", h.handleEditRenderIntake)
+	server := &http.Server{Addr: ":" + port, Handler: mux, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+	slog.Info("Worker health server listening", "worker", h.name, "port", port)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }

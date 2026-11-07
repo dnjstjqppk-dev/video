@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -29,6 +31,9 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Delete("/{id}", h.DeleteVideo)
 		pr.Post("/{id}/like", h.LikeVideo)
 		pr.Delete("/{id}/like", h.UnlikeVideo)
+		pr.Get("/{id}/captions", h.ListCaptions)
+		pr.Post("/{id}/captions", h.AddCaption)
+		pr.Delete("/{id}/captions/{capId}", h.DeleteCaption)
 	})
 
 	return r
@@ -107,6 +112,7 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 			video.Category = payload.Category
 		}
 	}
+	h.Store.PersistVideo(video)
 
 	identity.WriteJSON(w, http.StatusOK, video)
 }
@@ -184,4 +190,89 @@ func (h *Handler) UnlikeVideo(w http.ResponseWriter, r *http.Request) {
 		"liked":      false,
 		"like_count": video.LikeCount,
 	})
+}
+
+func (h *Handler) ListCaptions(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	video, ok := h.Store.Videos[id]
+	if !ok || video.Status == "DELETED" {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Video not found")
+		return
+	}
+	captions := video.Captions
+	if captions == nil {
+		captions = []store.VideoCaption{}
+	}
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"items": captions,
+		"total": len(captions),
+	})
+}
+
+func (h *Handler) AddCaption(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	video, ok := h.Store.Videos[id]
+	if !ok || video.Status == "DELETED" {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Video not found")
+		return
+	}
+	if !h.canManageVideo(r, video) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot modify video of another user")
+		return
+	}
+	var payload struct {
+		Language string `json:"language"`
+		Label    string `json:"label"`
+		VttURL   string `json:"vttUrl"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid request body")
+		return
+	}
+	language := security.SanitizeUserText(payload.Language, 16)
+	vttURL := security.SanitizeUserText(payload.VttURL, 2048)
+	if language == "" || vttURL == "" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "language and vttUrl are required")
+		return
+	}
+	cap := store.VideoCaption{
+		ID:       "cap-" + uuid.NewString()[:8],
+		Language: language,
+		Label:    security.SanitizeUserText(payload.Label, 120),
+		VttURL:   vttURL,
+	}
+	if cap.Label == "" {
+		cap.Label = language
+	}
+	video.Captions = append(video.Captions, cap)
+	identity.WriteJSON(w, http.StatusCreated, cap)
+}
+
+func (h *Handler) DeleteCaption(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	capID := chi.URLParam(r, "capId")
+	video, ok := h.Store.Videos[id]
+	if !ok || video.Status == "DELETED" {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Video not found")
+		return
+	}
+	if !h.canManageVideo(r, video) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot modify video of another user")
+		return
+	}
+	kept := make([]store.VideoCaption, 0, len(video.Captions))
+	found := false
+	for _, c := range video.Captions {
+		if c.ID == capID {
+			found = true
+			continue
+		}
+		kept = append(kept, c)
+	}
+	if !found {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Caption track not found")
+		return
+	}
+	video.Captions = kept
+	w.WriteHeader(http.StatusNoContent)
 }
