@@ -4,7 +4,7 @@
 # Supports the API monolith (services/api) and every standalone worker module
 # (services/<worker>) through the SVC_DIR / CMD_PATH build args.
 # ==============================================================================
-FROM golang:1.27-alpine3.20 AS builder
+FROM golang:1.27-alpine AS builder
 
 ARG SERVICE_NAME=api
 ARG SVC_DIR=services/api

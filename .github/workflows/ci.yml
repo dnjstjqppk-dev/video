@@ -184,13 +184,13 @@ jobs:
       - name: Install Dependencies & Playwright Browsers
         run: |
           pnpm install
-          npx playwright install --with-deps chromium
+          (cd tests && npx playwright install --with-deps chromium)
 
       - name: Start Go API Server & Run Playwright E2E Suite
         run: |
           (cd services/api && go run ./cmd/server &)
           sleep 3
-          npx playwright test tests/e2e/platform.spec.ts
+          (cd tests && npx playwright test e2e/platform.spec.ts)
 
   # ============================================================================
   # 6. FLUTTER MOBILE (iOS / ANDROID): ANALYZE & TEST
