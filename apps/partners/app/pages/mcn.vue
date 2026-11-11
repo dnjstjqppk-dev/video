@@ -51,65 +51,66 @@ async function confirmRevoke() {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-extrabold text-white">MCN 소속 크리에이터 및 계약 관리 (MCN Roster Console)</h1>
-    <p class="mt-1 text-xs text-neutral-400">
-      Automatic revenue split routing in the double-entry settlement ledger · Immediate access revocation on contract termination
-    </p>
+  <div class="space-y-6">
+    <div class="border-b border-slate-200 pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-slate-900">MCN 소속 크리에이터 및 계약 관리 (MCN Roster Console)</h1>
+      <p class="mt-1 text-sm text-slate-600">
+        Automatic revenue split routing in the double-entry settlement ledger · Immediate access revocation on contract termination
+      </p>
+    </div>
 
-    <GvpBanner v-if="actionError" tone="danger" dismissible class="mt-4" @dismiss="actionError = null">
+    <GvpBanner v-if="actionError" tone="danger" dismissible @dismiss="actionError = null">
       {{ actionError }}
     </GvpBanner>
 
-    <div v-if="pending" class="mt-6 space-y-2" role="status" aria-label="불러오는 중">
-      <div v-for="n in 4" :key="n" class="h-14 animate-pulse rounded-xl bg-white/5" />
+    <div v-if="pending" class="space-y-2" role="status" aria-label="불러오는 중">
+      <div v-for="n in 4" :key="n" class="h-14 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
     </div>
 
-    <GvpBanner v-else-if="error" tone="danger" class="mt-6">
-      계약 목록을 불러오지 못했습니다. <button type="button" class="font-bold underline" @click="refresh()">다시 시도</button>
+    <GvpBanner v-else-if="error" tone="danger">
+      계약 목록을 불러오지 못했습니다. <button type="button" class="font-semibold underline" @click="refresh()">다시 시도</button>
     </GvpBanner>
 
     <GvpEmptyState
       v-else-if="contracts.length === 0"
-      class="mt-6"
       title="등록된 MCN 계약이 없습니다"
       description="새 채널 계약이 체결되면 이 목록에 표시됩니다."
     />
 
-    <div v-else class="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#141A2C]">
-      <table class="w-full text-left text-xs">
-        <thead class="border-b border-white/10 bg-white/5 uppercase text-neutral-400">
-          <tr>
-            <th scope="col" class="p-3.5">Channel</th>
-            <th scope="col" class="p-3.5">Contract Split (Creator : MCN)</th>
-            <th scope="col" class="p-3.5">Valid Until</th>
-            <th scope="col" class="p-3.5">Status / Action</th>
+    <div v-else class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th scope="col" class="py-2.5 px-4">Channel</th>
+            <th scope="col" class="py-2.5 px-4">Contract Split (Creator : MCN)</th>
+            <th scope="col" class="py-2.5 px-4">Valid Until</th>
+            <th scope="col" class="py-2.5 px-4">Status / Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-white/10">
-          <tr v-for="ch in contracts" :key="ch.id" class="hover:bg-white/5">
-            <td class="p-3.5">
-              <p class="font-bold text-white">{{ ch.channelName }}</p>
-              <p class="text-[11px] text-neutral-400">{{ ch.channelHandle }} · {{ ch.id }}</p>
+        <tbody class="divide-y divide-slate-100">
+          <tr v-for="ch in contracts" :key="ch.id" class="hover:bg-slate-50">
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100">
+              <p class="font-medium text-slate-900">{{ ch.channelName }}</p>
+              <p class="text-xs text-slate-500 tabular-nums">{{ ch.channelHandle }} · {{ ch.id }}</p>
             </td>
-            <td class="p-3.5">
-              <span class="rounded bg-[#3EA6FF]/20 px-2 py-0.5 font-bold text-[#3EA6FF]">
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              <span class="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-800 tabular-nums">
                 {{ ch.creatorSplitPct }}% Creator / {{ ch.partnerSplitPct }}% MCN
               </span>
             </td>
-            <td class="p-3.5">{{ ch.validUntil }}</td>
-            <td class="p-3.5">
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">{{ ch.validUntil }}</td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
               <div class="flex flex-wrap items-center gap-2">
                 <span
-                  class="rounded px-2 py-0.5 text-[10px] font-bold uppercase"
-                  :class="ch.status === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'"
+                  class="rounded-md px-2 py-0.5 text-xs font-medium uppercase"
+                  :class="ch.status === 'active' ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-red-200 bg-red-50 text-red-700'"
                 >
                   {{ ch.status }}
                 </span>
                 <button
                   v-if="ch.status === 'active'"
                   type="button"
-                  class="rounded-lg bg-red-500/20 px-2.5 py-1 text-[11px] font-bold text-red-300 hover:bg-red-500/30"
+                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
                   @click="openRevoke(ch)"
                 >
                   Revoke Contract Immediately
@@ -122,8 +123,8 @@ async function confirmRevoke() {
     </div>
 
     <GvpModal :model-value="revokeTarget !== null" title="계약 즉시 해지" @update:model-value="(v: boolean) => { if (!v) revokeTarget = null }">
-      <p class="text-sm text-neutral-300">
-        <strong class="text-white">{{ revokeTarget?.channelName }}</strong> ({{ revokeTarget?.id }}) 계약을 해지합니다.
+      <p class="text-sm text-slate-600">
+        <strong class="font-semibold text-slate-900">{{ revokeTarget?.channelName }}</strong> ({{ revokeTarget?.id }}) 계약을 해지합니다.
         해지 즉시 정산 분배가 중단되며, 이 작업은 감사 로그에 기록됩니다.
       </p>
       <div class="mt-4">
@@ -138,7 +139,7 @@ async function confirmRevoke() {
       <template #footer>
         <button
           type="button"
-          class="rounded-full bg-white/10 px-5 py-2 text-xs font-bold text-neutral-200 hover:bg-white/20"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
           @click="revokeTarget = null"
         >
           취소
@@ -146,7 +147,7 @@ async function confirmRevoke() {
         <button
           type="button"
           :disabled="revoking"
-          class="rounded-full bg-[#FF0033] px-5 py-2 text-xs font-bold text-white hover:bg-[#D9002B] disabled:opacity-50"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-50"
           @click="confirmRevoke"
         >
           {{ revoking ? '해지 중…' : '계약 해지 확정' }}

@@ -42,28 +42,28 @@ async function loginWithDevToken() {
 
 <template>
   <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4">
-    <div class="w-full rounded-2xl border border-white/10 bg-[#141A2C] p-8 shadow-2xl">
+    <div class="w-full rounded-lg border border-slate-200 bg-white p-8">
       <div class="flex items-center gap-2">
-        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#3EA6FF] font-black text-black">
+        <span class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-sm font-semibold text-white">
           P
         </span>
-        <span class="text-lg font-extrabold text-white">Partner Console</span>
+        <span class="text-base font-semibold text-slate-900">Partner Console</span>
       </div>
-      <h1 class="mt-4 text-xl font-black text-white">파트너 로그인</h1>
-      <p class="mt-1 text-xs text-neutral-400">
+      <h1 class="mt-4 text-xl font-semibold tracking-tight text-slate-900">파트너 로그인</h1>
+      <p class="mt-1 text-sm text-slate-600">
         OIDC 싱글사인온으로 안전하게 로그인하세요.
       </p>
 
       <a
         href="/auth/login"
-        class="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#3EA6FF] px-6 py-3 text-sm font-bold text-black transition hover:brightness-110"
+        class="mt-6 inline-flex w-full items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
       >
         StreamVerse 계정으로 계속하기
       </a>
 
-      <div v-if="isLocalhost" class="mt-6 border-t border-white/10 pt-5">
-        <p class="text-xs font-bold text-amber-300">로컬 개발 전용 토큰 로그인</p>
-        <p class="mt-1 text-[11px] text-neutral-400">
+      <div v-if="isLocalhost" class="mt-6 border-t border-slate-200 pt-5">
+        <p class="text-xs font-semibold text-slate-900">로컬 개발 전용 토큰 로그인</p>
+        <p class="mt-1 text-xs text-slate-500">
           예: advertiser-token · admin-token
         </p>
         <div class="mt-3 flex gap-2">
@@ -71,19 +71,19 @@ async function loginWithDevToken() {
             v-model="devToken"
             type="text"
             placeholder="dev token"
-            class="h-10 flex-1 rounded-xl border border-white/15 bg-[#0B0E17] px-3 font-mono text-xs text-white outline-none focus:border-[#3EA6FF]"
+            class="h-9 flex-1 rounded-md border border-slate-300 bg-slate-100 px-3 font-mono text-xs text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
             @keyup.enter="loginWithDevToken"
           />
           <button
             type="button"
             :disabled="devLoading"
-            class="rounded-xl bg-white/10 px-4 text-xs font-bold text-white hover:bg-white/20 disabled:opacity-50"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-50"
             @click="loginWithDevToken"
           >
             {{ devLoading ? '...' : '로그인' }}
           </button>
         </div>
-        <p v-if="devError" class="mt-2 text-xs text-red-400">{{ devError }}</p>
+        <p v-if="devError" class="mt-2 text-xs text-red-600">{{ devError }}</p>
       </div>
     </div>
   </div>

@@ -38,8 +38,8 @@ export default defineNuxtConfig({
   },
   colorMode: {
     classSuffix: '',
-    preference: 'dark',
-    fallback: 'dark'
+    preference: 'light',
+    fallback: 'light'
   },
   i18n: {
     locales: [
@@ -52,8 +52,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: {
-        lang: 'ko',
-        class: 'dark'
+        lang: 'ko'
       },
       titleTemplate: '%s — StreamVerse Global Video Platform',
       meta: [
@@ -63,7 +62,7 @@ export default defineNuxtConfig({
           name: 'description',
           content: 'StreamVerse — Watch 4K HDR videos, Shorts, and ultra-low latency Live streams from global creators.'
         },
-        { name: 'theme-color', content: '#0F0F0F' },
+        { name: 'theme-color', content: '#FFFFFF' },
         { property: 'og:site_name', content: 'StreamVerse' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' }

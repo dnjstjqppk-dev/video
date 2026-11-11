@@ -52,11 +52,11 @@ function formatDate(iso: string): string {
 
 function statusTone(status: string): string {
   switch (status) {
-    case 'disputed': return 'bg-sky-500/20 text-sky-300'
-    case 'released': return 'bg-emerald-500/20 text-emerald-300'
+    case 'disputed': return 'border-sky-200 bg-sky-50 text-sky-700'
+    case 'released': return 'border-emerald-200 bg-emerald-50 text-emerald-700'
     case 'upheld':
-    case 'takedown': return 'bg-red-500/20 text-red-300'
-    default: return 'bg-amber-500/20 text-amber-300'
+    case 'takedown': return 'border-red-200 bg-red-50 text-red-700'
+    default: return 'border-amber-200 bg-amber-50 text-amber-700'
   }
 }
 
@@ -97,28 +97,28 @@ async function submitDispute() {
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
       <div>
-        <h1 class="text-2xl font-extrabold text-white">채널 저작권 (Copyright & Rights)</h1>
-        <p class="mt-1 text-xs text-neutral-400">
+        <h1 class="text-xl font-semibold tracking-tight text-slate-900">채널 저작권 (Copyright &amp; Rights)</h1>
+        <p class="mt-1 text-xs text-slate-500">
           Content ID 클레임 상태 확인 및 이의신청(Dispute) 관리
         </p>
       </div>
 
       <!-- Claim Status Summary -->
-      <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#161922] px-4 py-2 text-xs" role="status">
-        <span class="text-neutral-400">활성 <strong class="text-amber-300">{{ activeCount }}</strong></span>
-        <span class="text-neutral-600">·</span>
-        <span class="text-neutral-400">심사 중 <strong class="text-sky-300">{{ disputedCount }}</strong></span>
-        <span class="text-neutral-600">·</span>
-        <span class="text-neutral-400">해제 <strong class="text-emerald-300">{{ releasedCount }}</strong></span>
+      <div class="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs tabular-nums" role="status">
+        <span class="text-slate-600">활성 <strong class="font-semibold text-amber-700">{{ activeCount }}</strong></span>
+        <span class="text-slate-300">·</span>
+        <span class="text-slate-600">심사 중 <strong class="font-semibold text-sky-700">{{ disputedCount }}</strong></span>
+        <span class="text-slate-300">·</span>
+        <span class="text-slate-600">해제 <strong class="font-semibold text-emerald-700">{{ releasedCount }}</strong></span>
       </div>
     </div>
 
     <!-- Toast Notification -->
     <div
       v-if="toastMessage"
-      class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-300"
+      class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800"
       role="status"
     >
       {{ toastMessage }}
@@ -129,78 +129,96 @@ async function submitDispute() {
     </GvpBanner>
 
     <!-- Active Claims Section -->
-    <div class="rounded-2xl border border-white/10 bg-[#161922] p-6">
-      <h2 class="text-base font-bold text-white">내 동영상에 제기된 Content ID 클레임</h2>
-      <p class="mt-1 text-xs text-neutral-400">
-        클레임이 제기된 구간의 수익은 분쟁 해결 전까지 유보될 수 있습니다.
-      </p>
-
-      <div v-if="pending" class="mt-6 space-y-3" role="status" aria-label="불러오는 중">
-        <div v-for="n in 3" :key="n" class="h-20 animate-pulse rounded-xl bg-white/5" />
+    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div class="border-b border-slate-200 px-6 py-4">
+        <h2 class="text-sm font-semibold text-slate-900">내 동영상에 제기된 Content ID 클레임</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          클레임이 제기된 구간의 수익은 분쟁 해결 전까지 유보될 수 있습니다.
+        </p>
       </div>
 
-      <GvpBanner v-else-if="error" tone="danger" class="mt-6">
-        클레임을 불러오지 못했습니다. <button type="button" class="font-bold underline" @click="refresh()">다시 시도</button>
-      </GvpBanner>
-
-      <GvpEmptyState
-        v-else-if="claims.length === 0"
-        class="mt-6"
-        title="제기된 클레임이 없습니다"
-        description="Content ID와 일치하는 구간이 발견되면 이 목록에 표시됩니다."
-      />
-
-      <div v-else class="mt-6 divide-y divide-white/5">
-        <div
-          v-for="c in claims"
-          :key="c.id"
-          class="flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between"
-        >
-          <div class="min-w-0">
-            <div class="font-mono text-sm font-semibold text-white">{{ c.claimedVideoId }}</div>
-            <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-400">
-              <span>권리자: <strong class="text-neutral-200">{{ c.ownerName }}</strong></span>
-              <span aria-hidden="true">·</span>
-              <span>구간: {{ formatRange(c) }}</span>
-              <span aria-hidden="true">·</span>
-              <span>접수일: {{ formatDate(c.createdAt) }}</span>
-            </div>
-          </div>
-
-          <div class="flex shrink-0 items-center gap-3">
-            <span
-              class="rounded-lg px-2.5 py-1 text-xs font-bold uppercase"
-              :class="statusTone(c.status)"
-            >
-              {{ statusLabel(c) }}
-            </span>
-
-            <button
-              v-if="c.status === 'active' || c.status === 'pending'"
-              type="button"
-              class="rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/15"
-              @click="openDisputeModal(c)"
-            >
-              이의 제기 (Dispute)
-            </button>
-          </div>
-        </div>
+      <div v-if="pending" class="p-6 space-y-3" role="status" aria-label="불러오는 중">
+        <div v-for="n in 3" :key="n" class="h-16 animate-pulse rounded-lg bg-slate-100" />
       </div>
+
+      <div v-else-if="error" class="p-6">
+        <GvpBanner tone="danger">
+          클레임을 불러오지 못했습니다. <button type="button" class="font-semibold underline" @click="refresh()">다시 시도</button>
+        </GvpBanner>
+      </div>
+
+      <div v-else-if="claims.length === 0" class="p-6">
+        <GvpEmptyState
+          title="제기된 클레임이 없습니다"
+          description="Content ID와 일치하는 구간이 발견되면 이 목록에 표시됩니다."
+        />
+      </div>
+
+      <table v-else class="w-full text-left">
+        <thead class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+          <tr>
+            <th scope="col" class="py-2.5 px-4">Video ID</th>
+            <th scope="col" class="py-2.5 px-4">Claimant</th>
+            <th scope="col" class="py-2.5 px-4">Segment</th>
+            <th scope="col" class="py-2.5 px-4">Date</th>
+            <th scope="col" class="py-2.5 px-4">Status</th>
+            <th scope="col" class="py-2.5 px-4 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr
+            v-for="c in claims"
+            :key="c.id"
+            class="hover:bg-slate-50 transition-colors"
+          >
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums font-mono font-medium">
+              {{ c.claimedVideoId }}
+            </td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100">
+              {{ c.ownerName }}
+            </td>
+            <td class="py-3 px-4 text-sm text-slate-600 border-b border-slate-100 tabular-nums font-mono">
+              {{ formatRange(c) }}
+            </td>
+            <td class="py-3 px-4 text-sm text-slate-600 border-b border-slate-100 tabular-nums">
+              {{ formatDate(c.createdAt) }}
+            </td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              <span
+                class="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium uppercase"
+                :class="statusTone(c.status)"
+              >
+                {{ statusLabel(c) }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums text-right">
+              <button
+                v-if="c.status === 'active' || c.status === 'pending'"
+                type="button"
+                class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                @click="openDisputeModal(c)"
+              >
+                이의 제기 (Dispute)
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Dispute Modal -->
     <GvpModal :model-value="disputeTarget !== null" title="Content ID 클레임 공식 이의 제기" @update:model-value="(v: boolean) => { if (!v) disputeTarget = null }">
-      <p class="text-xs text-neutral-400">
+      <p class="text-xs text-slate-600">
         허위 또는 악의적인 이의 제기는 계정 해지 및 법적 책임이 따를 수 있습니다.
       </p>
 
       <div class="mt-4 space-y-4">
         <div>
-          <label for="dispute-reason" class="block text-xs font-semibold text-neutral-300">이의 제기 사유</label>
+          <label for="dispute-reason" class="block text-xs font-medium text-slate-700">이의 제기 사유</label>
           <select
             id="dispute-reason"
             v-model="disputeReason"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#12151E] p-2.5 text-xs text-white outline-none"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-slate-900"
           >
             <option value="fair_use">공정 이용 (비평, 교육, 패러디 등 저작권법상 인정된 이용)</option>
             <option value="public_domain">공유 저작물 / 퍼블릭 도메인 음원</option>
@@ -210,18 +228,18 @@ async function submitDispute() {
         </div>
 
         <div>
-          <label for="dispute-explain" class="block text-xs font-semibold text-neutral-300">상세 소명 내용</label>
+          <label for="dispute-explain" class="block text-xs font-medium text-slate-700">상세 소명 내용</label>
           <textarea
             id="dispute-explain"
             v-model="disputeExplanation"
             rows="4"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#12151E] p-3 text-xs text-white outline-none focus:border-[#FF0033]"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-white p-3 text-xs text-slate-900 outline-none focus:border-slate-900"
             placeholder="해당 저작물을 적법하게 사용한 근거 및 라이선스 번호, 사용 목적을 구체적으로 기재해주세요."
           />
         </div>
 
-        <label class="flex items-start gap-2 text-xs text-neutral-300">
-          <input v-model="disputePerjuryAgreed" type="checkbox" class="mt-0.5 rounded border-white/20 bg-black/40 text-[#FF0033]" />
+        <label class="flex items-start gap-2 text-xs text-slate-700">
+          <input v-model="disputePerjuryAgreed" type="checkbox" class="mt-0.5 rounded-md border-slate-300 accent-slate-900" />
           <span>위증 시 법적 처벌을 감수하며, 본 이의 신청 내용이 진실임을 서약합니다.</span>
         </label>
       </div>
@@ -229,14 +247,14 @@ async function submitDispute() {
       <template #footer>
         <button
           type="button"
-          class="rounded-xl border border-white/15 px-4 py-2 text-xs font-bold text-neutral-300 hover:bg-white/5"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
           @click="disputeTarget = null"
         >
           취소
         </button>
         <button
           type="button"
-          class="rounded-xl bg-[#FF0033] px-5 py-2 text-xs font-bold text-white transition hover:bg-[#D9002B] disabled:opacity-50"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-50"
           :disabled="!disputePerjuryAgreed || !disputeExplanation.trim() || disputing"
           @click="submitDispute"
         >

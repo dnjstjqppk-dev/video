@@ -2,9 +2,9 @@
 </script>
 
 <template>
-  <div class="dark min-h-screen bg-[#090B10] text-[#F8FAFC] antialiased">
+  <div class="min-h-screen bg-white text-slate-900 antialiased selection:bg-slate-900 selection:text-white">
     <NuxtRouteAnnouncer />
-    <NuxtLoadingIndicator color="#EF4444" :height="3" />
+    <NuxtLoadingIndicator color="#0F172A" :height="2" />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

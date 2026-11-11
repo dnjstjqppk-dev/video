@@ -10,7 +10,7 @@ withDefaults(
 </script>
 
 <template>
-  <div class="gvp-skeleton" aria-hidden="true">
+  <div class="gvp-skeleton animate-pulse" aria-hidden="true">
     <div v-if="aspectVideo" class="gvp-skeleton__thumb" />
     <div class="gvp-skeleton__row">
       <div v-if="avatar" class="gvp-skeleton__avatar" />
@@ -22,29 +22,21 @@ withDefaults(
 </template>
 
 <style scoped>
-.gvp-skeleton { display: flex; flex-direction: column; gap: 0.75rem; }
+.gvp-skeleton { display: flex; flex-direction: column; gap: 0.625rem; }
 .gvp-skeleton__thumb {
   aspect-ratio: 16 / 9;
-  border-radius: var(--gvp-radius-md);
-  background: linear-gradient(100deg, var(--gvp-surface-2) 40%, var(--gvp-surface-3) 50%, var(--gvp-surface-2) 60%);
-  background-size: 200% 100%;
-  animation: gvp-shimmer 1.4s ease infinite;
+  border-radius: 0.375rem;
+  background: #F1F5F9;
 }
 .gvp-skeleton__row { display: flex; gap: 0.75rem; }
 .gvp-skeleton__avatar {
   width: 2.25rem; height: 2.25rem; border-radius: 50%; flex-shrink: 0;
-  background: var(--gvp-surface-2);
+  background: #F1F5F9;
 }
 .gvp-skeleton__lines { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
 .gvp-skeleton__line {
   height: 0.75rem;
-  border-radius: var(--gvp-radius-pill);
-  background: linear-gradient(100deg, var(--gvp-surface-2) 40%, var(--gvp-surface-3) 50%, var(--gvp-surface-2) 60%);
-  background-size: 200% 100%;
-  animation: gvp-shimmer 1.4s ease infinite;
-}
-@keyframes gvp-shimmer { to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .gvp-skeleton__thumb, .gvp-skeleton__line { animation: none; }
+  border-radius: 0.375rem;
+  background: #F1F5F9;
 }
 </style>

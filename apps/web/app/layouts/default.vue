@@ -111,46 +111,46 @@ async function logout() {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col">
+  <div class="flex min-h-screen flex-col bg-white text-slate-900">
     <!-- Top Navbar -->
     <header
-      class="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/10 bg-[#0F0F0F]/95 px-4 backdrop-blur-md transition-colors"
+      class="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4"
     >
       <!-- Left: Hamburger & Brand Logo -->
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="rounded-full p-2 transition hover:bg-white/10"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
           aria-label="Toggle navigation sidebar"
           @click="appStore.toggleSidebar()"
         >
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        <NuxtLink to="/" class="flex items-center gap-2 font-bold tracking-tight">
-          <span class="flex h-7 w-9 items-center justify-center rounded-lg bg-[#FF0033] text-white shadow-sm">
-            <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+        <NuxtLink to="/" class="flex items-center gap-2">
+          <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-white">
+            <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
           </span>
-          <span class="text-lg font-extrabold tracking-tight">StreamVerse</span>
-          <span class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[#3EA6FF]">
+          <span class="text-base font-bold tracking-tight text-slate-900">StreamVerse</span>
+          <span class="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
             {{ appStore.locale === 'ko' ? 'KR' : 'GLOBAL' }}
           </span>
         </NuxtLink>
       </div>
 
       <!-- Center: Search Bar with Autocomplete -->
-      <div class="relative mx-4 flex max-w-2xl flex-1 items-center">
-        <form class="flex w-full" @submit.prevent="submitSearch()">
+      <div class="relative mx-4 flex max-w-xl flex-1 items-center">
+        <form class="flex w-full gap-1.5" @submit.prevent="submitSearch()">
           <div class="relative flex flex-1 items-center">
             <input
               v-model="searchQuery"
               type="search"
-              :placeholder="appStore.locale === 'ko' ? '검색어를 입력하세요 (동영상, 쇼츠, 라이브, 채널)...' : 'Search videos, Shorts, live streams, channels...'"
-              class="h-10 w-full rounded-l-full border border-white/20 bg-[#121212] px-4 text-sm text-white outline-none transition placeholder:text-neutral-400 focus:border-[#3EA6FF]"
+              :placeholder="appStore.locale === 'ko' ? '동영상, 쇼츠, 라이브, 채널 검색...' : 'Search videos, Shorts, live streams, channels...'"
+              class="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
               @focus="showSuggestions = true; onSearchInput()"
               @input="onSearchInput"
               @blur="onSearchBlur"
@@ -158,29 +158,29 @@ async function logout() {
           </div>
           <button
             type="submit"
-            class="flex h-10 w-16 items-center justify-center rounded-r-full border border-l-0 border-white/20 bg-[#272727] text-white transition hover:bg-[#3A3A3A]"
+            class="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             aria-label="Search"
           >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <svg class="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
           </button>
         </form>
 
-        <!-- Autocomplete Dropdown -->
+        <!-- Search Autocomplete Dropdown -->
         <div
-          v-if="showSuggestions && suggestions.length > 0"
-          class="absolute left-0 top-12 z-50 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#212121] py-2 text-white shadow-2xl"
+          v-if="showSuggestions && suggestions.length"
+          class="absolute left-0 right-0 top-10 z-50 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-md"
         >
           <button
             v-for="item in suggestions"
             :key="item"
             type="button"
-            class="flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition hover:bg-white/10"
+            class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
             @mousedown.prevent="submitSearch(item)"
           >
-            <svg class="h-4 w-4 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
@@ -189,11 +189,11 @@ async function logout() {
         </div>
       </div>
 
-      <!-- Right: Controls (Locale, Currency, Theme, Studio Link, User Menu) -->
+      <!-- Right: Controls (Locale, Currency, Console Links, User Menu) -->
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="rounded-full border border-white/15 px-2.5 py-1 text-xs font-semibold transition hover:bg-white/10"
+          class="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
           @click="appStore.toggleLocale()"
         >
           {{ appStore.locale === 'ko' ? '한국어' : 'EN' }}
@@ -201,7 +201,7 @@ async function logout() {
 
         <button
           type="button"
-          class="rounded-full border border-white/15 px-2.5 py-1 text-xs font-semibold transition hover:bg-white/10"
+          class="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 tabular-nums transition-colors hover:bg-slate-50"
           @click="appStore.toggleCurrency()"
         >
           {{ appStore.currency }}
@@ -211,71 +211,71 @@ async function logout() {
           :href="config.public.studioUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden items-center gap-1.5 rounded-full bg-[#FF0033] px-3 py-1.5 text-xs font-bold text-white shadow transition hover:bg-[#D9002B] sm:flex"
+          class="hidden h-8 items-center gap-1.5 rounded-md bg-slate-900 px-3 text-xs font-medium text-white transition-colors hover:bg-slate-800 sm:inline-flex"
         >
-          <svg class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-          </svg>
-          <span>Creator Studio ↗</span>
+          <span>Studio</span>
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10" /></svg>
         </a>
 
         <a
           :href="config.public.partnersUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden items-center gap-1 rounded-full border border-white/15 bg-[#272727] px-3 py-1.5 text-xs font-semibold text-[#3EA6FF] transition hover:bg-[#3A3A3A] lg:flex"
+          class="hidden h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 lg:inline-flex"
         >
-          <span>Partners ↗</span>
+          <span>Partners</span>
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10" /></svg>
         </a>
 
         <a
           :href="config.public.adminUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden items-center gap-1 rounded-full border border-red-500/30 bg-red-950/30 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-900/40 xl:flex"
+          class="hidden h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 xl:inline-flex"
         >
-          <span>Admin ↗</span>
+          <span>Admin</span>
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10" /></svg>
         </a>
 
         <div class="relative">
           <button
             v-if="appStore.currentUser"
             type="button"
-            class="flex items-center gap-2 rounded-full p-1 transition hover:ring-2 hover:ring-[#3EA6FF]"
+            class="flex items-center gap-2 rounded-full border border-slate-200 p-0.5 transition hover:border-slate-400"
             @click="showUserMenu = !showUserMenu"
           >
             <img
               :src="appStore.currentUser?.avatarUrl"
               :alt="appStore.currentUser?.displayName"
-              class="h-8 w-8 rounded-full object-cover"
+              class="h-7 w-7 rounded-full object-cover"
             />
           </button>
           <NuxtLink
             v-else
             to="/login"
-            class="flex items-center gap-2 rounded-full border border-[#3EA6FF]/50 px-4 py-1.5 text-xs font-bold text-[#3EA6FF] transition hover:bg-[#3EA6FF]/10"
+            class="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 transition-colors hover:bg-slate-50"
           >
             {{ appStore.locale === 'ko' ? '로그인' : 'Sign in' }}
           </NuxtLink>
 
           <div
             v-if="showUserMenu && appStore.currentUser"
-            class="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-white/10 bg-[#212121] p-3 text-white shadow-2xl"
+            class="absolute right-0 top-10 z-50 w-60 rounded-lg border border-slate-200 bg-white p-2 text-slate-900 shadow-md"
           >
-            <div class="border-b border-white/10 pb-3">
-              <p class="font-semibold">{{ appStore.currentUser?.displayName }}</p>
-              <p class="text-xs text-neutral-400">@{{ appStore.currentUser?.username }} · {{ appStore.currentUser?.subscriptionTier?.toUpperCase() }}</p>
+            <div class="border-b border-slate-100 px-2.5 py-2">
+              <p class="text-sm font-semibold text-slate-900">{{ appStore.currentUser?.displayName }}</p>
+              <p class="text-xs text-slate-500">@{{ appStore.currentUser?.username }} · {{ appStore.currentUser?.subscriptionTier?.toUpperCase() }}</p>
             </div>
-            <div class="mt-2 flex flex-col gap-1 text-sm">
-              <NuxtLink to="/channels/ch_tech_kr" class="rounded-lg px-3 py-2 hover:bg-white/10" @click="showUserMenu = false">
+            <div class="mt-1 flex flex-col gap-0.5 text-sm">
+              <NuxtLink to="/channels/ch_tech_kr" class="rounded-md px-2.5 py-1.5 text-slate-700 hover:bg-slate-50 hover:text-slate-900" @click="showUserMenu = false">
                 {{ appStore.locale === 'ko' ? '내 채널 보기' : 'Your Channel' }}
               </NuxtLink>
-              <NuxtLink to="/premium" class="rounded-lg px-3 py-2 text-[#3EA6FF] hover:bg-white/10" @click="showUserMenu = false">
+              <NuxtLink to="/premium" class="rounded-md px-2.5 py-1.5 font-medium text-blue-600 hover:bg-slate-50" @click="showUserMenu = false">
                 {{ appStore.locale === 'ko' ? 'StreamVerse Premium 멤버십' : 'StreamVerse Premium' }}
               </NuxtLink>
               <button
                 type="button"
-                class="rounded-lg px-3 py-2 text-left text-neutral-400 hover:bg-white/10"
+                class="rounded-md px-2.5 py-1.5 text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 @click="logout"
               >
                 {{ appStore.locale === 'ko' ? '로그아웃' : 'Sign out' }}
@@ -290,22 +290,22 @@ async function logout() {
     <div class="flex flex-1">
       <!-- Left Collapsible Sidebar -->
       <aside
-        class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-white/10 bg-[#0F0F0F] transition-all md:block"
-        :class="[appStore.sidebarCollapsed ? 'w-20 px-2' : 'w-60 px-3']"
+        class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 transition-all md:block"
+        :class="[appStore.sidebarCollapsed ? 'w-16 px-2' : 'w-56 px-3']"
       >
-        <nav class="mt-3 flex flex-col gap-1">
+        <nav class="mt-3 flex flex-col gap-0.5">
           <NuxtLink
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            class="flex items-center gap-4 rounded-xl px-3 py-2.5 text-sm font-medium transition"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
             :class="[
               route.path === item.path
-                ? 'bg-[#272727] text-white font-semibold'
-                : 'hover:bg-white/10 text-neutral-300'
+                ? 'bg-slate-900 text-white font-semibold'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             ]"
           >
-            <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
               <path :d="item.icon" />
             </svg>
             <span v-if="!appStore.sidebarCollapsed" class="truncate">{{ item.label }}</span>
@@ -313,45 +313,48 @@ async function logout() {
         </nav>
 
         <!-- Subscribed Channels -->
-        <div v-if="!appStore.sidebarCollapsed" class="mt-6 border-t border-white/10 pt-4">
-          <h3 class="px-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+        <div v-if="!appStore.sidebarCollapsed" class="mt-5 border-t border-slate-200 pt-4">
+          <h3 class="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
             {{ appStore.locale === 'ko' ? '구독 채널' : 'Subscriptions' }}
           </h3>
-          <div class="mt-2 flex flex-col gap-1">
+          <div class="mt-2 flex flex-col gap-0.5">
             <NuxtLink
               v-for="sub in subscribedChannels"
               :key="sub.id"
               :to="`/channels/${sub.id}`"
-              class="flex items-center justify-between rounded-xl px-3 py-2 text-sm transition hover:bg-white/10"
+              class="flex items-center justify-between rounded-md px-3 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
               <div class="flex items-center gap-2.5 truncate">
-                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FF0033] to-purple-600 text-xs font-bold text-white">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700">
                   {{ sub.name.slice(0, 1) }}
                 </span>
                 <span class="truncate">{{ sub.name }}</span>
               </div>
               <span
                 v-if="sub.isLive"
-                class="h-2 w-2 shrink-0 rounded-full bg-[#FF0033] ring-4 ring-[#FF0033]/20"
-                title="LIVE"
-              />
+                class="rounded border border-red-200 bg-red-50 px-1 py-0.5 text-[10px] font-semibold text-red-700"
+              >
+                LIVE
+              </span>
             </NuxtLink>
           </div>
         </div>
       </aside>
 
       <!-- Main Content -->
-      <main class="min-w-0 flex-1">
+      <main class="min-w-0 flex-1 bg-white">
         <slot />
-        <footer class="mt-12 border-t border-white/10 px-4 py-8 sm:px-6">
-          <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-400" aria-label="서비스 정보">
-            <span class="font-bold text-neutral-200">StreamVerse</span>
-            <NuxtLink to="/terms" class="hover:text-white hover:underline">이용약관</NuxtLink>
-            <NuxtLink to="/privacy" class="hover:text-white hover:underline">개인정보처리방침</NuxtLink>
-            <NuxtLink to="/premium" class="hover:text-white hover:underline">Premium</NuxtLink>
-            <a :href="config.public.studioUrl" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline">크리에이터 스튜디오</a>
-          </nav>
-          <p class="mt-3 text-[11px] text-neutral-500">© 2026 StreamVerse Global Video Platform. 모든 영상·채널 데이터는 계정 삭제 요청 시 30일 유예 후 파기됩니다.</p>
+        <footer class="mt-12 border-t border-slate-200 bg-slate-50 px-4 py-6 sm:px-6">
+          <div class="mx-auto max-w-7xl">
+            <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600" aria-label="서비스 정보">
+              <span class="font-bold text-slate-900">StreamVerse</span>
+              <NuxtLink to="/terms" class="hover:text-slate-900 hover:underline">이용약관</NuxtLink>
+              <NuxtLink to="/privacy" class="hover:text-slate-900 hover:underline">개인정보처리방침</NuxtLink>
+              <NuxtLink to="/premium" class="hover:text-slate-900 hover:underline">Premium</NuxtLink>
+              <a :href="config.public.studioUrl" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900 hover:underline">크리에이터 스튜디오</a>
+            </nav>
+            <p class="mt-2 text-xs text-slate-400">© 2026 StreamVerse Global Video Platform. 모든 영상·채널 데이터는 계정 삭제 요청 시 30일 유예 후 파기됩니다.</p>
+          </div>
         </footer>
       </main>
     </div>

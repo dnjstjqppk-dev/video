@@ -96,9 +96,9 @@ const channelPlaylists = [
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1600px] pb-12">
+  <div class="mx-auto max-w-[1600px] bg-white pb-12 text-slate-900">
     <!-- Channel Banner -->
-    <div class="h-44 w-full overflow-hidden bg-[#1A1A1A] sm:h-60">
+    <div class="h-44 w-full overflow-hidden border-b border-slate-200 bg-slate-100 sm:h-60">
       <img :src="channel.bannerUrl" :alt="channel.name" class="h-full w-full object-cover" />
     </div>
 
@@ -109,19 +109,19 @@ const channelPlaylists = [
           <img
             :src="channel.avatarUrl"
             :alt="channel.name"
-            class="h-20 w-20 rounded-full border-4 border-[#0F0F0F] object-cover sm:h-28 sm:w-28"
+            class="h-20 w-20 rounded-full border-4 border-white object-cover ring-1 ring-slate-200 sm:h-28 sm:w-28"
           />
           <div>
             <div class="flex items-center gap-2">
-              <h1 class="text-xl font-extrabold sm:text-2xl">{{ channel.name }}</h1>
-              <span v-if="channel.isVerified" class="rounded-full bg-[#3EA6FF]/20 px-2 py-0.5 text-xs font-bold text-[#3EA6FF]">
-                ✓ Verified
+              <h1 class="text-xl font-extrabold text-slate-900 sm:text-2xl">{{ channel.name }}</h1>
+              <span v-if="channel.isVerified" class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700">
+                Verified
               </span>
             </div>
-            <p class="mt-1 text-xs text-neutral-400">
+            <p class="mt-1 text-xs text-slate-500 tabular-nums">
               {{ channel.handle }} · {{ channel.subscriberCount.toLocaleString() }} subscribers · {{ channel.videoCount }} videos
             </p>
-            <p class="mt-2 max-w-2xl text-xs text-neutral-300">
+            <p class="mt-2 max-w-2xl text-xs text-slate-600">
               {{ channel.description }}
             </p>
           </div>
@@ -129,22 +129,22 @@ const channelPlaylists = [
 
         <button
           type="button"
-          class="rounded-full px-6 py-2.5 text-xs font-bold transition"
-          :class="isSubscribed ? 'bg-[#272727] text-white' : 'bg-white text-black hover:bg-neutral-200'"
+          class="rounded-md px-6 py-2.5 text-xs font-semibold transition"
+          :class="isSubscribed ? 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800'"
           @click="isSubscribed = !isSubscribed"
         >
-          {{ isSubscribed ? (appStore.locale === 'ko' ? '구독중 ✓' : 'Subscribed ✓') : (appStore.locale === 'ko' ? '구독하기' : 'Subscribe') }}
+          {{ isSubscribed ? (appStore.locale === 'ko' ? '구독중' : 'Subscribed') : (appStore.locale === 'ko' ? '구독하기' : 'Subscribe') }}
         </button>
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="mt-8 flex gap-6 border-b border-white/10 text-sm font-semibold">
+      <div class="mt-8 flex gap-6 border-b border-slate-200 text-sm font-semibold">
         <button
           v-for="tab in (['videos', 'shorts', 'live', 'playlists', 'community'] as const)"
           :key="tab"
           type="button"
           class="border-b-2 pb-3 capitalize transition"
-          :class="activeTab === tab ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-white'"
+          :class="activeTab === tab ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'"
           @click="activeTab = tab"
         >
           {{ tab }}
@@ -157,16 +157,16 @@ const channelPlaylists = [
           v-for="vid in channelVideos"
           :key="vid.id"
           :to="`/watch/${vid.id}`"
-          class="group rounded-2xl border border-white/10 bg-[#161616] p-3 transition hover:border-white/25"
+          class="group rounded-lg border border-slate-200 bg-white p-3 transition hover:bg-slate-50"
         >
-          <div class="relative aspect-video overflow-hidden rounded-xl">
-            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-            <span class="absolute bottom-2 right-2 rounded bg-black/85 px-1.5 py-0.5 font-mono text-xs text-white">
+          <div class="relative aspect-video overflow-hidden rounded-md border border-slate-200 bg-slate-100">
+            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" />
+            <span class="absolute bottom-2 right-2 rounded-md border border-slate-200 bg-white/95 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-900 tabular-nums">
               {{ vid.duration }}
             </span>
           </div>
-          <h3 class="mt-3 font-bold leading-snug text-white group-hover:text-[#3EA6FF]">{{ vid.title }}</h3>
-          <p class="mt-1 text-xs text-neutral-400">{{ vid.views }}</p>
+          <h3 class="mt-3 font-bold leading-snug text-slate-900 group-hover:text-blue-600">{{ vid.title }}</h3>
+          <p class="mt-1 text-xs text-slate-500 tabular-nums">{{ vid.views }}</p>
         </NuxtLink>
       </div>
 
@@ -176,10 +176,12 @@ const channelPlaylists = [
           v-for="i in 4"
           :key="i"
           to="/shorts"
-          class="relative aspect-[9/16] overflow-hidden rounded-2xl bg-[#1F1F1F]"
+          class="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:bg-slate-50"
         >
-          <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&q=80" alt="Short" class="h-full w-full object-cover" />
-          <div class="absolute inset-x-3 bottom-3 text-xs font-bold text-white">
+          <div class="aspect-[9/16] w-full overflow-hidden bg-slate-100">
+            <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&q=80" alt="Short" class="h-full w-full object-cover" />
+          </div>
+          <div class="border-t border-slate-200 bg-white p-3 text-xs font-bold text-slate-900 tabular-nums group-hover:text-blue-600">
             HLS Segment Caching Explained #{{ i }}
           </div>
         </NuxtLink>
@@ -189,13 +191,13 @@ const channelPlaylists = [
       <div v-else-if="activeTab === 'live'" class="mt-6">
         <NuxtLink
           to="/live/live_main_01"
-          class="flex flex-col gap-4 rounded-2xl border border-[#FF0033]/40 bg-[#181818] p-4 sm:flex-row"
+          class="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 transition hover:bg-slate-50 sm:flex-row"
         >
-          <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80" alt="Live" class="aspect-video w-full rounded-xl object-cover sm:w-72" />
+          <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80" alt="Live" class="aspect-video w-full rounded-md border border-slate-200 object-cover sm:w-72" />
           <div>
-            <span class="rounded bg-[#FF0033] px-2 py-0.5 text-xs font-bold text-white">LIVE NOW</span>
-            <h3 class="mt-2 text-lg font-bold text-white">[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A</h3>
-            <p class="mt-1 text-xs text-neutral-400">14,820 concurrent viewers · Ultra-low latency HLS + WebSocket Chat</p>
+            <span class="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">LIVE NOW</span>
+            <h3 class="mt-2 text-lg font-bold text-slate-900">[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A</h3>
+            <p class="mt-1 text-xs text-slate-500 tabular-nums">14,820 concurrent viewers · Ultra-low latency HLS + WebSocket Chat</p>
           </div>
         </NuxtLink>
       </div>
@@ -205,26 +207,26 @@ const channelPlaylists = [
         <div
           v-for="pl in channelPlaylists"
           :key="pl.id"
-          class="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#161616] p-4"
+          class="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4"
         >
-          <img :src="pl.thumbnailUrl" :alt="pl.title" class="h-24 w-40 rounded-xl object-cover" />
+          <img :src="pl.thumbnailUrl" :alt="pl.title" class="h-24 w-40 rounded-md border border-slate-200 object-cover" />
           <div>
-            <h3 class="font-bold text-white">{{ pl.title }}</h3>
-            <p class="mt-1 text-xs text-[#3EA6FF]">{{ pl.videoCount }} videos in playlist</p>
+            <h3 class="font-bold text-slate-900">{{ pl.title }}</h3>
+            <p class="mt-1 text-xs font-medium text-blue-700 tabular-nums">{{ pl.videoCount }} videos in playlist</p>
           </div>
         </div>
       </div>
 
       <!-- Tab Content: Community Posts & Polls -->
-      <div v-else class="mt-6 max-w-2xl rounded-2xl border border-white/10 bg-[#181818] p-5">
+      <div v-else class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-5">
         <div class="flex items-center gap-3">
-          <img :src="channel.avatarUrl" :alt="channel.name" class="h-10 w-10 rounded-full object-cover" />
+          <img :src="channel.avatarUrl" :alt="channel.name" class="h-10 w-10 rounded-full border border-slate-200 object-cover" />
           <div>
-            <p class="text-sm font-bold">{{ channel.name }}</p>
-            <p class="text-xs text-neutral-400">2 hours ago · Community Poll</p>
+            <p class="text-sm font-bold text-slate-900">{{ channel.name }}</p>
+            <p class="text-xs text-slate-500 tabular-nums">2 hours ago · Community Poll</p>
           </div>
         </div>
-        <p class="mt-3 text-sm text-neutral-200">
+        <p class="mt-3 text-sm text-slate-700">
           다음 주 기술 딥다이브 영상 주제로 어떤 아키텍처를 가장 보고 싶으신가요? 투표해 주세요!
         </p>
         <div class="mt-4 space-y-2">
@@ -232,20 +234,20 @@ const channelPlaylists = [
             v-for="(option, idx) in ['AV1 Hardware Encoding on GPU Fleet', 'ClickHouse Real-Time Creator Analytics', 'WebTransport Low-Latency Live Ingest']"
             :key="option"
             type="button"
-            class="relative flex w-full items-center justify-between overflow-hidden rounded-xl border px-4 py-3 text-left text-xs font-semibold transition"
-            :class="pollSelection === idx ? 'border-[#3EA6FF] text-white' : 'border-white/15 bg-white/5 hover:bg-white/10 text-neutral-200'"
+            class="relative flex w-full items-center justify-between overflow-hidden rounded-md border px-4 py-3 text-left text-xs font-semibold transition"
+            :class="pollSelection === idx ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'"
             @click="votePoll(idx)"
           >
             <div
               v-if="pollSelection !== null"
-              class="absolute inset-y-0 left-0 bg-[#3EA6FF]/20 transition-all duration-500 ease-out"
+              class="absolute inset-y-0 left-0 bg-blue-100/80 transition-all duration-300"
               :style="{ width: `${pollPercentages[idx]}%` }"
             />
             <span class="relative z-10">{{ option }}</span>
-            <span v-if="pollSelection !== null" class="relative z-10 font-mono font-bold">{{ pollPercentages[idx] }}%</span>
+            <span v-if="pollSelection !== null" class="relative z-10 font-mono font-bold tabular-nums">{{ pollPercentages[idx] }}%</span>
           </button>
         </div>
-        <p v-if="pollSelection !== null" class="mt-2 text-[11px] text-neutral-400">
+        <p v-if="pollSelection !== null" class="mt-2 text-[11px] font-medium text-slate-500 tabular-nums">
           {{ totalPollVotes.toLocaleString() }} {{ appStore.locale === 'ko' ? '표' : 'votes' }}
         </p>
       </div>

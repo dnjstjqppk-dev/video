@@ -37,20 +37,21 @@ defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 
 <style scoped>
 .gvp-field { display: flex; flex-direction: column; gap: 0.375rem; }
-.gvp-field__label { font-size: 0.8125rem; font-weight: 700; color: var(--gvp-text-secondary); }
+.gvp-field__label { font-size: 0.8125rem; font-weight: 600; color: #334155; }
 .gvp-field__input {
   font-family: var(--gvp-font-sans);
   font-size: 0.875rem;
-  color: var(--gvp-text);
-  background: var(--gvp-surface-2);
-  border: 1px solid var(--gvp-border-strong);
-  border-radius: var(--gvp-radius-md);
-  padding: 0.625rem 0.875rem;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 0.375rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
   width: 100%;
 }
-.gvp-field__input::placeholder { color: var(--gvp-text-faint); }
-.gvp-field__input:hover { border-color: rgba(255, 255, 255, 0.28); }
-.gvp-field__input--error { border-color: var(--gvp-danger); }
-.gvp-field__error { margin: 0; font-size: 0.75rem; color: var(--gvp-danger); }
-.gvp-field__hint { margin: 0; font-size: 0.75rem; color: var(--gvp-text-muted); }
+.gvp-field__input::placeholder { color: #94A3B8; }
+.gvp-field__input:focus { outline: none; border-color: #0F172A; box-shadow: 0 0 0 1px #0F172A; }
+.gvp-field__input--error { border-color: #B91C1C; }
+.gvp-field__error { margin: 0; font-size: 0.75rem; color: #B91C1C; }
+.gvp-field__hint { margin: 0; font-size: 0.75rem; color: #64748B; }
 </style>

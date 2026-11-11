@@ -39,84 +39,112 @@ const infraNodes = [
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-extrabold text-white">플랫폼 통합 운영 관제 (Platform Operations Dashboard)</h1>
-    <p class="mt-1 text-xs text-neutral-400">
-      Real-time global platform KPIs, transcoding queue depth, gross revenue, and 7-tier infrastructure health
-    </p>
+  <div class="space-y-6">
+    <div class="border-b border-slate-200 pb-4">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+        플랫폼 통합 운영 관제 (Platform Operations Dashboard)
+      </h1>
+      <p class="mt-1 text-sm text-slate-600">
+        Real-time global platform KPIs, transcoding queue depth, gross revenue, and 7-tier infrastructure health
+      </p>
+    </div>
 
     <!-- Top KPI Grid -->
-    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-4">
-        <p class="text-[11px] text-neutral-400">Total Registered Users</p>
-        <p class="mt-1.5 text-xl font-extrabold text-white">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-medium text-slate-500">Total Registered Users</p>
+        <p class="mt-1.5 text-xl font-bold text-slate-900 tabular-nums">
           {{ adminDash?.metrics.totalUsers.toLocaleString() }}
         </p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-4">
-        <p class="text-[11px] text-neutral-400">Active Viewers Today (DAU)</p>
-        <p class="mt-1.5 text-xl font-extrabold text-[#3EA6FF]">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-medium text-slate-500">Active Viewers Today (DAU)</p>
+        <p class="mt-1.5 text-xl font-bold text-slate-900 tabular-nums">
           {{ adminDash?.metrics.activeUsersToday.toLocaleString() }}
         </p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-4">
-        <p class="text-[11px] text-neutral-400">Active Live Streams</p>
-        <p class="mt-1.5 text-xl font-extrabold text-red-400">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-medium text-slate-500">Active Live Streams</p>
+        <p class="mt-1.5 text-xl font-bold text-rose-600 tabular-nums">
           {{ adminDash?.metrics.liveStreamsActive.toLocaleString() }}
         </p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-4">
-        <p class="text-[11px] text-neutral-400">Transcoding Queue Depth</p>
-        <p class="mt-1.5 text-xl font-extrabold text-amber-300">18 jobs</p>
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-medium text-slate-500">Transcoding Queue Depth</p>
+        <p class="mt-1.5 text-xl font-bold text-amber-700 tabular-nums">18 jobs</p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-4">
-        <p class="text-[11px] text-neutral-400">Gross Ad + Sub Revenue</p>
-        <p class="mt-1.5 text-xl font-extrabold text-emerald-400">
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-medium text-slate-500">Gross Ad + Sub Revenue</p>
+        <p class="mt-1.5 text-xl font-bold text-emerald-700 tabular-nums">
           ₩{{ ((adminDash?.metrics.totalAdRevenueKrw || 4820000000) / 100000000).toFixed(1) }}억
         </p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-4">
-        <p class="text-[11px] text-neutral-400">Open Moderation Reports</p>
-        <p class="mt-1.5 text-xl font-extrabold text-amber-400">12 cases</p>
+      <div class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-medium text-slate-500">Open Moderation Reports</p>
+        <p class="mt-1.5 text-xl font-bold text-amber-700 tabular-nums">12 cases</p>
       </div>
     </div>
 
-    <!-- Infrastructure Health Matrix -->
-    <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-5 lg:col-span-2">
-        <h2 class="text-sm font-bold text-white">핵심 인프라 클러스터 상태 (Core Infrastructure Health)</h2>
-        <div class="mt-4 space-y-2.5 text-xs">
-          <div
-            v-for="node in infraNodes"
-            :key="node.service"
-            class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#090B10] px-4 py-3"
-          >
-            <div>
-              <p class="font-bold text-white">{{ node.service }}</p>
-              <p class="text-[11px] text-neutral-400">{{ node.detail }}</p>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-mono text-[#3EA6FF]">{{ node.latency }}</span>
-              <span class="rounded bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
-                ● {{ node.status }}
-              </span>
-            </div>
-          </div>
+    <!-- Infrastructure Health Matrix & Audit Logs -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white lg:col-span-2">
+        <div class="border-b border-slate-200 bg-slate-50 px-5 py-3.5">
+          <h2 class="text-sm font-semibold text-slate-900">
+            핵심 인프라 클러스터 상태 (Core Infrastructure Health)
+          </h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th class="py-2.5 px-4">Service Cluster</th>
+                <th class="py-2.5 px-4">Operational Detail</th>
+                <th class="py-2.5 px-4 text-right">Latency</th>
+                <th class="py-2.5 px-4 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr
+                v-for="node in infraNodes"
+                :key="node.service"
+                class="hover:bg-slate-50 transition-colors"
+              >
+                <td class="py-3 px-4 text-sm font-semibold text-slate-900 tabular-nums">
+                  {{ node.service }}
+                </td>
+                <td class="py-3 px-4 text-sm text-slate-600 tabular-nums">
+                  {{ node.detail }}
+                </td>
+                <td class="py-3 px-4 text-right font-mono text-sm text-slate-900 tabular-nums">
+                  {{ node.latency }}
+                </td>
+                <td class="py-3 px-4 text-right text-sm text-slate-900 tabular-nums">
+                  <span class="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    {{ node.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <!-- Recent Immutable Audit Logs -->
-      <div class="rounded-2xl border border-white/10 bg-[#131722] p-5">
-        <h2 class="text-sm font-bold text-white">실시간 관리자 감사 로그 (Immutable Audit Trail)</h2>
-        <div class="mt-4 space-y-3 text-xs">
+      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div class="border-b border-slate-200 bg-slate-50 px-5 py-3.5">
+          <h2 class="text-sm font-semibold text-slate-900">
+            실시간 관리자 감사 로그 (Immutable Audit Trail)
+          </h2>
+        </div>
+        <div class="divide-y divide-slate-100">
           <div
             v-for="log in adminDash?.recentAuditLogs"
             :key="log.id"
-            class="rounded-xl border border-white/10 bg-[#090B10] p-3"
+            class="p-4 hover:bg-slate-50 transition-colors"
           >
-            <p class="font-mono font-bold text-red-400">{{ log.action }}</p>
-            <p class="mt-1 text-neutral-300">Actor: {{ log.actor }}</p>
-            <p class="text-[11px] text-neutral-500">{{ log.timestamp }}</p>
+            <p class="font-mono text-xs font-semibold text-slate-900">{{ log.action }}</p>
+            <p class="mt-1 text-xs text-slate-600">Actor: <span class="font-mono text-slate-900">{{ log.actor }}</span></p>
+            <p class="mt-0.5 font-mono text-xs text-slate-400 tabular-nums">{{ log.timestamp }}</p>
           </div>
         </div>
       </div>

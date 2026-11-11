@@ -58,48 +58,48 @@ async function loginWithDevToken() {
 
 <template>
   <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4">
-    <div class="w-full rounded-2xl border border-red-500/25 bg-[#10131C] p-8 shadow-2xl">
-      <div class="flex items-center gap-2">
-        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 font-black text-white">
+    <div class="w-full rounded-lg border border-slate-200 bg-white p-8">
+      <div class="flex items-center gap-2.5">
+        <span class="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-sm font-bold text-white">
           A
         </span>
-        <span class="text-lg font-extrabold text-white">Admin Console</span>
+        <span class="text-base font-bold tracking-tight text-slate-900">Admin Console</span>
       </div>
-      <h1 class="mt-4 text-xl font-black text-white">관리자 로그인</h1>
-      <p class="mt-1 text-xs text-neutral-400">
+      <h1 class="mt-5 text-xl font-bold tracking-tight text-slate-900">관리자 로그인</h1>
+      <p class="mt-1.5 text-xs text-slate-600 leading-relaxed">
         OIDC + 관리망 IP 허용 + 2단계 인증으로 보호되는 거버넌스 콘솔입니다.
       </p>
 
       <a
         href="/auth/login"
-        class="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-red-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-red-500"
+        class="mt-6 inline-flex w-full items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
       >
         관리자 계정으로 계속하기
       </a>
 
-      <div v-if="isLocalhost" class="mt-6 border-t border-white/10 pt-5">
-        <p class="text-xs font-bold text-amber-300">로컬 개발 전용 토큰 로그인</p>
-        <p class="mt-1 text-[11px] text-neutral-400">
-          예: admin-token (SUPER_ADMIN)
+      <div v-if="isLocalhost" class="mt-6 border-t border-slate-200 pt-5">
+        <p class="text-xs font-semibold text-slate-900">로컬 개발 전용 토큰 로그인</p>
+        <p class="mt-1 text-xs text-slate-500">
+          예: <span class="font-mono text-slate-700">admin-token</span> (SUPER_ADMIN)
         </p>
         <div class="mt-3 flex gap-2">
           <input
             v-model="devToken"
             type="text"
             placeholder="dev token"
-            class="h-10 flex-1 rounded-xl border border-white/15 bg-[#090B10] px-3 font-mono text-xs text-white outline-none focus:border-red-500"
+            class="h-9 flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white outline-none transition-colors"
             @keyup.enter="loginWithDevToken"
           />
           <button
             type="button"
             :disabled="devLoading"
-            class="rounded-xl bg-white/10 px-4 text-xs font-bold text-white hover:bg-white/20 disabled:opacity-50"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-50"
             @click="loginWithDevToken"
           >
             {{ devLoading ? '...' : '로그인' }}
           </button>
         </div>
-        <p v-if="devError" class="mt-2 text-xs text-red-400">{{ devError }}</p>
+        <p v-if="devError" class="mt-2 text-xs font-medium text-rose-600">{{ devError }}</p>
       </div>
     </div>
   </div>

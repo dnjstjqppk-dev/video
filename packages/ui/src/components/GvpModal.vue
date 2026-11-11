@@ -79,7 +79,7 @@ onMounted(() => {
       >
         <div class="gvp-modal__head">
           <h2 :id="labelledBy" class="gvp-modal__title">{{ title }}</h2>
-          <button type="button" class="gvp-modal__close" aria-label="닫기" @click="close">✕</button>
+          <button type="button" class="gvp-modal__close" aria-label="닫기" @click="close">닫기</button>
         </div>
         <div class="gvp-modal__body">
           <slot />
@@ -101,47 +101,48 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: var(--gvp-overlay);
-  animation: gvp-fade var(--gvp-motion-fast) var(--gvp-ease);
+  background: rgba(15, 23, 42, 0.45);
 }
 .gvp-modal {
   width: 100%;
-  background: var(--gvp-surface-1);
-  border: 1px solid var(--gvp-border-strong);
-  border-radius: var(--gvp-radius-lg);
-  box-shadow: var(--gvp-shadow-lg);
-  animation: gvp-pop var(--gvp-motion-base) var(--gvp-ease);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
 }
 .gvp-modal__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--gvp-border);
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
 }
-.gvp-modal__title { margin: 0; font-size: 1rem; font-weight: 800; }
+.gvp-modal__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0F172A;
+}
 .gvp-modal__close {
-  font-size: 0.875rem;
-  color: var(--gvp-text-muted);
   background: transparent;
   border: none;
-  border-radius: var(--gvp-radius-sm);
-  padding: 0.375rem 0.5rem;
+  color: #475569;
   cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
 }
-.gvp-modal__close:hover { color: var(--gvp-text); background: rgba(255, 255, 255, 0.08); }
-.gvp-modal__body { padding: 1.25rem; }
+.gvp-modal__close:hover { background: #E2E8F0; color: #0F172A; }
+.gvp-modal__body { padding: 1.25rem; color: #0F172A; font-size: 0.875rem; }
 .gvp-modal__footer {
-  padding: 1rem 1.25rem;
-  border-top: 1px solid var(--gvp-border);
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-}
-@keyframes gvp-fade { from { opacity: 0; } }
-@keyframes gvp-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
-@media (prefers-reduced-motion: reduce) {
-  .gvp-modal__backdrop, .gvp-modal { animation: none; }
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFC;
 }
 </style>

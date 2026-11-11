@@ -71,44 +71,46 @@ function downloadInvoice(statement: Payout) {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-extrabold text-white">복식부기 정산 명세서 및 세금계산서 (Partner Settlements)</h1>
-    <p class="mt-1 text-xs text-neutral-400">
-      Immutable double-entry ledger reconciliation (`SUM(debit) == SUM(credit)`) · Downloadable VAT & withholding invoices
-    </p>
+  <div class="space-y-6">
+    <div class="border-b border-slate-200 pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-slate-900">복식부기 정산 명세서 및 세금계산서 (Partner Settlements)</h1>
+      <p class="mt-1 text-sm text-slate-600">
+        Immutable double-entry ledger reconciliation (<code class="font-mono text-xs text-slate-700">SUM(debit) == SUM(credit)</code>) · Downloadable VAT &amp; withholding invoices
+      </p>
+    </div>
 
-    <div class="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#141A2C]">
-      <table class="w-full text-left text-xs">
-        <thead class="border-b border-white/10 bg-white/5 uppercase text-neutral-400">
-          <tr>
-            <th class="p-3.5">Statement ID</th>
-            <th class="p-3.5">Billing Period</th>
-            <th class="p-3.5">Gross Ledger Credit</th>
-            <th class="p-3.5">Tax / VAT Withheld</th>
-            <th class="p-3.5">Net Settlement</th>
-            <th class="p-3.5">Status</th>
-            <th class="p-3.5">Invoice</th>
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th class="py-2.5 px-4">Statement ID</th>
+            <th class="py-2.5 px-4">Billing Period</th>
+            <th class="py-2.5 px-4">Gross Ledger Credit</th>
+            <th class="py-2.5 px-4">Tax / VAT Withheld</th>
+            <th class="py-2.5 px-4">Net Settlement</th>
+            <th class="py-2.5 px-4">Status</th>
+            <th class="py-2.5 px-4">Invoice</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-white/10">
-          <tr v-for="stl in (settlements || fallbackSettlements)" :key="stl.id" class="hover:bg-white/5">
-            <td class="p-3.5 font-mono font-bold text-[#3EA6FF]">{{ stl.id }}</td>
-            <td class="p-3.5">{{ stl.periodStart }} ~ {{ stl.periodEnd }}</td>
-            <td class="p-3.5 font-mono">₩{{ stl.amount.toLocaleString() }}</td>
-            <td class="p-3.5 font-mono text-red-300">-₩{{ stl.taxWithheld.toLocaleString() }}</td>
-            <td class="p-3.5 font-mono font-bold text-emerald-400">₩{{ stl.netAmount.toLocaleString() }}</td>
-            <td class="p-3.5">
-              <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+        <tbody class="divide-y divide-slate-100">
+          <tr v-for="stl in (settlements || fallbackSettlements)" :key="stl.id" class="hover:bg-slate-50">
+            <td class="py-3 px-4 font-mono text-sm font-medium text-slate-900 border-b border-slate-100 tabular-nums">{{ stl.id }}</td>
+            <td class="py-3 px-4 text-sm text-slate-600 border-b border-slate-100 tabular-nums">{{ stl.periodStart }} ~ {{ stl.periodEnd }}</td>
+            <td class="py-3 px-4 font-mono text-sm text-slate-900 border-b border-slate-100 tabular-nums">₩{{ stl.amount.toLocaleString() }}</td>
+            <td class="py-3 px-4 font-mono text-sm text-red-700 border-b border-slate-100 tabular-nums">-₩{{ stl.taxWithheld.toLocaleString() }}</td>
+            <td class="py-3 px-4 font-mono text-sm font-semibold text-slate-900 border-b border-slate-100 tabular-nums">₩{{ stl.netAmount.toLocaleString() }}</td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium uppercase text-emerald-700">
                 {{ stl.status }}
               </span>
             </td>
-            <td class="p-3.5">
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
               <button
                 type="button"
-                class="rounded-lg bg-white/10 px-3 py-1.5 font-semibold text-white hover:bg-white/20"
+                class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
                 @click="downloadInvoice(stl)"
               >
-                📄 Download Invoice
+                Download Invoice
               </button>
             </td>
           </tr>

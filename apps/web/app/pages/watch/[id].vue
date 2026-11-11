@@ -437,7 +437,7 @@ const relatedVideos = [
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1720px] px-4 py-5 lg:px-8">
+  <div class="mx-auto max-w-[1720px] bg-white px-4 py-5 text-slate-900 lg:px-8">
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <!-- Primary Column: Video Player, Metadata, Chapters, Comments -->
       <div class="xl:col-span-8">
@@ -455,129 +455,140 @@ const relatedVideos = [
             :sources="activeVideo.sources"
           />
           <template #fallback>
-            <div class="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-sm text-neutral-400">
+            <div class="flex aspect-video w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-500">
               Loading Shaka HLS ABR Player...
             </div>
           </template>
         </ClientOnly>
 
         <!-- Video Title -->
-        <h1 class="mt-4 text-lg font-bold leading-snug sm:text-xl">
+        <h1 class="mt-4 text-lg font-bold leading-snug text-slate-900 sm:text-xl">
           {{ activeVideo.title }}
         </h1>
 
         <!-- Channel Bar & Action Buttons -->
-        <div class="mt-3 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div class="flex items-center gap-3">
             <NuxtLink :to="`/channels/${activeVideo.channelId}`">
               <img
                 :src="activeVideo.channel?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
                 :alt="activeVideo.channel?.name"
-                class="h-10 w-10 rounded-full object-cover"
+                class="h-10 w-10 rounded-full border border-slate-200 object-cover"
               />
             </NuxtLink>
             <div>
-              <NuxtLink :to="`/channels/${activeVideo.channelId}`" class="flex items-center gap-1 font-bold hover:text-[#3EA6FF]">
+              <NuxtLink :to="`/channels/${activeVideo.channelId}`" class="flex items-center gap-1 font-bold text-slate-900 hover:text-blue-600">
                 <span>{{ activeVideo.channel?.name || 'GVP Tech Engineering' }}</span>
-                <svg class="h-4 w-4 text-[#3EA6FF]" fill="currentColor" viewBox="0 0 24 24">
+                <svg class="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
               </NuxtLink>
-              <p class="text-xs text-neutral-400">
+              <p class="text-xs text-slate-500 tabular-nums">
                 {{ subscriberCount.toLocaleString() }} subscribers
               </p>
             </div>
 
             <button
               type="button"
-              class="ml-3 rounded-full px-4 py-2 text-xs font-bold transition"
+              class="ml-3 rounded-md px-4 py-2 text-xs font-semibold transition"
               :class="
                 isSubscribed
-                  ? 'bg-[#272727] text-white hover:bg-[#3A3A3A]'
-                  : 'bg-white text-black hover:bg-neutral-200'
+                  ? 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
               "
               @click="toggleSubscribe"
             >
-              {{ isSubscribed ? (appStore.locale === 'ko' ? '구독중 ✓' : 'Subscribed ✓') : (appStore.locale === 'ko' ? '구독 (Subscribe)' : 'Subscribe') }}
+              {{ isSubscribed ? (appStore.locale === 'ko' ? '구독중' : 'Subscribed') : (appStore.locale === 'ko' ? '구독 (Subscribe)' : 'Subscribe') }}
             </button>
           </div>
 
           <!-- Action Pills: Like/Dislike, Share, Save, Report -->
           <div class="flex flex-wrap items-center gap-2">
-            <!-- Unified Like / Dislike Split Capsule -->
-            <div class="flex items-center rounded-full bg-[#272727] p-0.5">
+            <!-- Unified Like / Dislike Split Control -->
+            <div class="flex items-center overflow-hidden rounded-md border border-slate-200 bg-white">
               <button
                 type="button"
-                class="flex items-center gap-1.5 rounded-l-full px-3.5 py-1.5 text-xs font-semibold transition"
-                :class="isLiked ? 'text-[#3EA6FF]' : 'text-white hover:bg-white/10'"
+                class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition tabular-nums"
+                :class="isLiked ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'"
                 @click="toggleLike"
               >
-                <span>👍</span>
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                </svg>
                 <span>{{ likeCount.toLocaleString() }}</span>
               </button>
-              <div class="h-4 w-px bg-white/20" />
+              <div class="h-4 w-px bg-slate-200" />
               <button
                 type="button"
-                class="rounded-r-full px-3 py-1.5 text-xs font-semibold transition"
-                :class="isDisliked ? 'text-[#3EA6FF]' : 'text-white hover:bg-white/10'"
+                class="px-3 py-1.5 text-xs font-semibold transition"
+                :class="isDisliked ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'"
                 @click="toggleDislike"
                 title="I dislike this"
               >
-                <span>👎</span>
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                </svg>
               </button>
             </div>
 
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-full bg-[#272727] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#3A3A3A]"
+              class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               @click="shareVideo"
             >
-              <span>🔗</span>
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
               <span>{{ shareCopied ? 'Copied URL!' : (appStore.locale === 'ko' ? '공유' : 'Share') }}</span>
             </button>
 
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-full bg-[#272727] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#3A3A3A]"
+              class="flex items-center gap-1.5 rounded-md border px-3.5 py-1.5 text-xs font-semibold transition"
+              :class="isSaved ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
               @click="isSaved = !isSaved"
             >
-              <span>{{ isSaved ? '✅' : '➕' }}</span>
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
               <span>{{ isSaved ? 'Saved' : (appStore.locale === 'ko' ? '재생목록 저장' : 'Save') }}</span>
             </button>
 
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-full bg-[#272727] px-3.5 py-2 text-xs font-semibold text-neutral-300 transition hover:bg-[#3A3A3A]"
+              class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
               @click="showReportModal = true"
             >
-              <span>🚩</span>
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              </svg>
               <span>{{ appStore.locale === 'ko' ? '신고' : 'Report' }}</span>
             </button>
           </div>
         </div>
 
         <!-- Expandable Description & Interactive Chapters -->
-        <div class="mt-4 rounded-2xl bg-[#1F1F1F] p-4 text-sm">
-          <div class="flex flex-wrap items-center gap-3 font-semibold text-white">
+        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+          <div class="flex flex-wrap items-center gap-2.5 font-semibold text-slate-900 tabular-nums">
             <span>{{ activeVideo.viewCount.toLocaleString() }} views</span>
-            <span>•</span>
+            <span class="text-slate-400">•</span>
             <span>Published {{ new Date(activeVideo.publishedAt || activeVideo.createdAt).toLocaleDateString() }}</span>
             <span
               v-for="tag in activeVideo.tags"
               :key="tag"
-              class="text-xs font-medium text-[#3EA6FF]"
+              class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
             >
               #{{ tag }}
             </span>
           </div>
 
-          <p class="mt-2 whitespace-pre-line text-neutral-200" :class="!descriptionExpanded ? 'line-clamp-3' : ''">
+          <p class="mt-2 whitespace-pre-line text-slate-600" :class="!descriptionExpanded ? 'line-clamp-3' : ''">
             {{ activeVideo.description }}
           </p>
 
           <!-- Chapters Timeline Strip -->
-          <div v-if="activeVideo.chapters?.length" class="mt-4 border-t border-white/10 pt-3">
-            <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-neutral-400">
+          <div v-if="activeVideo.chapters?.length" class="mt-4 border-t border-slate-200 pt-3">
+            <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
               {{ appStore.locale === 'ko' ? '챕터 바로가기 (Video Chapters)' : 'Video Chapters' }}
             </h3>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -585,11 +596,11 @@ const relatedVideos = [
                 v-for="chp in activeVideo.chapters"
                 :key="chp.id"
                 type="button"
-                class="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-left text-xs transition hover:bg-white/15"
+                class="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs transition hover:bg-slate-50"
                 @click="playerRef?.seekToSeconds(chp.startTimeSeconds)"
               >
-                <span class="truncate font-medium text-white">{{ chp.title }}</span>
-                <span class="ml-2 shrink-0 rounded bg-[#3EA6FF]/20 px-1.5 py-0.5 font-mono text-[11px] text-[#3EA6FF]">
+                <span class="truncate font-medium text-slate-900">{{ chp.title }}</span>
+                <span class="ml-2 shrink-0 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-blue-700 tabular-nums">
                   {{ Math.floor(chp.startTimeSeconds / 60) }}:{{ String(chp.startTimeSeconds % 60).padStart(2, '0') }}
                 </span>
               </button>
@@ -598,7 +609,7 @@ const relatedVideos = [
 
           <button
             type="button"
-            class="mt-3 text-xs font-bold text-[#3EA6FF] hover:underline"
+            class="mt-3 text-xs font-bold text-blue-700 hover:underline"
             @click="descriptionExpanded = !descriptionExpanded"
           >
             {{ descriptionExpanded ? (appStore.locale === 'ko' ? '간략히 보기' : 'Show less') : (appStore.locale === 'ko' ? '더보기' : 'Show more') }}
@@ -609,26 +620,24 @@ const relatedVideos = [
         <section class="mt-6">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-6">
-              <h2 class="text-base font-bold text-white">
+              <h2 class="text-base font-bold text-slate-900 tabular-nums">
                 {{ comments.length.toLocaleString() }} {{ appStore.locale === 'ko' ? '개의 댓글' : 'Comments' }}
               </h2>
-              <div class="flex items-center gap-1 text-xs font-medium text-neutral-300">
+              <div class="flex items-center gap-1.5 text-xs font-medium">
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition"
-                  :class="commentSort === 'top' ? 'bg-white/15 text-white font-semibold' : 'text-neutral-400 hover:text-white'"
+                  class="rounded-md border px-2.5 py-1 transition"
+                  :class="commentSort === 'top' ? 'border-slate-900 bg-slate-900 text-white font-semibold' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'"
                   @click="commentSort = 'top'"
                 >
-                  <span>⚡</span>
                   <span>{{ appStore.locale === 'ko' ? '인기순' : 'Top' }}</span>
                 </button>
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition"
-                  :class="commentSort === 'newest' ? 'bg-white/15 text-white font-semibold' : 'text-neutral-400 hover:text-white'"
+                  class="rounded-md border px-2.5 py-1 transition"
+                  :class="commentSort === 'newest' ? 'border-slate-900 bg-slate-900 text-white font-semibold' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'"
                   @click="commentSort = 'newest'"
                 >
-                  <span>🕒</span>
                   <span>{{ appStore.locale === 'ko' ? '최신순' : 'Newest' }}</span>
                 </button>
               </div>
@@ -640,26 +649,26 @@ const relatedVideos = [
             <img
               :src="appStore.currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
               :alt="appStore.currentUser?.displayName"
-              class="h-9 w-9 rounded-full object-cover"
+              class="h-9 w-9 rounded-full border border-slate-200 object-cover"
             />
             <div class="flex-1">
               <input
                 v-model="newCommentText"
                 type="text"
                 :placeholder="appStore.locale === 'ko' ? '공개 댓글 추가...' : 'Add a public comment...'"
-                class="w-full border-b border-white/20 bg-transparent pb-2 text-sm text-white outline-none focus:border-[#3EA6FF]"
+                class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
               />
               <div class="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  class="rounded-full px-3 py-1.5 text-xs text-neutral-400 hover:bg-white/10"
+                  class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                   @click="newCommentText = ''"
                 >
                   {{ appStore.locale === 'ko' ? '취소' : 'Cancel' }}
                 </button>
                 <button
                   type="submit"
-                  class="rounded-full bg-[#3EA6FF] px-4 py-1.5 text-xs font-bold text-black transition hover:bg-[#65B8FF]"
+                  class="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
                 >
                   {{ appStore.locale === 'ko' ? '댓글 작성' : 'Comment' }}
                 </button>
@@ -668,83 +677,85 @@ const relatedVideos = [
           </form>
 
           <!-- Comment Thread List -->
-          <div class="mt-6 space-y-6">
-            <article v-for="cmt in sortedComments" :key="cmt.id" class="flex items-start gap-3">
+          <div class="mt-6 space-y-6 divide-y divide-slate-100">
+            <article v-for="cmt in sortedComments" :key="cmt.id" class="flex items-start gap-3 pt-4 first:pt-0">
               <img
                 :src="cmt.author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
                 :alt="cmt.author?.displayName"
-                class="h-9 w-9 shrink-0 rounded-full object-cover"
+                class="h-9 w-9 shrink-0 rounded-full border border-slate-200 object-cover"
               />
               <div class="flex-1 text-sm">
                 <!-- Header: Display name, Badges, Date -->
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="font-semibold text-white">{{ cmt.author?.displayName || 'User' }}</span>
+                  <span class="font-semibold text-slate-900">{{ cmt.author?.displayName || 'User' }}</span>
                   <span
                     v-if="cmt.isChannelOwner || cmt.author?.isCreator"
-                    class="rounded-full bg-[#3EA6FF]/20 px-2 py-0.5 text-[10px] font-bold text-[#3EA6FF]"
+                    class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700"
                   >
                     {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
                   </span>
                   <span
                     v-if="cmt.isPinned"
-                    class="flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-neutral-300"
+                    class="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
                   >
-                    <span>📌</span>
                     <span>{{ appStore.locale === 'ko' ? '고정됨' : 'Pinned' }}</span>
                   </span>
-                  <span class="text-xs text-neutral-400">
+                  <span class="text-xs text-slate-400 tabular-nums">
                     {{ new Date(cmt.createdAt).toLocaleDateString() }}
                   </span>
                 </div>
 
                 <!-- Body -->
-                <p class="mt-1 text-neutral-200">{{ cmt.content }}</p>
+                <p class="mt-1 text-slate-700">{{ cmt.content }}</p>
 
                 <!-- Actions: Like, Heart, Pin, Reply, Delete -->
-                <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-neutral-400">
+                <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500">
                   <button
                     type="button"
-                    class="flex items-center gap-1 transition hover:text-white"
+                    class="flex items-center gap-1 transition hover:text-slate-900 tabular-nums"
                     @click="handleLikeComment(cmt)"
                   >
-                    <span>👍</span>
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                    </svg>
                     <span>{{ cmt.likeCount || 0 }}</span>
                   </button>
 
                   <!-- Creator Heart indicator -->
                   <span
                     v-if="cmt.isHeartedByCreator"
-                    class="flex items-center gap-1 text-rose-400"
+                    class="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
                     :title="appStore.locale === 'ko' ? '게시자가 하트를 눌렀습니다' : 'Hearted by creator'"
                   >
-                    <span>❤️</span>
+                    <svg class="h-3 w-3 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                    <span>Creator Heart</span>
                   </span>
 
                   <!-- Channel Owner controls: Heart & Pin -->
                   <button
                     v-if="appStore.currentUser?.id && activeVideo.channel?.ownerId && appStore.currentUser.id === activeVideo.channel.ownerId"
                     type="button"
-                    class="flex items-center gap-1 transition hover:text-white"
-                    :class="cmt.isHeartedByCreator ? 'text-rose-400' : 'text-neutral-400'"
+                    class="flex items-center gap-1 transition hover:text-slate-900"
+                    :class="cmt.isHeartedByCreator ? 'text-red-700 font-semibold' : 'text-slate-500'"
                     @click="handleHeartComment(cmt)"
                   >
-                    <span>{{ cmt.isHeartedByCreator ? '❤️' : '🤍' }}</span>
                     <span>{{ appStore.locale === 'ko' ? '하트' : 'Heart' }}</span>
                   </button>
                   <button
                     v-if="appStore.currentUser?.id && activeVideo.channel?.ownerId && appStore.currentUser.id === activeVideo.channel.ownerId"
                     type="button"
-                    class="flex items-center gap-1 transition hover:text-white"
-                    :class="cmt.isPinned ? 'text-amber-300 font-semibold' : 'text-neutral-400'"
+                    class="flex items-center gap-1 transition hover:text-slate-900"
+                    :class="cmt.isPinned ? 'text-amber-700 font-semibold' : 'text-slate-500'"
                     @click="handlePinComment(cmt)"
                   >
-                    <span>📌</span>
                     <span>{{ cmt.isPinned ? (appStore.locale === 'ko' ? '고정 해제' : 'Unpin') : (appStore.locale === 'ko' ? '고정' : 'Pin') }}</span>
                   </button>
 
                   <button
                     type="button"
-                    class="font-semibold transition hover:text-white"
+                    class="font-semibold transition hover:text-slate-900"
                     @click="replyTargetId = replyTargetId === cmt.id ? null : cmt.id"
                   >
                     {{ appStore.locale === 'ko' ? '답글' : 'Reply' }}
@@ -752,7 +763,7 @@ const relatedVideos = [
                   <button
                     v-if="cmt.userId === appStore.currentUser?.id"
                     type="button"
-                    class="text-red-400 transition hover:underline"
+                    class="text-red-600 transition hover:underline"
                     @click="removeComment(cmt.id)"
                   >
                     {{ appStore.locale === 'ko' ? '삭제' : 'Delete' }}
@@ -765,12 +776,12 @@ const relatedVideos = [
                     v-model="replyText"
                     type="text"
                     :placeholder="appStore.locale === 'ko' ? '답글 작성...' : 'Write a reply...'"
-                    class="flex-1 rounded-lg border border-white/15 bg-[#161616] px-3 py-1.5 text-xs text-white outline-none focus:border-[#3EA6FF]"
+                    class="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
                     @keydown.enter="submitReply(cmt.id)"
                   />
                   <button
                     type="button"
-                    class="rounded-lg bg-[#3EA6FF] px-3 py-1.5 text-xs font-bold text-black transition hover:bg-[#65B8FF]"
+                    class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
                     @click="submitReply(cmt.id)"
                   >
                     {{ appStore.locale === 'ko' ? '등록' : 'Send' }}
@@ -781,7 +792,7 @@ const relatedVideos = [
                 <div v-if="cmt.replies && cmt.replies.length > 0" class="mt-3">
                   <button
                     type="button"
-                    class="flex items-center gap-1.5 text-xs font-bold text-[#3EA6FF] transition hover:text-[#65B8FF]"
+                    class="flex items-center gap-1.5 text-xs font-bold text-blue-700 transition hover:underline tabular-nums"
                     @click="toggleExpandReplies(cmt.id)"
                   >
                     <span>{{ expandedReplies[cmt.id] ? '▲' : '▼' }}</span>
@@ -790,40 +801,42 @@ const relatedVideos = [
                     </span>
                   </button>
 
-                  <div v-if="expandedReplies[cmt.id]" class="mt-3 space-y-3 border-l-2 border-white/10 pl-4">
+                  <div v-if="expandedReplies[cmt.id]" class="mt-3 space-y-3 border-l-2 border-slate-200 pl-4">
                     <article v-for="reply in cmt.replies" :key="reply.id" class="flex items-start gap-2.5">
                       <img
                         :src="reply.author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
                         :alt="reply.author?.displayName"
-                        class="h-7 w-7 shrink-0 rounded-full object-cover"
+                        class="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover"
                       />
                       <div class="flex-1 text-xs">
                         <div class="flex items-center gap-2">
-                          <span class="font-semibold text-white">{{ reply.author?.displayName || 'User' }}</span>
+                          <span class="font-semibold text-slate-900">{{ reply.author?.displayName || 'User' }}</span>
                           <span
                             v-if="reply.isChannelOwner || reply.author?.isCreator"
-                            class="rounded-full bg-[#3EA6FF]/20 px-1.5 py-0.2 text-[9px] font-bold text-[#3EA6FF]"
+                            class="rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700"
                           >
                             {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
                           </span>
-                          <span class="text-neutral-400">
+                          <span class="text-slate-400 tabular-nums">
                             {{ new Date(reply.createdAt).toLocaleDateString() }}
                           </span>
                         </div>
-                        <p class="mt-0.5 text-neutral-200">{{ reply.content }}</p>
-                        <div class="mt-1 flex items-center gap-3 text-neutral-400">
+                        <p class="mt-0.5 text-slate-700">{{ reply.content }}</p>
+                        <div class="mt-1 flex items-center gap-3 text-slate-500">
                           <button
                             type="button"
-                            class="flex items-center gap-1 transition hover:text-white"
+                            class="flex items-center gap-1 transition hover:text-slate-900 tabular-nums"
                             @click="handleLikeComment(reply)"
                           >
-                            <span>👍</span>
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                            </svg>
                             <span>{{ reply.likeCount || 0 }}</span>
                           </button>
                           <button
                             v-if="reply.userId === appStore.currentUser?.id"
                             type="button"
-                            class="text-red-400 hover:underline"
+                            class="text-red-600 hover:underline"
                             @click="removeComment(reply.id, cmt.id)"
                           >
                             {{ appStore.locale === 'ko' ? '삭제' : 'Delete' }}
@@ -841,7 +854,7 @@ const relatedVideos = [
 
       <!-- Right Sidebar: Related & Up Next Videos -->
       <aside class="xl:col-span-4">
-        <h2 class="mb-3 text-sm font-bold uppercase tracking-wider text-neutral-400">
+        <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
           {{ appStore.locale === 'ko' ? '다음 추천 동영상 (Up Next)' : 'Up Next & Related' }}
         </h2>
         <div class="flex flex-col gap-3">
@@ -849,20 +862,20 @@ const relatedVideos = [
             v-for="item in relatedVideos"
             :key="item.id"
             :to="`/watch/${item.id}`"
-            class="group flex gap-3 rounded-xl p-1.5 transition hover:bg-white/5"
+            class="group flex gap-3 rounded-lg border border-transparent p-1.5 transition hover:border-slate-200 hover:bg-slate-50"
           >
-            <div class="relative aspect-video w-44 shrink-0 overflow-hidden rounded-xl bg-[#1F1F1F]">
-              <img :src="item.thumbnailUrl" :alt="item.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-              <span class="absolute bottom-1.5 right-1.5 rounded bg-black/85 px-1.5 py-0.5 font-mono text-[11px] text-white">
+            <div class="relative aspect-video w-44 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+              <img :src="item.thumbnailUrl" :alt="item.title" class="h-full w-full object-cover" />
+              <span class="absolute bottom-1.5 right-1.5 rounded-md border border-slate-200 bg-white/95 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-900 tabular-nums">
                 {{ item.duration }}
               </span>
             </div>
             <div class="min-w-0 flex-1">
-              <h3 class="line-clamp-2 text-xs font-semibold leading-snug text-white group-hover:text-[#3EA6FF]">
+              <h3 class="line-clamp-2 text-xs font-semibold leading-snug text-slate-900 group-hover:text-blue-600">
                 {{ item.title }}
               </h3>
-              <p class="mt-1 text-[11px] text-neutral-400">{{ item.channelName }}</p>
-              <p class="text-[11px] text-neutral-400">{{ item.views }}</p>
+              <p class="mt-1 text-[11px] text-slate-600">{{ item.channelName }}</p>
+              <p class="text-[11px] text-slate-500 tabular-nums">{{ item.views }}</p>
             </div>
           </NuxtLink>
         </div>
@@ -872,23 +885,23 @@ const relatedVideos = [
     <!-- Report Modal -->
     <div
       v-if="showReportModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       @mousedown.self="closeReportModal"
       @keydown="onReportModalKeydown"
     >
       <div
-        class="w-full max-w-md rounded-2xl border border-white/15 bg-[#212121] p-6 text-white shadow-2xl"
+        class="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 text-slate-900 shadow-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-modal-title"
       >
-        <h3 id="report-modal-title" class="text-base font-bold">
+        <h3 id="report-modal-title" class="text-base font-bold text-slate-900">
           {{ appStore.locale === 'ko' ? '콘텐츠 신고 (Trust & Safety Report)' : 'Report Video to Trust & Safety' }}
         </h3>
-        <p class="mt-1 text-xs text-neutral-400">
+        <p class="mt-1 text-xs text-slate-500">
           Reports are queued directly to the Moderation Engine (`/v1/admin/moderation`).
         </p>
-        <div class="mt-4 space-y-2 text-xs">
+        <div class="mt-4 space-y-2 text-xs text-slate-700">
           <label class="flex items-center gap-2">
             <input v-model="reportReason" type="radio" value="copyright_or_policy" />
             <span>Copyright infringement or unauthorized re-upload</span>
@@ -902,16 +915,16 @@ const relatedVideos = [
             <span>Harmful, hateful, or age-inappropriate content</span>
           </label>
         </div>
-        <p v-if="reportSubmitted" class="mt-3 text-xs font-semibold text-emerald-400" role="status">
-          ✓ Report {{ reportCaseId }} received. Our Trust & Safety team will review it shortly.
+        <p v-if="reportSubmitted" class="mt-3 rounded-md border border-green-200 bg-green-50 p-2 text-xs font-semibold text-green-700" role="status">
+          Report {{ reportCaseId }} received. Our Trust & Safety team will review it shortly.
         </p>
-        <p v-if="reportError" class="mt-3 text-xs font-semibold text-red-400" role="alert">
+        <p v-if="reportError" class="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
           {{ reportError }}
         </p>
         <div class="mt-5 flex justify-end gap-2">
           <button
             type="button"
-            class="rounded-full px-4 py-1.5 text-xs text-neutral-300 hover:bg-white/10"
+            class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             @click="closeReportModal"
           >
             Close
@@ -919,7 +932,7 @@ const relatedVideos = [
           <button
             type="button"
             :disabled="reportSubmitting || reportSubmitted"
-            class="rounded-full bg-[#FF0033] px-4 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+            class="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             @click="submitReport"
           >
             {{ reportSubmitting ? 'Submitting…' : 'Submit Report' }}

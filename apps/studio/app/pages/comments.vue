@@ -87,60 +87,59 @@ async function removeComment(cmt: Comment) {
 </script>
 
 <template>
-  <div class="max-w-6xl">
-    <div class="flex flex-wrap items-center justify-between gap-4">
+  <div class="max-w-6xl space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
       <div>
-        <h1 class="text-2xl font-extrabold text-white">채널 댓글 및 검토 관리 (Comments & Mentions)</h1>
-        <p class="mt-1 text-xs text-neutral-400">
+        <h1 class="text-xl font-semibold tracking-tight text-slate-900">채널 댓글 및 검토 관리 (Comments &amp; Mentions)</h1>
+        <p class="mt-1 text-xs text-slate-500">
           내 채널 영상에 달린 댓글을 하트·고정·삭제하고 시청자와 소통하세요
         </p>
       </div>
     </div>
 
-    <GvpBanner v-if="actionError" tone="danger" dismissible class="mt-4" @dismiss="actionError = null">
+    <GvpBanner v-if="actionError" tone="danger" dismissible @dismiss="actionError = null">
       {{ actionError }}
     </GvpBanner>
 
     <!-- Filter Bar -->
-    <div class="mt-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-3">
-      <p class="text-sm font-semibold text-white" role="status">
-        전체 댓글 <span class="text-[#3EA6FF]">{{ total.toLocaleString() }}</span>개
+    <div class="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
+      <p class="text-sm font-medium text-slate-900 tabular-nums" role="status">
+        전체 댓글 <span class="font-semibold text-slate-900">{{ total.toLocaleString() }}</span>개
       </p>
-      <label class="flex items-center gap-2 text-xs text-neutral-400">
-        검색
+      <label class="flex items-center gap-2 text-xs font-medium text-slate-600">
+        <span>검색</span>
         <input
           v-model="searchQuery"
           type="search"
           placeholder="댓글 내용 또는 작성자..."
-          class="w-64 rounded-xl border border-white/15 bg-[#151822] px-3 py-1.5 text-xs text-white outline-none focus:border-[#3EA6FF]"
+          class="h-9 w-64 rounded-md border border-slate-300 bg-slate-50 px-3 text-xs text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
         />
       </label>
     </div>
 
     <!-- Loading -->
-    <div v-if="pending" class="mt-6 space-y-4" role="status" aria-label="불러오는 중">
-      <div v-for="n in 4" :key="n" class="h-28 animate-pulse rounded-2xl bg-white/5" />
+    <div v-if="pending" class="space-y-3" role="status" aria-label="불러오는 중">
+      <div v-for="n in 4" :key="n" class="h-24 animate-pulse rounded-lg bg-slate-100" />
     </div>
 
     <!-- Error -->
-    <GvpBanner v-else-if="error" tone="danger" class="mt-6">
-      댓글을 불러오지 못했습니다. <button type="button" class="font-bold underline" @click="refresh()">다시 시도</button>
+    <GvpBanner v-else-if="error" tone="danger">
+      댓글을 불러오지 못했습니다. <button type="button" class="font-semibold underline" @click="refresh()">다시 시도</button>
     </GvpBanner>
 
     <!-- Empty -->
     <GvpEmptyState
       v-else-if="filteredComments.length === 0"
-      class="mt-6"
       title="표시할 댓글이 없습니다"
       :description="searchQuery ? '검색어를 바꾸거나 필터를 초기화하세요.' : '아직 채널 영상에 댓글이 없습니다.'"
     />
 
     <!-- Comments List -->
-    <div v-else class="mt-6 space-y-4">
+    <div v-else class="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
       <div
         v-for="cmt in filteredComments"
         :key="cmt.id"
-        class="flex items-start gap-4 rounded-2xl border border-white/10 bg-[#151822] p-4 text-xs"
+        class="flex items-start gap-4 p-4 text-xs hover:bg-slate-50 transition-colors"
       >
         <img
           v-if="cmt.author.avatarUrl"
@@ -150,39 +149,41 @@ async function removeComment(cmt: Comment) {
         />
         <span
           v-else
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3EA6FF]/20 text-sm font-black text-[#3EA6FF]"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700"
           aria-hidden="true"
         >
           {{ initials(cmt.author.displayName) }}
         </span>
         <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="font-bold text-white">{{ cmt.author.displayName }}</span>
-            <span class="text-neutral-400">· {{ formatDate(cmt.createdAt) }}</span>
-            <span class="text-neutral-500">· ♥ {{ cmt.likeCount.toLocaleString() }}</span>
-            <span v-if="cmt.isPinned" class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-neutral-300">
+          <div class="flex flex-wrap items-center gap-2 tabular-nums">
+            <span class="font-semibold text-slate-900">{{ cmt.author.displayName }}</span>
+            <span class="text-slate-400">· {{ formatDate(cmt.createdAt) }}</span>
+            <span class="text-slate-500">· Likes {{ cmt.likeCount.toLocaleString() }}</span>
+            <span v-if="cmt.isPinned" class="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
               Pinned
             </span>
-            <span v-if="cmt.isHeartedByCreator" class="text-rose-400" title="크리에이터 하트">♥</span>
+            <span v-if="cmt.isHeartedByCreator" class="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700" title="크리에이터 하트">
+              Creator Hearted
+            </span>
           </div>
 
-          <p class="mt-0.5 font-mono text-[11px] text-[#3EA6FF]">on video: {{ cmt.videoId }}</p>
-          <p class="mt-2 text-sm text-neutral-200">{{ cmt.content }}</p>
+          <p class="mt-0.5 font-mono text-[11px] text-slate-500">on video: {{ cmt.videoId }}</p>
+          <p class="mt-2 text-sm text-slate-900">{{ cmt.content }}</p>
 
           <!-- Actions -->
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
-              class="rounded-lg bg-white/10 px-2.5 py-1 text-white hover:bg-white/20 disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
               @click="toggleHeart(cmt)"
             >
-              {{ cmt.isHeartedByCreator ? '♥ 하트 취소' : '♡ 하트' }}
+              {{ cmt.isHeartedByCreator ? '하트 취소' : '하트' }}
             </button>
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
-              class="rounded-lg bg-white/10 px-2.5 py-1 text-white hover:bg-white/20 disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
               @click="togglePin(cmt)"
             >
               {{ cmt.isPinned ? '고정 해제' : '상단 고정' }}
@@ -190,7 +191,7 @@ async function removeComment(cmt: Comment) {
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
-              class="rounded-lg bg-red-600/20 px-2.5 py-1 font-bold text-red-400 hover:bg-red-600/40 disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-40"
               @click="removeComment(cmt)"
             >
               삭제
@@ -201,20 +202,20 @@ async function removeComment(cmt: Comment) {
     </div>
 
     <!-- Pagination -->
-    <div v-if="!pending && !error && totalPages > 1" class="mt-6 flex items-center justify-center gap-2 text-xs">
+    <div v-if="!pending && !error && totalPages > 1" class="flex items-center justify-center gap-3 text-xs">
       <button
         type="button"
         :disabled="page <= 1"
-        class="rounded-lg border border-white/15 px-3 py-1.5 text-neutral-200 disabled:opacity-40"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
         @click="page -= 1"
       >
         이전
       </button>
-      <span class="text-neutral-400" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
+      <span class="text-slate-500 tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
       <button
         type="button"
         :disabled="page >= totalPages"
-        class="rounded-lg border border-white/15 px-3 py-1.5 text-neutral-200 disabled:opacity-40"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
         @click="page += 1"
       >
         다음

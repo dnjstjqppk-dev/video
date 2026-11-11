@@ -1,0 +1,8 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+name = "global-video-platform-api"
+main = "./worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# API_UPSTREAM is set as a secret (the quick-tunnel URL of the operator PC):
+#   echo <tunnel-url> | wrangler secret put API_UPSTREAM

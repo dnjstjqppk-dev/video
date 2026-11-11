@@ -78,37 +78,39 @@ async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAc
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-extrabold text-white">저작권 권리자 및 Content ID 콘솔 (Rights Owner Console)</h1>
-    <p class="mt-1 text-xs text-neutral-400">
-      Register SHA-256 & perceptual audio/video fingerprints · Enforce territory rules (Monetize / Track / Block) · Resolve creator counter-disputes
-    </p>
+  <div class="space-y-6">
+    <div class="border-b border-slate-200 pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-slate-900">저작권 권리자 및 Content ID 콘솔 (Rights Owner Console)</h1>
+      <p class="mt-1 text-sm text-slate-600">
+        Register SHA-256 &amp; perceptual audio/video fingerprints · Enforce territory rules (Monetize / Track / Block) · Resolve creator counter-disputes
+      </p>
+    </div>
 
     <!-- Register Reference Fingerprint Asset -->
-    <form class="mt-6 rounded-2xl border border-white/10 bg-[#141A2C] p-6" @submit.prevent="registerReferenceAsset">
-      <h2 class="text-sm font-bold text-white">신규 원본 레퍼런스 자산 및 핑거프린트 등록</h2>
+    <form class="rounded-lg border border-slate-200 bg-white p-6" @submit.prevent="registerReferenceAsset">
+      <h2 class="text-sm font-semibold text-slate-900">신규 원본 레퍼런스 자산 및 핑거프린트 등록</h2>
       <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
-          <label class="text-xs text-neutral-400">Reference Asset Title</label>
+          <label class="text-xs font-medium text-slate-700">Reference Asset Title</label>
           <input
             v-model="newAssetTitle"
             type="text"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs text-neutral-400">SHA-256 & Chromaprint Hash</label>
+          <label class="text-xs font-medium text-slate-700">SHA-256 &amp; Chromaprint Hash</label>
           <input
             v-model="newAssetSha256"
             type="text"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 font-mono text-xs text-[#3EA6FF]"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 font-mono text-xs text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs text-neutral-400">Default Global Territory Match Policy</label>
+          <label class="text-xs font-medium text-slate-700">Default Global Territory Match Policy</label>
           <select
             v-model="defaultTerritoryPolicy"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
           >
             <option :value="CopyrightClaimAction.MONETIZE">Monetize (Route Ad Revenue to Rights Owner)</option>
             <option :value="CopyrightClaimAction.TRACK">Track Only (Collect View Telemetry)</option>
@@ -117,75 +119,75 @@ async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAc
         </div>
       </div>
 
-      <div class="mt-4 flex items-center justify-between">
-        <span v-if="assetRegisteredToast" class="text-xs font-bold text-emerald-400">
-          ✓ Reference fingerprint indexed in real-time upload verification engine.
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+        <span v-if="assetRegisteredToast" class="text-xs font-medium text-emerald-700">
+          Reference fingerprint indexed in real-time upload verification engine.
         </span>
-        <span v-else class="text-xs text-neutral-400">Automatically scans all new R2 uploads during VALIDATING stage.</span>
+        <span v-else class="text-xs text-slate-500">Automatically scans all new R2 uploads during VALIDATING stage.</span>
         <button
           type="submit"
-          class="rounded-xl bg-[#3EA6FF] px-5 py-2 text-xs font-bold text-black hover:bg-[#65B8FF]"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
         >
-          🛡️ Register Reference Asset
+          Register Reference Asset
         </button>
       </div>
     </form>
 
     <!-- Suspected Infringement Matches & Creator Counter-Disputes -->
-    <div class="mt-6 rounded-2xl border border-white/10 bg-[#141A2C] p-5">
-      <h2 class="text-sm font-bold text-white">Content ID 매칭 목록 및 크리에이터 이의 신청 처리</h2>
+    <div class="rounded-lg border border-slate-200 bg-white p-6">
+      <h2 class="text-sm font-semibold text-slate-900">Content ID 매칭 목록 및 크리에이터 이의 신청 처리</h2>
 
       <div class="mt-4 space-y-4">
         <div
           v-for="claim in claims"
           :key="claim.id"
-          class="rounded-xl border border-white/10 bg-[#0B0E17] p-4 text-xs"
+          class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm"
         >
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <span class="font-mono font-bold text-[#3EA6FF]">{{ claim.id }}</span>
-              <span class="ml-2 font-bold text-white">Target Video: {{ claim.claimedVideoId }}</span>
-              <span class="ml-2 text-neutral-400">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-800 tabular-nums">{{ claim.id }}</span>
+              <span class="font-semibold text-slate-900">Target Video: {{ claim.claimedVideoId }}</span>
+              <span class="text-xs text-slate-600 tabular-nums">
                 Segment: {{ claim.matchStartSeconds }}s – {{ claim.matchEndSeconds }}s (Confidence: {{ claim.matchConfidence }}%)
               </span>
             </div>
             <span
-              class="rounded px-2.5 py-0.5 text-[10px] font-bold uppercase"
-              :class="claim.status === CopyrightClaimStatus.DISPUTED ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'"
+              class="rounded-md px-2.5 py-0.5 text-xs font-medium uppercase"
+              :class="claim.status === CopyrightClaimStatus.DISPUTED ? 'border border-amber-200 bg-amber-50 text-amber-800' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'"
             >
               {{ claim.status }} · Policy: {{ claim.claimAction.toUpperCase() }}
             </span>
           </div>
 
-          <div v-if="claim.disputeReason" class="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-amber-200">
-            <p class="font-bold">⚠️ Creator Counter-Dispute Filed:</p>
-            <p class="mt-1">"{{ claim.disputeReason }}"</p>
-            <p class="mt-1 text-[11px] text-neutral-300">
+          <div v-if="claim.disputeReason" class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            <p class="font-semibold">Creator Counter-Dispute Filed</p>
+            <p class="mt-1 text-slate-700">"{{ claim.disputeReason }}"</p>
+            <p class="mt-1 text-slate-500">
               Note: Ad revenue is held in the Double-Entry Escrow Account until resolved.
             </p>
           </div>
 
-          <div class="mt-3 flex flex-wrap gap-2">
+          <div class="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
-              class="rounded-lg bg-emerald-500/20 px-3 py-1.5 font-bold text-emerald-300 hover:bg-emerald-500/30"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
               @click="updateClaimAction(claim, CopyrightClaimAction.MONETIZE)"
             >
-              💰 Monetize (Claim Revenue)
+              Monetize (Claim Revenue)
             </button>
             <button
               type="button"
-              class="rounded-lg bg-blue-500/20 px-3 py-1.5 font-bold text-blue-300 hover:bg-blue-500/30"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
               @click="updateClaimAction(claim, CopyrightClaimAction.TRACK)"
             >
-              📊 Track Only (Release Escrow to Creator)
+              Track Only (Release Escrow to Creator)
             </button>
             <button
               type="button"
-              class="rounded-lg bg-red-500/20 px-3 py-1.5 font-bold text-red-300 hover:bg-red-500/30"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
               @click="updateClaimAction(claim, CopyrightClaimAction.BLOCK)"
             >
-              ⛔ Enforce Block Worldwide
+              Enforce Block Worldwide
             </button>
           </div>
         </div>

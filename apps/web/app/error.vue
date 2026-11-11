@@ -11,24 +11,26 @@ const handleError = () => clearError({ redirect: '/' })
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center bg-[#0F0F0F] px-4 text-center text-white">
-    <div class="max-w-md rounded-2xl border border-white/10 bg-[#141414] p-8 shadow-2xl">
-      <span class="rounded-full bg-red-500/15 px-3 py-1 font-mono text-xs font-bold text-red-400">
+  <div class="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-center text-slate-900">
+    <div class="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6">
+      <span class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2.5 py-0.5 font-mono text-xs font-medium text-red-700 tabular-nums">
         HTTP {{ error.statusCode || 404 }}
       </span>
-      <h1 class="mt-4 text-2xl font-black tracking-tight">
-        {{ is404 ? '페이지를 찾을 수 없습니다' : '오류가 발생했습니다' }}
+      <h1 class="mt-4 text-xl font-bold tracking-tight text-slate-900">
+        {{ is404 ? '페이지를 찾을 수 없습니다' : '요청을 처리할 수 없습니다' }}
       </h1>
-      <p class="mt-2 text-xs text-neutral-400">
-        {{ error.statusMessage || (is404 ? '요청하신 주소는 존재하지 않거나 이전되었습니다.' : '일시적인 서버 문제가 발생했습니다.') }}
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+        {{ error.statusMessage || (is404 ? '요청하신 주소는 존재하지 않거나 이동되었습니다.' : '일시적인 서버 오류가 발생했습니다.') }}
       </p>
-      <button
-        type="button"
-        class="mt-6 rounded-full bg-[#FF0033] px-6 py-2.5 text-xs font-bold text-white transition hover:bg-[#D9002B]"
-        @click="handleError"
-      >
-        홈으로 이동
-      </button>
+      <div class="mt-6">
+        <button
+          type="button"
+          class="inline-flex h-9 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+          @click="handleError"
+        >
+          홈으로 돌아가기
+        </button>
+      </div>
     </div>
   </div>
 </template>

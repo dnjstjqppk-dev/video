@@ -144,12 +144,12 @@ function splitLeft(point: number): string {
 </script>
 
 <template>
-  <div class="editor">
-    <div class="editor__header">
+  <div class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
       <div>
-        <h1 class="editor__title">Video Editor</h1>
-        <p class="editor__subtitle">
-          Video ID: <code class="editor__code">{{ videoId }}</code>
+        <h1 class="text-xl font-semibold tracking-tight text-slate-900">Video Editor</h1>
+        <p class="mt-1 text-xs text-slate-500 tabular-nums">
+          Video ID: <code class="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-slate-900">{{ videoId }}</code>
           <span v-if="video"> · {{ video.title }} · {{ duration }}s · Non-destructive: the source, URL, views, and comments are preserved.</span>
         </p>
       </div>
@@ -157,13 +157,14 @@ function splitLeft(point: number): string {
         variant="primary"
         :loading="dispatching || polling"
         :disabled="videoPending || !!videoError || !video"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
         @click="dispatchRenderJob"
       >
         Save &amp; Dispatch Render Job
       </GvpButton>
     </div>
 
-    <div v-if="videoPending" class="editor__loading">
+    <div v-if="videoPending" class="grid gap-3">
       <GvpSkeleton />
       <GvpSkeleton />
     </div>
@@ -177,76 +178,89 @@ function splitLeft(point: number): string {
     />
 
     <template v-else>
-      <GvpBanner v-if="job" :tone="jobTone" class="editor__banner">
-        <strong>Render job {{ job.jobId }} — {{ job.status }}</strong><br />
+      <GvpBanner v-if="job" :tone="jobTone">
+        <strong class="tabular-nums">Render job {{ job.jobId }} — {{ job.status }}</strong><br />
         {{ jobMessage }}
       </GvpBanner>
-      <GvpBanner v-if="jobError" tone="danger" class="editor__banner">
+      <GvpBanner v-if="jobError" tone="danger">
         {{ jobError }}
-        <button type="button" class="editor__link" @click="refreshVideo()">Retry loading video</button>
+        <button type="button" class="ml-2 font-semibold underline" @click="refreshVideo()">Retry loading video</button>
       </GvpBanner>
 
-      <div class="editor__grid">
-        <section class="editor__panel editor__preview" aria-label="Preview and timeline">
-          <div class="editor__frame">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section class="rounded-lg border border-slate-200 bg-white p-5 lg:col-span-2" aria-label="Preview and timeline">
+          <div class="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
             <img
               v-if="video.thumbnailUrl"
               :src="video.thumbnailUrl"
               :alt="`Preview frame of ${video.title}`"
-              class="editor__frame-img"
+              class="h-full w-full object-cover"
             />
-            <div v-else class="editor__frame-fallback" role="img" :aria-label="`No thumbnail for ${video.title}`">
+            <div v-else class="flex h-full items-center justify-center p-8 text-center text-sm font-medium text-slate-600 bg-slate-50" role="img" :aria-label="`No thumbnail for ${video.title}`">
               {{ video.title }}
             </div>
             <div
               v-for="box in blurRegions"
               :key="box.id"
-              class="editor__blur-box"
+              class="absolute flex h-16 w-36 items-center justify-center rounded-md border-2 border-slate-900 bg-white/90 text-[11px] font-semibold text-slate-900"
               :style="{ left: `${box.x}%`, top: `${box.y}%` }"
             >
               {{ box.label }}
             </div>
           </div>
 
-          <div class="editor__timeline">
-            <div class="editor__timeline-head">
-              <span class="editor__timeline-title">Timeline (Trim: {{ trimStart }}s – {{ trimEnd }}s of {{ duration }}s)</span>
-              <div class="editor__timeline-actions">
-                <GvpButton variant="secondary" size="sm" @click="addSplitAtPlayhead">Split at midpoint</GvpButton>
-                <GvpButton variant="secondary" size="sm" @click="addBlurRegion">Add blur region</GvpButton>
+          <div class="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <span class="font-semibold text-slate-900 tabular-nums">Timeline (Trim: {{ trimStart }}s – {{ trimEnd }}s of {{ duration }}s)</span>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                  @click="addSplitAtPlayhead"
+                >
+                  Split at midpoint
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                  @click="addBlurRegion"
+                >
+                  Add blur region
+                </button>
               </div>
             </div>
 
-            <div class="editor__track editor__track--video" aria-label="Video track with split points">
-              <span>Video track</span>
+            <div class="relative w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900" aria-label="Video track with split points">
+              <span class="font-medium">Video track</span>
               <button
                 v-for="sp in splitPoints"
                 :key="sp"
                 type="button"
-                class="editor__split"
+                class="absolute top-0 h-full w-1 -ml-0.5 cursor-pointer rounded-md bg-slate-900 hover:bg-slate-700"
                 :style="{ left: splitLeft(sp) }"
                 :title="`Split at ${sp}s — activate to remove`"
                 :aria-label="`Remove split at ${sp} seconds`"
                 @click="removeSplit(sp)"
               />
-              <span v-if="splitPoints.length === 0" class="editor__track-hint">No splits — the trim plays straight through.</span>
+              <span v-if="splitPoints.length === 0" class="ml-2 text-slate-500">No splits — the trim plays straight through.</span>
             </div>
 
-            <div class="editor__track editor__track--blur">
-              Blur regions: {{ blurRegions.length }} active mask(s)
+            <div class="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-700 tabular-nums">
+              <span>Blur regions: {{ blurRegions.length }} active mask(s)</span>
               <button
                 v-for="box in blurRegions"
                 :key="box.id"
                 type="button"
-                class="editor__chip"
+                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
                 :title="`Remove ${box.label}`"
                 @click="removeBlurRegion(box.id)"
               >
-                {{ box.label }} ✕
+                <span>{{ box.label }}</span>
+                <span class="text-slate-500">(Remove)</span>
               </button>
             </div>
 
-            <div class="editor__track editor__track--audio">
+            <div class="rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-700 tabular-nums">
               <template v-if="mutedSegments.length > 0">
                 Muted {{ mutedSegments[0]?.startSec }}s–{{ mutedSegments[0]?.endSec }}s · {{ replacementAudio }}
               </template>
@@ -257,45 +271,51 @@ function splitLeft(point: number): string {
           </div>
         </section>
 
-        <aside class="editor__panel editor__inspector" aria-label="Edit decision list controls">
-          <h2 class="editor__inspector-title">Edit Decision List</h2>
+        <aside class="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 text-xs" aria-label="Edit decision list controls">
+          <h2 class="text-sm font-semibold text-slate-900">Edit Decision List</h2>
 
-          <div class="editor__fields">
-            <div class="editor__field">
-              <label for="editor-trim-in">Trim in (sec)</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label for="editor-trim-in" class="font-medium text-slate-600">Trim in (sec)</label>
               <input
                 id="editor-trim-in"
                 v-model.number="trimStart"
                 type="number"
                 min="0"
                 :max="duration"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 tabular-nums outline-none focus:border-slate-900"
               />
             </div>
-            <div class="editor__field">
-              <label for="editor-trim-out">Trim out (sec)</label>
+            <div class="flex flex-col gap-1.5">
+              <label for="editor-trim-out" class="font-medium text-slate-600">Trim out (sec)</label>
               <input
                 id="editor-trim-out"
                 v-model.number="trimEnd"
                 type="number"
                 min="0"
                 :max="duration"
+                class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 tabular-nums outline-none focus:border-slate-900"
               />
             </div>
           </div>
-          <p v-if="trimEnd <= trimStart" class="editor__field-error" role="alert">
+          <p v-if="trimEnd <= trimStart" class="font-semibold text-red-600 tabular-nums" role="alert">
             Trim out must be greater than trim in (0–{{ duration }}s).
           </p>
 
-          <div class="editor__field">
-            <label for="editor-audio">Audio replacement (resolves copyright claims)</label>
-            <select id="editor-audio" v-model="replacementAudio">
+          <div class="flex flex-col gap-1.5">
+            <label for="editor-audio" class="font-medium text-slate-600">Audio replacement (resolves copyright claims)</label>
+            <select
+              id="editor-audio"
+              v-model="replacementAudio"
+              class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900"
+            >
               <option>Royalty-Free Synthwave Ambient #04 (StreamVerse Audio Library)</option>
               <option>Lo-Fi Chill Coding Beats #12 (Cleared Global License)</option>
               <option>Mute Claimed Segment Only (Preserve Speech via AI Stem Split)</option>
             </select>
           </div>
 
-          <p class="editor__note">
+          <p class="leading-relaxed text-slate-500">
             Dispatch sends this EDL to the media worker render queue. The original file keeps serving until the edited rendition is ready.
           </p>
         </aside>
@@ -303,41 +323,3 @@ function splitLeft(point: number): string {
     </template>
   </div>
 </template>
-
-<style scoped>
-.editor { display: flex; flex-direction: column; gap: 1rem; }
-.editor__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
-.editor__title { font-size: 1.5rem; font-weight: 800; color: var(--gvp-text); }
-.editor__subtitle { margin-top: 0.25rem; font-size: 0.75rem; color: var(--gvp-text-muted); }
-.editor__code { color: var(--gvp-link); font-family: var(--gvp-font-mono); }
-.editor__loading { display: grid; gap: 0.75rem; }
-.editor__banner { margin-top: 0.25rem; }
-.editor__link { background: none; border: none; padding: 0; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
-.editor__grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-@media (min-width: 1024px) { .editor__grid { grid-template-columns: 2fr 1fr; } }
-.editor__panel { border: 1px solid var(--gvp-border); background: var(--gvp-surface-1); border-radius: var(--gvp-radius-xl); padding: 1rem; }
-.editor__frame { position: relative; aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border-radius: var(--gvp-radius-md); background: #000; }
-.editor__frame-img { height: 100%; width: 100%; object-fit: cover; }
-.editor__frame-fallback { display: flex; height: 100%; align-items: center; justify-content: center; padding: 2rem; text-align: center; color: var(--gvp-text-secondary); background: linear-gradient(135deg, var(--gvp-surface-2), var(--gvp-surface-3)); }
-.editor__blur-box { position: absolute; display: flex; height: 4rem; width: 9rem; align-items: center; justify-content: center; border: 2px solid var(--gvp-link); border-radius: var(--gvp-radius-md); background: rgba(0, 0, 0, 0.5); color: var(--gvp-text); font-size: 0.625rem; font-weight: 700; backdrop-filter: blur(6px); }
-.editor__timeline { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; border: 1px solid var(--gvp-border); border-radius: var(--gvp-radius-md); background: var(--gvp-canvas); padding: 1rem; font-size: 0.75rem; }
-.editor__timeline-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.editor__timeline-title { font-weight: 700; color: var(--gvp-text); }
-.editor__timeline-actions { display: flex; gap: 0.5rem; }
-.editor__track { position: relative; width: 100%; border-radius: var(--gvp-radius-md); padding: 0.375rem 0.75rem; line-height: 1.75rem; color: var(--gvp-text); }
-.editor__track--video { background: var(--gvp-surface-3); }
-.editor__track--blur { background: var(--gvp-info-soft); color: var(--gvp-text-secondary); }
-.editor__track--audio { background: var(--gvp-warning-soft); color: var(--gvp-text-secondary); }
-.editor__track-hint { margin-left: 0.5rem; color: var(--gvp-text-faint); }
-.editor__split { position: absolute; top: 0; height: 100%; width: 4px; margin-left: -2px; background: var(--gvp-brand); border: none; border-radius: 2px; cursor: pointer; }
-.editor__split:hover { background: var(--gvp-brand-hover); }
-.editor__chip { margin-left: 0.5rem; border: 1px solid var(--gvp-border-strong); background: var(--gvp-surface-2); color: var(--gvp-text); border-radius: var(--gvp-radius-pill); padding: 0.125rem 0.625rem; font-size: 0.6875rem; cursor: pointer; }
-.editor__inspector { display: flex; flex-direction: column; gap: 1rem; font-size: 0.75rem; }
-.editor__inspector-title { font-size: 0.875rem; font-weight: 700; color: var(--gvp-text); }
-.editor__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.editor__field { display: flex; flex-direction: column; gap: 0.375rem; color: var(--gvp-text-muted); }
-.editor__field input, .editor__field select { width: 100%; border: 1px solid var(--gvp-border-strong); border-radius: var(--gvp-radius-md); background: var(--gvp-canvas); color: var(--gvp-text); padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
-.editor__field input:focus-visible, .editor__field select:focus-visible, .editor__split:focus-visible, .editor__chip:focus-visible { outline: none; box-shadow: var(--gvp-focus-ring); }
-.editor__field-error { color: var(--gvp-danger); font-weight: 600; }
-.editor__note { color: var(--gvp-text-faint); line-height: 1.5; }
-</style>

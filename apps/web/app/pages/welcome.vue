@@ -55,9 +55,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl px-4 py-16 sm:px-6">
-    <p class="text-xs font-bold uppercase tracking-wider text-[#FF0033]">Welcome</p>
-    <h1 class="mt-2 text-3xl font-extrabold">
+  <div class="mx-auto max-w-2xl bg-white px-4 py-16 text-slate-900 sm:px-6">
+    <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Welcome</p>
+    <h1 class="mt-2 text-3xl font-extrabold text-slate-900">
       {{ appStore.locale === 'ko' ? 'StreamVerse 시작하기' : 'Get started with StreamVerse' }}
     </h1>
 
@@ -65,21 +65,21 @@ onMounted(() => {
       <li
         v-for="(_, i) in steps"
         :key="i"
-        class="h-1.5 flex-1 rounded-full"
-        :class="i <= step ? 'bg-[#FF0033]' : 'bg-white/10'"
+        class="h-1.5 flex-1 rounded-md"
+        :class="i <= step ? 'bg-slate-900' : 'bg-slate-200'"
         :aria-current="i === step ? 'step' : undefined"
       />
     </ol>
 
-    <div class="mt-6 rounded-2xl border border-white/10 bg-[#161616] p-6" role="status">
-      <p class="text-xs font-bold text-[#3EA6FF]">Step {{ step + 1 }} / {{ steps.length }}</p>
-      <h2 class="mt-1 text-xl font-bold">{{ steps[step]?.title }}</h2>
-      <p class="mt-2 text-sm text-neutral-300">{{ steps[step]?.body }}</p>
+    <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-6" role="status">
+      <p class="text-xs font-bold text-blue-700 tabular-nums">Step {{ step + 1 }} / {{ steps.length }}</p>
+      <h2 class="mt-1 text-xl font-bold text-slate-900">{{ steps[step]?.title }}</h2>
+      <p class="mt-2 text-sm text-slate-600">{{ steps[step]?.body }}</p>
       <div class="mt-5 flex flex-wrap items-center gap-3">
         <NuxtLink
           v-if="steps[step]?.to"
           :to="steps[step]?.to"
-          class="rounded-full bg-[#FF0033] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#D9002B]"
+          class="rounded-md bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           {{ steps[step]?.cta }}
         </NuxtLink>
@@ -88,15 +88,15 @@ onMounted(() => {
           :href="steps[step]?.href"
           target="_blank"
           rel="noopener noreferrer"
-          class="rounded-full bg-[#FF0033] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#D9002B]"
+          class="rounded-md bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          {{ steps[step]?.cta }} ↗
+          {{ steps[step]?.cta }}
         </a>
         <div class="flex gap-2">
           <button
             v-if="step > 0"
             type="button"
-            class="rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold text-neutral-200 hover:bg-white/10"
+            class="rounded-md border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             @click="back"
           >
             {{ appStore.locale === 'ko' ? '이전' : 'Back' }}
@@ -104,7 +104,7 @@ onMounted(() => {
           <button
             v-if="step < steps.length - 1"
             type="button"
-            class="rounded-full border border-white/15 px-5 py-2.5 text-sm font-bold text-neutral-200 hover:bg-white/10"
+            class="rounded-md border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             @click="next"
           >
             {{ appStore.locale === 'ko' ? '다음' : 'Next' }}
@@ -112,7 +112,7 @@ onMounted(() => {
           <NuxtLink
             v-else
             to="/premium"
-            class="rounded-full border border-[#3EA6FF]/50 px-5 py-2.5 text-sm font-bold text-[#3EA6FF] hover:bg-[#3EA6FF]/10"
+            class="rounded-md border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100"
           >
             Premium 보기
           </NuxtLink>
@@ -120,10 +120,10 @@ onMounted(() => {
       </div>
     </div>
 
-    <p class="mt-4 text-center text-xs text-neutral-500">
-      <NuxtLink to="/terms" class="underline hover:text-neutral-300">이용약관</NuxtLink>
+    <p class="mt-4 text-center text-xs text-slate-500">
+      <NuxtLink to="/terms" class="underline hover:text-slate-900">이용약관</NuxtLink>
       ·
-      <NuxtLink to="/privacy" class="underline hover:text-neutral-300">개인정보처리방침</NuxtLink>
+      <NuxtLink to="/privacy" class="underline hover:text-slate-900">개인정보처리방침</NuxtLink>
     </p>
   </div>
 </template>

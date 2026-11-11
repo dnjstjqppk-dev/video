@@ -76,16 +76,16 @@ onMounted(async () => {
     chart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis' },
-      legend: { data: ['Views', 'Watch Hours'], textStyle: { color: '#CBD5E1' } },
+      legend: { data: ['Views', 'Watch Hours'], textStyle: { color: '#475569' } },
       xAxis: {
         type: 'category',
         data: fallbackSeries.map(d => d.date),
-        axisLabel: { color: '#94A3B8' }
+        axisLabel: { color: '#64748B' }
       },
       yAxis: {
         type: 'value',
-        axisLabel: { color: '#94A3B8' },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } }
+        axisLabel: { color: '#64748B' },
+        splitLine: { lineStyle: { color: '#E2E8F0' } }
       },
       series: [
         {
@@ -93,14 +93,14 @@ onMounted(async () => {
           type: 'line',
           smooth: true,
           data: fallbackSeries.map(d => d.views),
-          itemStyle: { color: '#FF0033' }
+          itemStyle: { color: '#0F172A' }
         },
         {
           name: 'Watch Hours',
           type: 'line',
           smooth: true,
           data: fallbackSeries.map(d => d.watchHours),
-          itemStyle: { color: '#3EA6FF' }
+          itemStyle: { color: '#2563EB' }
         }
       ]
     })
@@ -111,19 +111,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
-    <div class="flex flex-wrap items-center justify-between gap-4">
+  <div class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
       <div>
-        <h1 class="text-2xl font-extrabold text-white">심층 채널 분석 (ClickHouse Analytics & Retention)</h1>
-        <p class="mt-1 text-xs text-neutral-400">
-          Powered by ClickHouse OLAP rollups · Real-time CTR, audience retention curve, traffic sources & CSV export
+        <h1 class="text-xl font-semibold tracking-tight text-slate-900">심층 채널 분석 (ClickHouse Analytics &amp; Retention)</h1>
+        <p class="mt-1 text-xs text-slate-500">
+          Powered by ClickHouse OLAP rollups · Real-time CTR, audience retention curve, traffic sources &amp; CSV export
         </p>
       </div>
 
       <div class="flex items-center gap-2">
         <select
           v-model="selectedRange"
-          class="rounded-xl border border-white/15 bg-[#151822] px-3 py-2 text-xs font-bold text-white outline-none"
+          class="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 tabular-nums outline-none focus:border-slate-900"
         >
           <option value="7d">Last 7 Days</option>
           <option value="28d">Last 28 Days</option>
@@ -133,69 +133,72 @@ onMounted(async () => {
 
         <button
           type="button"
-          class="rounded-xl bg-[#3EA6FF] px-4 py-2 text-xs font-bold text-black hover:bg-[#65B8FF]"
+          class="inline-flex items-center justify-center gap-2 h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
           @click="exportCsvReport"
         >
-          📥 Export Revenue & Telemetry CSV
+          <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v8m0 0L4.75 7.25M8 10.5l3.25-3.25M2.5 11.5v1a1 1 0 001 1h9a1 1 0 001-1v-1" />
+          </svg>
+          <span>Export Revenue &amp; Telemetry CSV</span>
         </button>
       </div>
     </div>
 
     <!-- ECharts Time Series Chart -->
-    <div class="mt-6 rounded-2xl border border-white/10 bg-[#151822] p-5">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold text-white">조회수 및 시청 시간 추이 (Views & Watch Time Time-Series)</h2>
-        <span class="text-xs font-semibold text-emerald-400">Impressions CTR: 10.4% · Avg View Duration: 14m 22s</span>
+    <div class="rounded-lg border border-slate-200 bg-white p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <h2 class="text-sm font-semibold text-slate-900">조회수 및 시청 시간 추이 (Views &amp; Watch Time Time-Series)</h2>
+        <span class="text-xs font-medium text-emerald-600 tabular-nums">Impressions CTR: 10.4% · Avg View Duration: 14m 22s</span>
       </div>
       <div ref="chartCanvasRef" class="mt-4 h-72 w-full" />
     </div>
 
     <!-- Audience Retention Curve + Traffic Sources + Demographics -->
-    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <!-- Retention Curve -->
-      <div class="rounded-2xl border border-white/10 bg-[#151822] p-5">
-        <h3 class="text-sm font-bold text-white">시청 지속률 곡선 (Audience Retention Curve)</h3>
-        <p class="mt-1 text-xs text-neutral-400">64.2% of viewers still watching at the 15:00 mark</p>
-        <div class="mt-4 space-y-2.5 text-xs">
+      <div class="rounded-lg border border-slate-200 bg-white p-5">
+        <h3 class="text-sm font-semibold text-slate-900">시청 지속률 곡선 (Audience Retention Curve)</h3>
+        <p class="mt-1 text-xs text-slate-500 tabular-nums">64.2% of viewers still watching at the 15:00 mark</p>
+        <div class="mt-4 space-y-3 text-xs">
           <div v-for="(pt, idx) in [{ t: '00:00 Intro', pct: 100 }, { t: '03:30 R2 Upload', pct: 84 }, { t: '09:15 FFmpeg ABR', pct: 72 }, { t: '15:00 ClickHouse', pct: 64 }, { t: '25:00 Outro', pct: 51 }]" :key="idx">
-            <div class="flex justify-between text-neutral-300">
+            <div class="flex justify-between text-slate-700 tabular-nums">
               <span>{{ pt.t }}</span>
-              <span class="font-mono font-bold text-[#3EA6FF]">{{ pt.pct }}%</span>
+              <span class="font-mono font-semibold text-slate-900">{{ pt.pct }}%</span>
             </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div class="h-full bg-[#3EA6FF]" :style="{ width: `${pt.pct}%` }" />
+            <div class="mt-1 h-2 w-full overflow-hidden rounded-md bg-slate-100">
+              <div class="h-full bg-slate-900" :style="{ width: `${pt.pct}%` }" />
             </div>
           </div>
         </div>
       </div>
 
       <!-- Traffic Sources -->
-      <div class="rounded-2xl border border-white/10 bg-[#151822] p-5">
-        <h3 class="text-sm font-bold text-white">트래픽 소스 (Traffic Sources)</h3>
+      <div class="rounded-lg border border-slate-200 bg-white p-5">
+        <h3 class="text-sm font-semibold text-slate-900">트래픽 소스 (Traffic Sources)</h3>
         <div class="mt-4 space-y-3 text-xs">
           <div v-for="src in trafficSources" :key="src.source">
-            <div class="flex justify-between text-neutral-200">
+            <div class="flex justify-between text-slate-700">
               <span>{{ src.source }}</span>
-              <span class="font-bold">{{ src.share }}%</span>
+              <span class="font-semibold text-slate-900 tabular-nums">{{ src.share }}%</span>
             </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div class="h-full bg-[#FF0033]" :style="{ width: `${src.share}%` }" />
+            <div class="mt-1 h-2 w-full overflow-hidden rounded-md bg-slate-100">
+              <div class="h-full bg-slate-700" :style="{ width: `${src.share}%` }" />
             </div>
           </div>
         </div>
       </div>
 
       <!-- Geography & Demographics -->
-      <div class="rounded-2xl border border-white/10 bg-[#151822] p-5">
-        <h3 class="text-sm font-bold text-white">국가 및 연령 분포 (Geography & Demographics)</h3>
+      <div class="rounded-lg border border-slate-200 bg-white p-5">
+        <h3 class="text-sm font-semibold text-slate-900">국가 및 연령 분포 (Geography &amp; Demographics)</h3>
         <div class="mt-4 space-y-3 text-xs">
           <div v-for="geo in demographics" :key="geo.group">
-            <div class="flex justify-between text-neutral-200">
+            <div class="flex justify-between text-slate-700">
               <span>{{ geo.group }}</span>
-              <span class="font-bold text-emerald-400">{{ geo.share }}%</span>
+              <span class="font-semibold text-slate-900 tabular-nums">{{ geo.share }}%</span>
             </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div class="h-full bg-emerald-400" :style="{ width: `${geo.share}%` }" />
+            <div class="mt-1 h-2 w-full overflow-hidden rounded-md bg-slate-100">
+              <div class="h-full bg-emerald-600" :style="{ width: `${geo.share}%` }" />
             </div>
           </div>
         </div>

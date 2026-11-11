@@ -59,11 +59,11 @@ async function voteInLivePoll(idx: number) {
 }
 
 function getSuperChatBadgeClass(amount: number) {
-  if (amount >= 50000) return 'from-red-600 to-rose-700 text-white border-red-500'
-  if (amount >= 20000) return 'from-orange-500 to-amber-600 text-white border-orange-400'
-  if (amount >= 10000) return 'from-yellow-400 to-amber-500 text-black border-yellow-300'
-  if (amount >= 5000) return 'from-emerald-500 to-teal-600 text-white border-emerald-400'
-  return 'from-sky-500 to-blue-600 text-white border-sky-400'
+  if (amount >= 50000) return 'bg-red-50 text-red-700 border-red-200'
+  if (amount >= 20000) return 'bg-amber-50 text-amber-700 border-amber-200'
+  if (amount >= 10000) return 'bg-amber-50 text-amber-700 border-amber-200'
+  if (amount >= 5000) return 'bg-green-50 text-green-700 border-green-200'
+  return 'bg-blue-50 text-blue-700 border-blue-200'
 }
 
 const messages = ref<LiveChatMessage[]>([
@@ -84,7 +84,7 @@ const messages = ref<LiveChatMessage[]>([
     userDisplayName: '최현우 (Hyunwoo Choi)',
     isModerator: false,
     isCreator: false,
-    message: 'SuperChat 응원합니다! Go 1.24 + Nuxt 4 조합 최고네요 🔥',
+    message: 'SuperChat 응원합니다! Go 1.24 + Nuxt 4 조합 최고네요.',
     donationAmount: 50000,
     currency: 'KRW',
     timestamp: new Date().toISOString()
@@ -197,8 +197,8 @@ function retryChatConnection() {
 }
 
 const pinnedSuperChats = ref([
-  { id: 'sc_1', name: '최현우', amount: 50000, gradient: 'from-red-600 to-rose-700' },
-  { id: 'sc_2', name: 'Elena Rostova', amount: 5000, gradient: 'from-emerald-500 to-teal-600' }
+  { id: 'sc_1', name: '최현우', amount: 50000, gradient: 'border-red-200 bg-red-50 text-red-700' },
+  { id: 'sc_2', name: 'Elena Rostova', amount: 5000, gradient: 'border-green-200 bg-green-50 text-green-700' }
 ])
 
 function sendChatMessage() {
@@ -217,7 +217,7 @@ function sendChatMessage() {
       id: `sc_${Date.now()}`,
       name: appStore.currentUser?.displayName || '김민준',
       amount: amt,
-      gradient: amt >= 50000 ? 'from-red-600 to-rose-700' : amt >= 10000 ? 'from-amber-500 to-orange-600' : 'from-emerald-500 to-teal-600'
+      gradient: amt >= 50000 ? 'border-red-200 bg-red-50 text-red-700' : amt >= 10000 ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-green-200 bg-green-50 text-green-700'
     })
   }
 
@@ -246,7 +246,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1720px] px-4 py-5 lg:px-8">
+  <div class="mx-auto max-w-[1720px] bg-white px-4 py-5 text-slate-900 lg:px-8">
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <!-- Live HLS Player + Info -->
       <div class="xl:col-span-8">
@@ -261,24 +261,24 @@ onBeforeUnmount(() => {
           />
         </ClientOnly>
 
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#161616] p-4">
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
           <div>
-            <div class="flex items-center gap-2">
-              <span class="rounded bg-[#FF0033] px-2 py-0.5 text-xs font-extrabold uppercase text-white">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-bold uppercase text-red-700">
                 LIVE
               </span>
-              <span v-if="viewerCountKnown" class="text-xs font-semibold text-emerald-400">
+              <span v-if="viewerCountKnown" class="text-xs font-semibold text-green-700 tabular-nums">
                 ● {{ viewerCount.toLocaleString() }} watching now
               </span>
-              <span v-else class="text-xs font-semibold text-neutral-400">
-                ◌ 시청자 수 집계 중
+              <span v-else class="text-xs font-semibold text-slate-500">
+                시청자 수 집계 중
               </span>
-              <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-400">
+              <span class="rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-700 tabular-nums">
                 6.8 Mbps · 60 fps · 2.0s GOP · 0% Loss
               </span>
-              <span class="text-xs text-neutral-400">· RTMPS Ingest → LL-HLS Edge</span>
+              <span class="text-xs text-slate-500">· RTMPS Ingest → LL-HLS Edge</span>
             </div>
-            <h1 class="mt-1.5 text-lg font-bold text-white">
+            <h1 class="mt-2 text-lg font-bold text-slate-900">
               [LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A
             </h1>
           </div>
@@ -287,13 +287,16 @@ onBeforeUnmount(() => {
               :href="`${config.public.studioUrl}/live`"
               target="_blank"
               rel="noopener noreferrer"
-              class="rounded-full bg-[#FF0033] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#D9002B]"
+              class="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
             >
-              📡 라이브 관제실 (Studio Live Room) ↗
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
+              </svg>
+              <span>라이브 관제실 (Studio Live Room)</span>
             </a>
             <NuxtLink
               to="/channels/ch_tech_kr"
-              class="rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-neutral-200"
+              class="rounded-md border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
             >
               GVP Tech Engineering
             </NuxtLink>
@@ -302,70 +305,75 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Real-Time WebSocket Live Chat & SuperChat Column -->
-      <aside class="flex h-[640px] flex-col rounded-2xl border border-white/15 bg-[#161616] xl:col-span-4">
-        <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
+      <aside class="flex h-[640px] flex-col rounded-lg border border-slate-200 bg-white xl:col-span-4">
+        <div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
           <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full" :class="wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-500'" />
-            <h2 class="text-sm font-bold">Live Chat & SuperChat</h2>
+            <span class="h-2 w-2 rounded-full" :class="wsConnected ? 'bg-green-600 animate-pulse' : 'bg-slate-400'" />
+            <h2 class="text-sm font-bold text-slate-900">Live Chat & SuperChat</h2>
           </div>
           <span class="flex items-center gap-2">
             <span
-              class="text-[11px] font-medium"
-              :class="chatStatus === 'live' ? 'text-emerald-400' : chatStatus === 'offline' ? 'text-red-400' : 'text-amber-400'"
+              class="text-[11px] font-semibold tabular-nums"
+              :class="chatStatus === 'live' ? 'text-green-700' : chatStatus === 'offline' ? 'text-red-700' : 'text-amber-700'"
               role="status"
             >
-              {{ chatStatus === 'live' ? '● WebSocket Live' : chatStatus === 'connecting' ? '◌ 연결 중…' : chatStatus === 'reconnecting' ? `◌ 재연결 중… (${reconnectAttempts})` : '○ 연결 끊김' }}
+              {{ chatStatus === 'live' ? '● WebSocket Live' : chatStatus === 'connecting' ? '연결 중…' : chatStatus === 'reconnecting' ? `재연결 중… (${reconnectAttempts})` : '연결 끊김' }}
             </span>
             <button
               v-if="chatStatus === 'offline' || chatStatus === 'reconnecting'"
               type="button"
-              class="rounded-full border border-white/15 px-2.5 py-1 text-[11px] font-bold text-neutral-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#3EA6FF]"
+              class="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
               @click="retryChatConnection"
             >
               다시 연결
             </button>
           </span>
         </div>
-        <p v-if="queuedOutbox > 0" class="border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-[11px] text-amber-300" role="status">
+        <p v-if="queuedOutbox > 0" class="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-[11px] font-medium text-amber-700 tabular-nums" role="status">
           연결이 복구되면 대기 중인 메시지 {{ queuedOutbox }}건이 전송됩니다.
         </p>
 
         <!-- Pinned SuperChat Horizontal Ticker -->
-        <div class="flex items-center gap-2 overflow-x-auto border-b border-white/10 bg-black/40 px-3 py-2 text-xs">
+        <div class="flex items-center gap-2 overflow-x-auto border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs">
           <div
             v-for="sc in pinnedSuperChats"
             :key="sc.id"
-            class="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r px-3 py-1 font-semibold text-white shadow"
+            class="flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 font-semibold tabular-nums"
             :class="sc.gradient"
           >
-            <span>💎</span>
+            <span class="text-[10px] font-bold uppercase">SuperChat</span>
             <span>{{ sc.name }} ₩{{ sc.amount.toLocaleString() }}</span>
           </div>
         </div>
 
         <!-- Real-Time Live Poll Widget -->
-        <div v-if="activePoll" class="border-b border-white/10 bg-[#1F1F1F] p-3 text-xs">
-          <div class="flex items-center justify-between text-neutral-300">
-            <span class="font-bold text-white">📊 {{ appStore.locale === 'ko' ? '라이브 실시간 투표' : 'Live Poll' }}</span>
-            <span class="text-[10px] text-neutral-400">{{ activePoll.totalVotes }} {{ appStore.locale === 'ko' ? '표' : 'votes' }}</span>
+        <div v-if="activePoll" class="border-b border-slate-200 bg-slate-50 p-3 text-xs">
+          <div class="flex items-center justify-between text-slate-600">
+            <span class="flex items-center gap-1.5 font-bold text-slate-900">
+              <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>{{ appStore.locale === 'ko' ? '라이브 실시간 투표' : 'Live Poll' }}</span>
+            </span>
+            <span class="text-[11px] font-medium text-slate-500 tabular-nums">{{ activePoll.totalVotes }} {{ appStore.locale === 'ko' ? '표' : 'votes' }}</span>
           </div>
-          <p class="mt-1 font-medium text-neutral-200">{{ activePoll.question }}</p>
+          <p class="mt-1 font-medium text-slate-700">{{ activePoll.question }}</p>
           <div class="mt-2 space-y-1.5">
             <button
               v-for="(opt, idx) in activePoll.options"
               :key="idx"
               type="button"
-              class="relative flex w-full items-center justify-between overflow-hidden rounded-lg border px-2.5 py-1.5 text-left text-xs transition"
-              :class="activePoll.userVotedIndex === idx ? 'border-[#3EA6FF] text-white' : 'border-white/10 bg-white/5 hover:bg-white/10 text-neutral-300'"
+              class="relative flex w-full items-center justify-between overflow-hidden rounded-md border px-2.5 py-1.5 text-left text-xs transition"
+              :class="activePoll.userVotedIndex === idx ? 'border-blue-200 bg-blue-50 text-blue-700 font-semibold' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'"
               @click="voteInLivePoll(idx)"
             >
               <div
                 v-if="activePoll.userVotedIndex !== null"
-                class="absolute inset-y-0 left-0 bg-[#3EA6FF]/20"
+                class="absolute inset-y-0 left-0 bg-blue-100/70"
                 :style="{ width: `${Math.round((opt.votes / (activePoll.totalVotes || 1)) * 100)}%` }"
               />
               <span class="relative z-10">{{ opt.text }}</span>
-              <span v-if="activePoll.userVotedIndex !== null" class="relative z-10 font-mono font-bold">
+              <span v-if="activePoll.userVotedIndex !== null" class="relative z-10 font-mono font-bold tabular-nums">
                 {{ Math.round((opt.votes / (activePoll.totalVotes || 1)) * 100) }}%
               </span>
             </button>
@@ -373,23 +381,23 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Chat Messages Scroll Area -->
-        <div class="flex-1 space-y-3 overflow-y-auto p-4 text-xs">
+        <div class="flex-1 space-y-2.5 overflow-y-auto p-4 text-xs">
           <div
             v-for="msg in messages"
             :key="msg.id"
-            class="rounded-xl p-2.5"
+            class="rounded-lg border p-2.5"
             :class="
               msg.donationAmount
-                ? 'border border-amber-400/50 bg-gradient-to-r from-amber-500/20 to-red-500/20 text-white'
-                : 'bg-white/5 text-neutral-200'
+                ? getSuperChatBadgeClass(msg.donationAmount)
+                : 'border-slate-200 bg-slate-50 text-slate-700'
             "
           >
             <div class="flex items-center justify-between">
-              <span class="font-bold" :class="msg.isModerator ? 'text-emerald-400' : 'text-[#3EA6FF]'">
+              <span class="font-bold" :class="msg.isModerator ? 'text-green-700' : 'text-slate-900'">
                 {{ msg.userDisplayName }}
-                <span v-if="msg.isModerator" class="ml-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px]">MOD</span>
+                <span v-if="msg.isModerator" class="ml-1 rounded-md border border-green-200 bg-green-50 px-1.5 py-0.5 text-[10px] text-green-700">MOD</span>
               </span>
-              <span v-if="msg.donationAmount" class="rounded bg-amber-400 px-2 py-0.5 font-extrabold text-black">
+              <span v-if="msg.donationAmount" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 font-bold text-amber-700 tabular-nums">
                 SuperChat {{ msg.currency === 'USD' ? `$${msg.donationAmount}` : `₩${msg.donationAmount.toLocaleString()}` }}
               </span>
             </div>
@@ -398,15 +406,15 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Chat Input & SuperChat Selector -->
-        <form class="border-t border-white/10 p-3" @submit.prevent="sendChatMessage">
+        <form class="border-t border-slate-200 bg-slate-50 p-3" @submit.prevent="sendChatMessage">
           <div class="mb-2 flex items-center gap-1.5">
-            <span class="text-[11px] text-neutral-400">SuperChat:</span>
+            <span class="text-[11px] font-medium text-slate-500">SuperChat:</span>
             <button
               v-for="amt in [0, 5000, 10000, 50000]"
               :key="amt"
               type="button"
-              class="rounded-lg px-2 py-0.5 text-[11px] font-semibold transition"
-              :class="superChatAmount === amt ? 'bg-amber-400 text-black' : 'bg-white/10 text-neutral-300'"
+              class="rounded-md border px-2 py-0.5 text-[11px] font-semibold transition tabular-nums"
+              :class="superChatAmount === amt ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
               @click="superChatAmount = amt"
             >
               {{ amt === 0 ? 'None' : `₩${amt.toLocaleString()}` }}
@@ -417,11 +425,11 @@ onBeforeUnmount(() => {
               v-model="chatInput"
               type="text"
               placeholder="Send a live chat message..."
-              class="flex-1 rounded-xl border border-white/15 bg-[#0F0F0F] px-3 py-2 text-xs text-white outline-none focus:border-[#3EA6FF]"
+              class="flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-blue-600"
             />
             <button
               type="submit"
-              class="rounded-xl bg-[#FF0033] px-4 py-2 text-xs font-bold text-white hover:bg-[#D9002B]"
+              class="rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
             >
               Send
             </button>

@@ -21,23 +21,25 @@ withDefaults(
 
 <style scoped>
 .gvp-card {
-  background: var(--gvp-surface-1);
-  border: 1px solid var(--gvp-border);
-  border-radius: var(--gvp-radius-lg);
-  box-shadow: var(--gvp-shadow-sm);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.5rem;
   overflow: hidden;
 }
-.gvp-card--pad > .gvp-card__body { padding: 1.25rem; }
-.gvp-card--hover { transition: border-color var(--gvp-motion-base) var(--gvp-ease), box-shadow var(--gvp-motion-base) var(--gvp-ease); }
-.gvp-card--hover:hover { border-color: var(--gvp-border-strong); box-shadow: var(--gvp-shadow-md); }
+.gvp-card--pad > .gvp-card__body { padding: 1rem; }
+.gvp-card--hover { transition: border-color 150ms ease, background-color 150ms ease; }
+.gvp-card--hover:hover { border-color: #CBD5E1; background: #F8FAFC; }
 .gvp-card__header {
-  padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid var(--gvp-border);
-  font-weight: 700;
-  font-size: 0.9375rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #0F172A;
 }
 .gvp-card__footer {
-  padding: 0.875rem 1.25rem;
-  border-top: 1px solid var(--gvp-border);
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFC;
 }
 </style>

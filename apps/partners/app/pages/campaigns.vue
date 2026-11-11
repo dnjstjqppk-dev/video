@@ -104,37 +104,39 @@ async function createCampaign() {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-extrabold text-white">광고주 캠페인 매니저 (Advertiser Campaign Console)</h1>
-    <p class="mt-1 text-xs text-neutral-400">
-      Create Pre-Roll, Mid-Roll, and Shorts campaigns · Configure CPM/CPC bidding & daily budget pacing
-    </p>
+  <div class="space-y-6">
+    <div class="border-b border-slate-200 pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-slate-900">광고주 캠페인 매니저 (Advertiser Campaign Console)</h1>
+      <p class="mt-1 text-sm text-slate-600">
+        Create Pre-Roll, Mid-Roll, and Shorts campaigns · Configure CPM/CPC bidding &amp; daily budget pacing
+      </p>
+    </div>
 
     <!-- Alert Notifications -->
-    <div v-if="errorMessage" class="mt-4 rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-xs font-semibold text-red-200">
+    <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
       {{ errorMessage }}
     </div>
-    <div v-if="successMessage" class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-xs font-semibold text-emerald-200">
+    <div v-if="successMessage" class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-700">
       {{ successMessage }}
     </div>
 
     <!-- Create Campaign Form -->
-    <form class="mt-6 rounded-2xl border border-white/10 bg-[#141A2C] p-6" @submit.prevent="createCampaign">
-      <h2 class="text-sm font-bold text-white">신규 광고 캠페인 생성 (`POST /v1/partners/campaigns`)</h2>
+    <form class="rounded-lg border border-slate-200 bg-white p-6" @submit.prevent="createCampaign">
+      <h2 class="text-sm font-semibold text-slate-900">신규 광고 캠페인 생성 (<code class="font-mono text-xs text-slate-600">POST /v1/partners/campaigns</code>)</h2>
       <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="md:col-span-2">
-          <label class="text-xs text-neutral-400">Campaign Name</label>
+          <label class="text-xs font-medium text-slate-700">Campaign Name</label>
           <input
             v-model="newCampaignName"
             type="text"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3.5 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs text-neutral-400">Placement Format</label>
+          <label class="text-xs font-medium text-slate-700">Placement Format</label>
           <select
             v-model="newFormat"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
           >
             <option :value="AdFormat.PREROLL">Pre-Roll (In-Stream Skippable)</option>
             <option :value="AdFormat.MIDROLL">Mid-Roll (Watch Page Break)</option>
@@ -143,73 +145,79 @@ async function createCampaign() {
           </select>
         </div>
         <div>
-          <label class="text-xs text-neutral-400">Daily Budget (KRW)</label>
+          <label class="text-xs font-medium text-slate-700">Daily Budget (KRW)</label>
           <input
             v-model.number="dailyBudget"
             type="number"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs text-neutral-400">CPM Bid (KRW per 1,000 impressions)</label>
+          <label class="text-xs font-medium text-slate-700">CPM Bid (KRW per 1,000 impressions)</label>
           <input
             v-model.number="cpmBid"
             type="number"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs text-neutral-400">CPC Bid (KRW per Click)</label>
+          <label class="text-xs font-medium text-slate-700">CPC Bid (KRW per Click)</label>
           <input
             v-model.number="cpcBid"
             type="number"
-            class="mt-1 w-full rounded-xl border border-white/15 bg-[#0B0E17] px-3 py-2 text-xs text-white"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
           />
         </div>
       </div>
 
-      <div class="mt-4 flex items-center justify-between">
-        <p class="text-xs text-neutral-400">
-          Creative Asset: <code class="text-[#3EA6FF]">s26_ultra_hdr_master_1080p60.mp4</code> (VAST 4.2 Verified)
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+        <p class="text-xs text-slate-500">
+          Creative Asset: <code class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-slate-800">s26_ultra_hdr_master_1080p60.mp4</code> (VAST 4.2 Verified)
         </p>
         <button
           type="submit"
-          class="rounded-xl bg-[#3EA6FF] px-5 py-2 text-xs font-bold text-black hover:bg-[#65B8FF]"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
         >
-          🚀 Launch Ad Campaign
+          Launch Ad Campaign
         </button>
       </div>
     </form>
 
     <!-- Active Campaigns Table -->
-    <div class="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#141A2C]">
-      <table class="w-full text-left text-xs">
-        <thead class="border-b border-white/10 bg-white/5 uppercase text-neutral-400">
-          <tr>
-            <th class="p-3.5">Campaign</th>
-            <th class="p-3.5">Placement</th>
-            <th class="p-3.5">Budget Pacing</th>
-            <th class="p-3.5">CPM / CPC</th>
-            <th class="p-3.5">Impressions</th>
-            <th class="p-3.5">Clicks (CTR)</th>
-            <th class="p-3.5">Status</th>
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th class="py-2.5 px-4">Campaign</th>
+            <th class="py-2.5 px-4">Placement</th>
+            <th class="py-2.5 px-4">Budget Pacing</th>
+            <th class="py-2.5 px-4">CPM / CPC</th>
+            <th class="py-2.5 px-4">Impressions</th>
+            <th class="py-2.5 px-4">Clicks (CTR)</th>
+            <th class="py-2.5 px-4">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-white/10">
-          <tr v-for="cmp in campaigns" :key="cmp.id" class="hover:bg-white/5">
-            <td class="p-3.5 font-bold text-white">{{ cmp.name }}</td>
-            <td class="p-3.5 uppercase text-[#3EA6FF]">{{ cmp.format }}</td>
-            <td class="p-3.5">
+        <tbody class="divide-y divide-slate-100">
+          <tr v-for="cmp in campaigns" :key="cmp.id" class="hover:bg-slate-50">
+            <td class="py-3 px-4 text-sm font-medium text-slate-900 border-b border-slate-100">{{ cmp.name }}</td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs uppercase text-slate-700">{{ cmp.format }}</span>
+            </td>
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
               ₩{{ cmp.spentAmount.toLocaleString() }} / ₩{{ cmp.totalBudget.toLocaleString() }}
             </td>
-            <td class="p-3.5">₩{{ cmp.cpmBid.toLocaleString() }} / ₩{{ cmp.cpcBid.toLocaleString() }}</td>
-            <td class="p-3.5 font-mono">{{ cmp.impressions.toLocaleString() }}</td>
-            <td class="p-3.5 font-mono">
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              ₩{{ cmp.cpmBid.toLocaleString() }} / ₩{{ cmp.cpcBid.toLocaleString() }}
+            </td>
+            <td class="py-3 px-4 font-mono text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              {{ cmp.impressions.toLocaleString() }}
+            </td>
+            <td class="py-3 px-4 font-mono text-sm text-slate-900 border-b border-slate-100 tabular-nums">
               {{ cmp.clicks.toLocaleString() }}
               ({{ cmp.impressions ? ((cmp.clicks / cmp.impressions) * 100).toFixed(2) : '0.00' }}%)
             </td>
-            <td class="p-3.5">
-              <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-400">
+            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+              <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium uppercase text-emerald-700">
                 {{ cmp.status }}
               </span>
             </td>
