@@ -8,6 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./.output/public"
 binding = "ASSETS"
 
-[build]
-command = "pnpm run build"
+# No [build] command: CI builds once with deploy env (see cloudflare-deploy.yml)
+# and `wrangler deploy` uploads that .output. A [build] here would rebuild
+# without env and silently drop the baked deploy metadata.
 
