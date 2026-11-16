@@ -25,7 +25,9 @@ export default defineNuxtConfig({
       webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjqppk.workers.dev',
       studioUrl: process.env.NUXT_PUBLIC_STUDIO_URL || 'https://global-video-platform-studio.dnjstjqppk.workers.dev',
       adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjqppk.workers.dev',
-      partnerDomain: 'global-video-platform-partners.dnjstjqppk.workers.dev'
+      partnerDomain: 'global-video-platform-partners.dnjstjqppk.workers.dev',
+      deployCommit: process.env.NUXT_PUBLIC_DEPLOY_COMMIT || 'unknown',
+      deployBuiltAt: process.env.NUXT_PUBLIC_DEPLOY_BUILT_AT || 'unknown'
     }
   },
   app: {

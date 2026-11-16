@@ -42,6 +42,8 @@ jobs:
           NITRO_PRESET: cloudflare-module
           NUXT_PUBLIC_API_BASE_URL: /api
           NUXT_PUBLIC_WS_BASE_URL: wss://global-video-platform-api.dnjstjq0824.workers.dev
+          NUXT_PUBLIC_DEPLOY_COMMIT: ${{ github.sha }}
+          NUXT_PUBLIC_DEPLOY_BUILT_AT: ${{ github.event.head_commit.timestamp }}
 
       - name: Deploy ${{ matrix.app }} via Wrangler
         if: env.CF_TOKEN != ''

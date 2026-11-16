@@ -1,4 +1,5 @@
 export default defineEventHandler((event) => {
+  const config = useRuntimeConfig()
   setResponseHeaders(event, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -6,9 +7,8 @@ export default defineEventHandler((event) => {
   })
   return {
     app: 'studio',
-    commit: '3f8c1ef',
-    builtAt: '2026-11-01T03:00:00Z',
-    workerVersion: 'v2026.10.30',
+    commit: (config.public.deployCommit as string) || 'unknown',
+    builtAt: (config.public.deployBuiltAt as string) || 'unknown',
     status: 'healthy'
   }
 })
