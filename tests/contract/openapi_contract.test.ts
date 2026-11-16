@@ -33,8 +33,22 @@ export function validateApiErrorEnvelope(payload: unknown): payload is StandardA
   return true;
 }
 
+function findRepoRoot(): string {
+  // The suite runs from the repo root locally but from tests/ in CI
+  // (see @gvp/e2e-tests test script). Walk up to the real root.
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    const hasSpec = fs.existsSync(path.join(dir, 'openapi/gvp-v1.yaml'));
+    const hasCensus = fs.existsSync(path.join(dir, 'docs/api/routes.json'));
+    if (hasSpec && hasCensus) return dir;
+    dir = path.dirname(dir);
+  }
+  return process.cwd();
+}
+
 describe('OpenAPI 3.1 Contract & Standard Error Envelope Verification', () => {
-  const openApiPath = path.resolve(process.cwd(), 'openapi/gvp-v1.yaml');
+  const repoRoot = findRepoRoot();
+  const openApiPath = path.resolve(repoRoot, 'openapi/gvp-v1.yaml');
   const openApiContent = fs.readFileSync(openApiPath, 'utf-8');
 
   it('declares OpenAPI 3.1.0 version and production/local v1 server endpoints', () => {
@@ -96,7 +110,7 @@ describe('OpenAPI 3.1 Contract & Standard Error Envelope Verification', () => {
   });
 
   it('covers every chi.Walk route from the generated census (docs/api/routes.json)', () => {
-    const censusPath = path.resolve(process.cwd(), 'docs/api/routes.json');
+    const censusPath = path.resolve(repoRoot, 'docs/api/routes.json');
     const census = JSON.parse(fs.readFileSync(censusPath, 'utf-8')) as Array<{
       method: string;
       path: string;
