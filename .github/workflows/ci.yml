@@ -186,10 +186,11 @@ jobs:
           pnpm install
           (cd tests && npx playwright install --with-deps chromium)
 
-      - name: Start Go API Server & Run Playwright E2E Suite
+      - name: Run Playwright E2E Suite (webServer boots the API)
+        # Do NOT pre-start the API here: playwright.config.ts webServer owns the
+        # server lifecycle (with GVP_ENV=test + dev tokens). A second copy races
+        # for :8080 and fails the run flakily with exit status 1.
         run: |
-          (cd services/api && go run ./cmd/server &)
-          sleep 3
           (cd tests && npx playwright test e2e/platform.spec.ts)
 
   # ============================================================================
