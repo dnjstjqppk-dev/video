@@ -1,5 +1,7 @@
+declare const __DEPLOY_COMMIT__: string
+declare const __DEPLOY_BUILT_AT__: string
+
 export default defineEventHandler((event) => {
-  const config = useRuntimeConfig()
   setResponseHeaders(event, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -7,8 +9,8 @@ export default defineEventHandler((event) => {
   })
   return {
     app: 'studio',
-    commit: (config.public.deployCommit as string) || 'unknown',
-    builtAt: (config.public.deployBuiltAt as string) || 'unknown',
+    commit: __DEPLOY_COMMIT__,
+    builtAt: __DEPLOY_BUILT_AT__,
     status: 'healthy'
   }
 })

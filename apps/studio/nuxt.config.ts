@@ -26,9 +26,7 @@ export default defineNuxtConfig({
       webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjqppk.workers.dev',
       partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjqppk.workers.dev',
       adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjqppk.workers.dev',
-      studioDomain: 'global-video-platform-studio.dnjstjqppk.workers.dev',
-      deployCommit: process.env.NUXT_PUBLIC_DEPLOY_COMMIT || 'unknown',
-      deployBuiltAt: process.env.NUXT_PUBLIC_DEPLOY_BUILT_AT || 'unknown'
+      studioDomain: 'global-video-platform-studio.dnjstjqppk.workers.dev'
     }
   },
   app: {
@@ -55,6 +53,10 @@ export default defineNuxtConfig({
     shim: false
   },
   nitro: {
-    preset: process.env.NITRO_PRESET || (process.env.CF_PAGES ? 'cloudflare-pages' : 'cloudflare-module')
+    preset: process.env.NITRO_PRESET || (process.env.CF_PAGES ? 'cloudflare-pages' : 'cloudflare-module'),
+    replace: {
+      __DEPLOY_COMMIT__: JSON.stringify(process.env.NUXT_PUBLIC_DEPLOY_COMMIT || 'unknown'),
+      __DEPLOY_BUILT_AT__: JSON.stringify(process.env.NUXT_PUBLIC_DEPLOY_BUILT_AT || 'unknown')
+    }
   }
 })
