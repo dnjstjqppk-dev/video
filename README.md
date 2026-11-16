@@ -2,6 +2,10 @@
 
 An enterprise-grade reference architecture video platform monorepo built with **4 independently deployed Vue 3 / Nuxt 4 web consoles**, a **Flutter (iOS & Android) mobile application**, and a **Go Modular Monolith API + Separated Background Workers** backed by **PostgreSQL 18, Valkey 8, NATS JetStream, OpenSearch, ClickHouse, and Cloudflare R2 / Stream**.
 
+> **Implementation status (2026-11-16, code-audited):** this repo is a **COMMERCIAL NO-GO architecture testbed & prototype**.
+> The persistent store, real transcoding, real ad-creative delivery, real live ingest, and NATS/Valkey/OpenSearch/ClickHouse wiring are not yet connected in code.
+> See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the module-by-module status and the full P0→P2 build backlog.
+
 ---
 
 ## 1. Monorepo Directory Structure
@@ -13,6 +17,7 @@ An enterprise-grade reference architecture video platform monorepo built with **
 │   ├── studio/               # Creator Studio (studio.brand.com) — Multipart R2 Upload, Analytics, Live
 │   ├── partners/             # Partner Portal (partners.brand.com) — Ads, MCN, Content ID, Settlements
 │   ├── admin/                # Admin Console (admin.brand.com) — Trust & Safety, Users, Audit Logs
+│   ├── api-proxy/            # Cloudflare Worker — Stable /api upstream for consoles (tunnel URL isolated)
 │   └── mobile/               # Mobile App (iOS & Android) — Flutter, Riverpod, GoRouter, media_kit
 ├── packages/
 │   ├── design-tokens/        # Shared Colors, Typography, Spacing, Z-Index & Dark/Light Theme Tokens
@@ -24,9 +29,9 @@ An enterprise-grade reference architecture video platform monorepo built with **
 ├── services/
 │   └── api/                  # Go Modular Monolith API (/v1 REST) & Worker Entrypoints
 │       ├── cmd/server/       # HTTP Server Entrypoint (Graceful Shutdown, CORS, RequestID, RBAC)
-│       └── internal/         # 18 Domain Modules (identity, users, channels, videos, uploads, etc.)
+│       └── internal/         # 23 Domain Modules (identity, users, channels, videos, uploads, ads, etc.)
 ├── db/
-│   ├── migrations/           # Ordered Forward/Rollback SQL Migrations (00001..00008, 32 Core Tables)
+│   ├── migrations/           # Ordered Forward SQL Migrations (00001..00009, 75 Tables)
 │   ├── queries/              # sqlc Type-Safe SQL Queries
 │   ├── schema/               # Canonical PostgreSQL 18 Schema & Table Inventory
 │   └── seeds/                # Deterministic Local & CI Seed Dataset

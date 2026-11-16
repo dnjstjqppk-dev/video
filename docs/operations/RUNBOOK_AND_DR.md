@@ -1,5 +1,11 @@
 # Global Video Platform — Operations Runbook & Disaster Recovery (DR)
 
+> **Current-hosting note (2026-11-16, code-audited):** this runbook targets the **production K8s/RDS topology**.
+> The actually running stack is operator-PC hosted (`gvp-api.exe :18092`, media worker `:8081`) behind a
+> Cloudflare quick tunnel + `apps/api-proxy` worker — see `infra/local/README.md` and
+> [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) §3. PITR/DLQ procedures below are unexercised
+> against the live stack (P1 backlog item 20); outbox relay and NATS DLQ do not exist in code yet.
+
 ## 1. Recovery Objectives (RTO & RPO)
 
 | System Tier | Components | Target RPO (Max Data Loss) | Target RTO (Max Recovery Time) | HA / Failover Mechanism |

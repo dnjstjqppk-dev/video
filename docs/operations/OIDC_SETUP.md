@@ -55,3 +55,7 @@ Leave `OIDC_ISSUER` unset and set `GVP_ALLOW_DEV_TOKENS=true` with
 `GVP_ENV=development`. Dev tokens (`creator`, `viewer`, `admin`,
 `advertiser`) never work in production: the middleware gates them on
 environment.
+
+> **Current-deployment note (2026-11-16):** the live stack still runs `GVP_ENV=test` + `GVP_ALLOW_DEV_TOKENS=true`
+> with no ZITADEL tenant, so demo login is open. Complete §1–§4 and switch to `GVP_ENV=production`
+> before any real-user traffic (P0 backlog item 6 in [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)).

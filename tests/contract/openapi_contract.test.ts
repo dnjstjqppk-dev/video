@@ -94,4 +94,22 @@ describe('OpenAPI 3.1 Contract & Standard Error Envelope Verification', () => {
       false
     );
   });
+
+  it('covers every chi.Walk route from the generated census (docs/api/routes.json)', () => {
+    const censusPath = path.resolve(process.cwd(), 'docs/api/routes.json');
+    const census = JSON.parse(fs.readFileSync(censusPath, 'utf-8')) as Array<{
+      method: string;
+      path: string;
+    }>;
+    assert.ok(census.length > 100, `Expected 100+ census routes, got ${census.length}`);
+    const missing: string[] = [];
+    for (const route of census) {
+      if (!route.path.startsWith('/v1/')) continue; // ops probes are outside the /v1 contract
+      const shortPath = route.path.slice('/v1'.length);
+      if (!openApiContent.includes(`\n  ${shortPath}:`)) {
+        missing.push(`${route.method} ${shortPath}`);
+      }
+    }
+    assert.deepEqual(missing, [], `Spec is missing ${missing.length} census routes`);
+  });
 });

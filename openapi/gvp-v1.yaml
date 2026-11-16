@@ -1,29 +1,598 @@
 openapi: 3.1.0
 info:
   title: Global Video Platform API
-  description: YouTube-scale production API for Users, Creators, Partners, Admins, and Mobile
   version: 1.0.0
+  description: |
+    Public v1 API for the StreamVerse video ecosystem: identity, channels,
+    videos, feeds, uploads, live, studio, payments, moderation and admin.
+    Every error response uses the standard ApiError envelope.
 servers:
   - url: https://api.brand.com/v1
-    description: Production Go API
+    description: Production
   - url: http://localhost:8080/v1
-    description: Local Development Server
-
+    description: Local development
+security:
+  - BearerAuth: []
 paths:
+  # --- hand-detailed core (from tests/openapi/gvp-v1.yaml) ---
   /me:
     get:
-      summary: Get current authenticated user profile
-      security:
-        - BearerAuth: []
+      summary: Current authenticated user
+      operationId: getMe
       responses:
         '200':
-          description: User profile
+          description: Authenticated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
   /videos/{id}/playback:
     get:
-      summary: Retrieve adaptive HLS playback manifest & playback token
+      summary: Playback manifest and sources for a video
+      operationId: getVideoPlayback
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Playback info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaybackInfo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{id}/captions:
+    get:
+      summary: List captions for a video
+      operationId: listVideoCaptions
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Caption list
+    post:
+      summary: Add a caption track
+      operationId: createVideoCaption
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '201':
+          description: Caption created
+  /feed/home:
+    get:
+      summary: Ranked home feed
+      operationId: getHomeFeed
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Ranked video list
+  /feed/shorts:
+    get:
+      summary: Shorts feed
+      operationId: getShortsFeed
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Shorts video list
+  /uploads:
+    post:
+      summary: Create a multipart upload session
+      operationId: createUploadSession
+      responses:
+        '201':
+          description: Upload session created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /uploads/{id}/parts:
+    post:
+      summary: Get a part upload URL
+      operationId: getPartUploadUrl
+      responses:
+        '200':
+          description: Part URL issued
+  /uploads/{id}/chunks/{partNumber}:
+    put:
+      summary: PUT chunk bytes (local relay mode)
+      operationId: putUploadChunk
+      responses:
+        '200':
+          description: Chunk stored
+  /uploads/{id}/complete:
+    post:
+      summary: Complete a multipart upload and queue transcoding
+      operationId: completeUpload
+      responses:
+        '200':
+          description: Upload completed, transcode queued
+  /uploads/{id}/status:
+    get:
+      summary: Upload and transcode status
+      operationId: getUploadStatus
+      responses:
+        '200':
+          description: Status report
+  /events/analytics:
+    post:
+      summary: Ingest a playback analytics event
+      operationId: ingestAnalyticsEvent
+      responses:
+        '202':
+          description: Event accepted
+  /studio/videos:
+    get:
+      summary: Authenticated creator video list
+      operationId: getStudioVideos
+      responses:
+        '200':
+          description: Studio video list
+  /studio/videos/{id}/edit-jobs:
+    post:
+      summary: Dispatch a non-destructive EDL render job
+      operationId: createStudioEditJob
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '202':
+          description: Edit job queued
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /studio/videos/{id}/edit-jobs/{jobId}:
+    get:
+      summary: Poll an EDL render job
+      operationId: getStudioEditJob
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Edit job status
+  /studio/comments:
+    get:
+      summary: Studio comment moderation queue
+      operationId: getStudioComments
+      responses:
+        '200':
+          description: Comment list
+  /studio/claims:
+    get:
+      summary: Copyright claims on owned content
+      operationId: getStudioClaims
+      responses:
+        '200':
+          description: Claim list
+  /studio/earnings:
+    get:
+      summary: Earnings summary
+      operationId: getStudioEarnings
+      responses:
+        '200':
+          description: Earnings report
+  /studio/settlements:
+    get:
+      summary: Payout settlements
+      operationId: getStudioSettlements
+      responses:
+        '200':
+          description: Settlement list
+  /payments/checkout:
+    post:
+      summary: Create a checkout session (Stripe/Toss)
+      operationId: createCheckout
+      responses:
+        '201':
+          description: Checkout created
+  /channels/{id}:
+    get:
+      summary: Channel profile
+      operationId: getChannel
+      responses:
+        '200':
+          description: Channel profile
+    patch:
+      summary: Update channel branding
+      operationId: updateChannelBranding
+      responses:
+        '200':
+          description: Channel updated
+  /moderation/reports:
+    get:
+      summary: List moderation reports
+      operationId: listModerationReports
+      responses:
+        '200':
+          description: Report list
+    post:
+      summary: File a moderation report
+      operationId: createModerationReport
+      responses:
+        '201':
+          description: Report filed
+  /partners/contracts:
+    get:
+      summary: List MCN contracts
+      operationId: listPartnerContracts
+      responses:
+        '200':
+          description: Contract list
+    post:
+      summary: Create an MCN contract
+      operationId: createPartnerContract
+      responses:
+        '201':
+          description: Contract created
+  /admin/finance/settlements:
+    get:
+      summary: Finance settlement overview
+      operationId: getFinanceSettlements
+      responses:
+        '200':
+          description: Settlement overview
+  # --- generated inventory (x-census.generated) ---
+  /admin/ads/delivery-diagnostics:
+    get:
+      tags: [admin]
+      summary: "Get admin ads delivery diagnostics"
+      operationId: GetAdminAdsDeliveryDiagnostics
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/finance/batches/approve:
+    post:
+      tags: [admin]
+      summary: "Create admin finance batches approve"
+      operationId: CreateAdminFinanceBatchesApprove
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, finance_admin)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/finance/summary:
+    get:
+      tags: [admin]
+      summary: "Get admin finance summary"
+      operationId: GetAdminFinanceSummary
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, finance_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/moderation:
+    get:
+      tags: [admin]
+      summary: "Get admin moderation"
+      operationId: GetAdminModeration
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, moderator, support_agent)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/moderation/{id}/resolve:
+    post:
+      tags: [admin]
+      summary: "Create admin moderation resolve"
+      operationId: CreateAdminModerationByIdResolve
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, moderator, support_agent)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/policies/:
+    get:
+      tags: [admin]
+      summary: "Get admin policies"
+      operationId: GetAdminPolicies
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [admin]
+      summary: "Update admin policies"
+      operationId: UpdateAdminPolicies
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/policies/flags/{key}:
+    patch:
+      tags: [admin]
+      summary: "Update admin policies flags"
+      operationId: UpdateAdminPoliciesFlagsByKey
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/audit-logs:
+    get:
+      tags: [admin]
+      summary: "Get admin audit logs"
+      operationId: GetAdminAuditLogs
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/dashboard:
+    get:
+      tags: [admin]
+      summary: "Get admin dashboard"
+      operationId: GetAdminDashboard
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/users:
+    get:
+      tags: [admin]
+      summary: "Get admin users"
+      operationId: GetAdminUsers
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET /users))"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/users/{id}/status:
+    patch:
+      tags: [admin]
+      summary: "Update admin users status"
+      operationId: UpdateAdminUsersByIdStatus
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET /users))"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/admin/creatives:
+    get:
+      tags: [ads]
+      summary: "Get ads admin creatives"
+      operationId: GetAdsAdminCreatives
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/admin/creatives/{id}/approve:
+    post:
+      tags: [ads]
+      summary: "Create ads admin creatives approve"
+      operationId: CreateAdsAdminCreativesByIdApprove
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/admin/creatives/{id}/reject:
+    post:
+      tags: [ads]
+      summary: "Create ads admin creatives reject"
+      operationId: CreateAdsAdminCreativesByIdReject
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/admin/diagnostics:
+    get:
+      tags: [ads]
+      summary: "Get ads admin diagnostics"
+      operationId: GetAdsAdminDiagnostics
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/advertiser/reports:
+    get:
+      tags: [ads]
+      summary: "Get ads advertiser reports"
+      operationId: GetAdsAdvertiserReports
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/campaigns:
+    get:
+      tags: [ads]
+      summary: "Get ads campaigns"
+      operationId: GetAdsCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [ads]
+      summary: "Create ads campaigns"
+      operationId: CreateAdsCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /ads/campaigns/{id}:
+    get:
+      tags: [ads]
+      summary: "Get ads campaigns"
+      operationId: GetAdsCampaignsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
       parameters:
         - name: id
           in: path
@@ -32,131 +601,1851 @@ paths:
             type: string
       responses:
         '200':
-          description: Playback manifest, qualities, captions, and chapters
-        '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Success
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /feed/home:
-    get:
-      summary: Personalized or default home recommendation feed
+  /ads/campaigns/{id}/status:
+    patch:
+      tags: [ads]
+      summary: "Update ads campaigns status"
+      operationId: UpdateAdsCampaignsByIdStatus
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
       parameters:
-        - name: page
-          in: query
+        - name: id
+          in: path
+          required: true
           schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/decision:
+    post:
+      tags: [ads]
+      summary: "Create ads decision"
+      operationId: CreateAdsDecision
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /ads/events:
+    post:
+      tags: [ads]
+      summary: "Create ads events"
+      operationId: CreateAdsEvents
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /ads/preview:
+    post:
+      tags: [ads]
+      summary: "Create ads preview"
+      operationId: CreateAdsPreview
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /ads/reports:
+    get:
+      tags: [ads]
+      summary: "Get ads reports"
+      operationId: GetAdsReports
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/reports:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser reports"
+      operationId: GetAdvertiserReports
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/admin/creatives:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser admin creatives"
+      operationId: GetAdvertiserAdminCreatives
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/admin/creatives/{id}/approve:
+    post:
+      tags: [advertiser]
+      summary: "Create advertiser admin creatives approve"
+      operationId: CreateAdvertiserAdminCreativesByIdApprove
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      parameters:
+        - name: id
+          in: path
+          required: true
           schema:
-            type: integer
-            default: 24
-        - name: category
-          in: query
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/admin/creatives/{id}/reject:
+    post:
+      tags: [advertiser]
+      summary: "Create advertiser admin creatives reject"
+      operationId: CreateAdvertiserAdminCreativesByIdReject
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/admin/diagnostics:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser admin diagnostics"
+      operationId: GetAdvertiserAdminDiagnostics
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/advertiser/reports:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser advertiser reports"
+      operationId: GetAdvertiserAdvertiserReports
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/campaigns:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser campaigns"
+      operationId: GetAdvertiserCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [advertiser]
+      summary: "Create advertiser campaigns"
+      operationId: CreateAdvertiserCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /advertiser/campaigns/{id}:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser campaigns"
+      operationId: GetAdvertiserCampaignsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      parameters:
+        - name: id
+          in: path
+          required: true
           schema:
             type: string
       responses:
         '200':
-          description: Paginated video recommendations
-
-  /feed/shorts:
-    get:
-      summary: Infinite vertical shorts feed
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/campaigns/{id}/status:
+    patch:
+      tags: [advertiser]
+      summary: "Update advertiser campaigns status"
+      operationId: UpdateAdvertiserCampaignsByIdStatus
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public HOLE: guard required (P0)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         '200':
-          description: Shorts list
-
-  /uploads:
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/decision:
     post:
-      summary: Initiate multipart R2 upload session
-      security:
-        - BearerAuth: []
+      tags: [advertiser]
+      summary: "Create advertiser decision"
+      operationId: CreateAdvertiserDecision
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [title, fileSizeBytes, mimeType]
-              properties:
-                title:
-                  type: string
-                fileSizeBytes:
-                  type: integer
-                mimeType:
-                  type: string
       responses:
         '201':
-          description: Upload session created with part size and upload key
-
-  /events/analytics:
+          description: Success
+  /advertiser/events:
     post:
-      summary: Ingest client analytics playback events to NATS & ClickHouse
+      tags: [advertiser]
+      summary: "Create advertiser events"
+      operationId: CreateAdvertiserEvents
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [event_id, event_type, session_id, video_id, channel_id, device_type]
-              properties:
-                event_id:
-                  type: string
-                event_type:
-                  type: string
-                session_id:
-                  type: string
-                video_id:
-                  type: string
-                channel_id:
-                  type: string
-                device_type:
-                  type: string
       responses:
-        '202':
-          description: Event accepted for background processing
-
+        '201':
+          description: Success
+  /advertiser/preview:
+    post:
+      tags: [advertiser]
+      summary: "Create advertiser preview"
+      operationId: CreateAdvertiserPreview
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /channels/:
+    post:
+      tags: [channels]
+      summary: "Create channels"
+      operationId: CreateChannels
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{id}/subscribe:
+    delete:
+      tags: [channels]
+      summary: "Delete channels subscribe"
+      operationId: DeleteChannelsByIdSubscribe
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [channels]
+      summary: "Create channels subscribe"
+      operationId: CreateChannelsByIdSubscribe
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{id}/videos:
+    get:
+      tags: [channels]
+      summary: "Get channels videos"
+      operationId: GetChannelsByIdVideos
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{id}:
+    delete:
+      tags: [comments]
+      summary: "Delete comments"
+      operationId: DeleteCommentsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{id}/heart:
+    post:
+      tags: [comments]
+      summary: "Create comments heart"
+      operationId: CreateCommentsByIdHeart
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{id}/like:
+    post:
+      tags: [comments]
+      summary: "Create comments like"
+      operationId: CreateCommentsByIdLike
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{id}/pin:
+    post:
+      tags: [comments]
+      summary: "Create comments pin"
+      operationId: CreateCommentsByIdPin
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /feed/feedback:
+    post:
+      tags: [feed]
+      summary: "Create feed feedback"
+      operationId: CreateFeedFeedback
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+  /feed/subscriptions:
+    get:
+      tags: [feed]
+      summary: "Get feed subscriptions"
+      operationId: GetFeedSubscriptions
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams"
+      operationId: CreateLiveStreams
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /live-streams/{id}:
+    get:
+      tags: [live-streams]
+      summary: "Get live streams"
+      operationId: GetLiveStreamsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/chat:
+    get:
+      tags: [live-streams]
+      summary: "Get live streams chat"
+      operationId: GetLiveStreamsByIdChat
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [live-streams]
+      summary: "Create live streams chat"
+      operationId: CreateLiveStreamsByIdChat
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/health:
+    get:
+      tags: [live-streams]
+      summary: "Get live streams health"
+      operationId: GetLiveStreamsByIdHealth
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/polls:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams polls"
+      operationId: CreateLiveStreamsByIdPolls
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/polls/active:
+    get:
+      tags: [live-streams]
+      summary: "Get live streams polls active"
+      operationId: GetLiveStreamsByIdPollsActive
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/polls/vote:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams polls vote"
+      operationId: CreateLiveStreamsByIdPollsVote
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/rotate-key:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams rotate key"
+      operationId: CreateLiveStreamsByIdRotateKey
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/start:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams start"
+      operationId: CreateLiveStreamsByIdStart
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/stop:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams stop"
+      operationId: CreateLiveStreamsByIdStop
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/superchat:
+    post:
+      tags: [live-streams]
+      summary: "Create live streams superchat"
+      operationId: CreateLiveStreamsByIdSuperchat
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/superchats:
+    get:
+      tags: [live-streams]
+      summary: "Get live streams superchats"
+      operationId: GetLiveStreamsByIdSuperchats
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /live-streams/{id}/ws:
+    get:
+      tags: [live-streams]
+      summary: "Get live streams ws"
+      operationId: GetLiveStreamsByIdWs
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/campaigns:
+    post:
+      tags: [partners]
+      summary: "Create partners campaigns"
+      operationId: CreatePartnersCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [partners]
+      summary: "Get partners campaigns"
+      operationId: GetPartnersCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/rights/claims:
+    get:
+      tags: [partners]
+      summary: "Get partners rights claims"
+      operationId: GetPartnersRightsClaims
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [partners]
+      summary: "Create partners rights claims"
+      operationId: CreatePartnersRightsClaims
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /partners/rights/claims/{id}/dispute:
+    post:
+      tags: [partners]
+      summary: "Create partners rights claims dispute"
+      operationId: CreatePartnersRightsClaimsByIdDispute
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/rights/claims/{id}/resolve:
+    post:
+      tags: [partners]
+      summary: "Create partners rights claims resolve"
+      operationId: CreatePartnersRightsClaimsByIdResolve
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin, moderator)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/rights/dmca-counter-notice:
+    post:
+      tags: [partners]
+      summary: "Create partners rights dmca counter notice"
+      operationId: CreatePartnersRightsDmcaCounterNotice
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /partners/rights/dmca-takedown:
+    post:
+      tags: [partners]
+      summary: "Create partners rights dmca takedown"
+      operationId: CreatePartnersRightsDmcaTakedown
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /partners/settlements:
+    get:
+      tags: [partners]
+      summary: "Get partners settlements"
+      operationId: GetPartnersSettlements
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/settlements/earnings-summary:
+    get:
+      tags: [partners]
+      summary: "Get partners settlements earnings summary"
+      operationId: GetPartnersSettlementsEarningsSummary
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/settlements/payout:
+    post:
+      tags: [partners]
+      summary: "Create partners settlements payout"
+      operationId: CreatePartnersSettlementsPayout
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /partners/channels:
+    get:
+      tags: [partners]
+      summary: "Get partners channels"
+      operationId: GetPartnersChannels
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/contracts/{id}:
+    patch:
+      tags: [partners]
+      summary: "Update partners contracts"
+      operationId: UpdatePartnersContractsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /partners/me:
+    get:
+      tags: [partners]
+      summary: "Get partners me"
+      operationId: GetPartnersMe
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments/confirm:
+    post:
+      tags: [payments]
+      summary: "Create payments confirm"
+      operationId: CreatePaymentsConfirm
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /payments/transactions:
+    get:
+      tags: [payments]
+      summary: "Get payments transactions"
+      operationId: GetPaymentsTransactions
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /payments/webhooks/{provider}:
+    post:
+      tags: [payments]
+      summary: "Create payments webhooks"
+      operationId: CreatePaymentsWebhooksByProvider
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /playlists/:
+    post:
+      tags: [playlists]
+      summary: "Create playlists"
+      operationId: CreatePlaylists
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /playlists/{id}:
+    patch:
+      tags: [playlists]
+      summary: "Update playlists"
+      operationId: UpdatePlaylistsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [playlists]
+      summary: "Get playlists"
+      operationId: GetPlaylistsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /playlists/{id}/items:
+    post:
+      tags: [playlists]
+      summary: "Create playlists items"
+      operationId: CreatePlaylistsByIdItems
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /search:
+    get:
+      tags: [search]
+      summary: "Get search"
+      operationId: GetSearch
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /search/suggestions:
+    get:
+      tags: [search]
+      summary: "Get search suggestions"
+      operationId: GetSearchSuggestions
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studio/analytics:
+    get:
+      tags: [studio]
+      summary: "Get studio analytics"
+      operationId: GetStudioAnalytics
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studio/dashboard:
+    get:
+      tags: [studio]
+      summary: "Get studio dashboard"
+      operationId: GetStudioDashboard
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /subscriptions/:
+    get:
+      tags: [subscriptions]
+      summary: "Get subscriptions"
+      operationId: GetSubscriptions
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /subscriptions/{channelId}:
+    post:
+      tags: [subscriptions]
+      summary: "Create subscriptions"
+      operationId: CreateSubscriptionsByChannelid
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [subscriptions]
+      summary: "Delete subscriptions"
+      operationId: DeleteSubscriptionsByChannelid
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /uploads/:
+    post:
+      tags: [uploads]
+      summary: "Create uploads"
+      operationId: CreateUploads
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/comments:
+    post:
+      tags: [videos]
+      summary: "Create videos comments"
+      operationId: CreateVideosByIdComments
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [videos]
+      summary: "Get videos comments"
+      operationId: GetVideosByIdComments
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{id}:
+    get:
+      tags: [videos]
+      summary: "Get videos"
+      operationId: GetVideosById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [videos]
+      summary: "Update videos"
+      operationId: UpdateVideosById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [videos]
+      summary: "Delete videos"
+      operationId: DeleteVideosById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{id}/captions/{capId}:
+    delete:
+      tags: [videos]
+      summary: "Delete videos captions"
+      operationId: DeleteVideosByIdCaptionsByCapid
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: capId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{id}/like:
+    post:
+      tags: [videos]
+      summary: "Create videos like"
+      operationId: CreateVideosByIdLike
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [videos]
+      summary: "Delete videos like"
+      operationId: DeleteVideosByIdLike
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/blocked-users:
+    get:
+      tags: [me]
+      summary: "Get me blocked users"
+      operationId: GetMeBlockedUsers
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [me]
+      summary: "Create me blocked users"
+      operationId: CreateMeBlockedUsers
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/blocked-users/{targetId}:
+    delete:
+      tags: [me]
+      summary: "Delete me blocked users"
+      operationId: DeleteMeBlockedUsersByTargetid
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/delete-request:
+    post:
+      tags: [me]
+      summary: "Create me delete request"
+      operationId: CreateMeDeleteRequest
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [me]
+      summary: "Delete me delete request"
+      operationId: DeleteMeDeleteRequest
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/history:
+    get:
+      tags: [me]
+      summary: "Get me history"
+      operationId: GetMeHistory
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [me]
+      summary: "Delete me history"
+      operationId: DeleteMeHistory
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/mfa:
+    get:
+      tags: [me]
+      summary: "Get me mfa"
+      operationId: GetMeMfa
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/mfa/disable:
+    post:
+      tags: [me]
+      summary: "Create me mfa disable"
+      operationId: CreateMeMfaDisable
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/mfa/setup:
+    post:
+      tags: [me]
+      summary: "Create me mfa setup"
+      operationId: CreateMeMfaSetup
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/mfa/verify:
+    post:
+      tags: [me]
+      summary: "Create me mfa verify"
+      operationId: CreateMeMfaVerify
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/sessions:
+    get:
+      tags: [me]
+      summary: "Get me sessions"
+      operationId: GetMeSessions
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/sessions/{id}:
+    delete:
+      tags: [me]
+      summary: "Delete me sessions"
+      operationId: DeleteMeSessionsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/sessions/{id}/revoke:
+    post:
+      tags: [me]
+      summary: "Create me sessions revoke"
+      operationId: CreateMeSessionsByIdRevoke
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me/strikes:
+    get:
+      tags: [me]
+      summary: "Get me strikes"
+      operationId: GetMeStrikes
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  responses:
-    Unauthorized:
-      description: Authentication token missing or invalid
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
-    Forbidden:
-      description: Insufficient permissions for resource
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
-    NotFound:
-      description: Target resource was not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
+      description: OIDC JWT in production, dev tokens in test/development only
+  parameters:
+    VideoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
   schemas:
     ApiError:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+          example: UNAUTHENTICATED
+        message:
+          type: string
+          example: Authentication required
+        request_id:
+          type: string
+          example: req_01J9X8Z2M4K1
+        field:
+          type: string
+          example: title
+    ErrorEnvelope:
       type: object
       required: [error]
       properties:
         error:
-          type: object
-          required: [code, message, request_id]
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            request_id:
-              type: string
-            field:
-              type: string
-
+          $ref: '#/components/schemas/ApiError'
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    PlaybackInfo:
+      type: object
+      properties:
+        videoId:
+          type: string
+        hlsMasterUrl:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'

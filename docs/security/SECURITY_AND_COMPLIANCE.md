@@ -48,3 +48,25 @@
 - **Structured Log Redaction**: Go `slog` JSON loggers never log raw `Authorization` headers, cookies, refresh tokens, or full email addresses in production traces.
 - **Right to Erasure & Account Deletion**: Account deletion anonymizes PII in `users` while retaining legally required financial ledger rows (`ledger_entries`, `settlements`) under statutory tax retention periods.
 - **Immutable Administrative Audit Trail**: Every user sanction, moderation decision, and payout approval writes an append-only entry to `audit_logs` with `actor_id`, `action`, `target_id`, `reason`, and RFC3339 timestamp.
+
+---
+
+## 5. Implementation Gaps (2026-11-16, code-audited — target vs. code)
+
+The controls in §1–§4 are the **target posture**. Code audit found these gaps (P0 unless noted):
+
+1. **Playback tokens are unsigned** (`"pb_token_" + videoID`, no HMAC/expiry/path binding) and `GET /v1/videos/{id}/playback`
+   skips visibility/entitlement/geo checks (`services/api/internal/videos/handler.go`). §2 not yet implemented.
+2. **Payment confirmation fail-open**: `ConfirmPayment` marks `succeeded` when the Toss secret is unset
+   (`services/api/internal/payments/handler.go`). Must refuse instead.
+3. **Current deployment runs dev tokens** (`GVP_ENV=test`, `GVP_ALLOW_DEV_TOKENS=true`); production OIDC tenant not provisioned.
+4. **Admin MFA / step-up re-auth missing**: role gates do not verify `amr: ["mfa"]`; `admin.brand.com` MFA claim unenforced.
+5. **AES-128 key release / Widevine / FairPlay**: no key-release endpoint or DRM packaging in code.
+6. **PII at-rest encryption** (AES-256-GCM payout accounts) and log-redaction coverage: UNVERIFIED in code — needs proof test.
+7. Rate limiting is single-instance in-memory (no Valkey); multi-replica enforcement pending.
+8. **Ad surface unauthenticated (P0, route audit 2026-11-16):** every route under `/v1/ads/*` and `/v1/advertiser/*`
+   (campaign CRUD, reports, creative approve/reject, diagnostics) is public; creation auto-activates (`active` +
+   `approved`) with no advertiser scoping. See `docs/api/ROUTE_CENSUS.md` ads/advertiser groups.
+9. **Search leaks non-public videos (P0):** `/v1/search` has no visibility filter (private/unlisted returned).
+
+Full list: [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) §4–§5.

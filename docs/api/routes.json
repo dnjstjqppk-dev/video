@@ -1,0 +1,717 @@
+[
+  {
+    "method": "GET",
+    "path": "/healthz",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/metrics",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/ready",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/ads/delivery-diagnostics",
+    "auth": "Role(super_admin, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/admin/finance/batches/approve",
+    "auth": "Role(super_admin, platform_admin, finance_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/finance/settlements",
+    "auth": "Role(super_admin, platform_admin, finance_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/finance/summary",
+    "auth": "Role(super_admin, platform_admin, finance_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/moderation",
+    "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/admin/moderation/{id}/resolve",
+    "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/policies/",
+    "auth": "Role(super_admin, platform_admin (+support read on GET))"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/admin/policies/",
+    "auth": "Role(super_admin, platform_admin (+support read on GET))"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/admin/policies/flags/{key}",
+    "auth": "Role(super_admin, platform_admin (+support read on GET))"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/audit-logs",
+    "auth": "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/dashboard",
+    "auth": "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/users",
+    "auth": "Role(super_admin, platform_admin (+support read on GET /users))"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/admin/users/{id}/status",
+    "auth": "Role(super_admin, platform_admin (+support read on GET /users))"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/admin/creatives",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/admin/creatives/{id}/approve",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/admin/creatives/{id}/reject",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/admin/diagnostics",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/advertiser/reports",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/campaigns",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/campaigns",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/campaigns/{id}",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/ads/campaigns/{id}/status",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/decision",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/events",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/preview",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/reports",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/reports",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/admin/creatives",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/admin/creatives/{id}/approve",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/admin/creatives/{id}/reject",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/admin/diagnostics",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/advertiser/reports",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/campaigns",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/campaigns",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/campaigns/{id}",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/advertiser/campaigns/{id}/status",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/decision",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/events",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/preview",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/reports",
+    "auth": "Public HOLE: guard required (P0)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/channels/",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/channels/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/channels/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/channels/{id}/subscribe",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/channels/{id}/subscribe",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/channels/{id}/videos",
+    "auth": "Public"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/comments/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/comments/{id}/heart",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/comments/{id}/like",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/comments/{id}/pin",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/events/analytics",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/feed/feedback",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/feed/home",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/feed/shorts",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/feed/subscriptions",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/chat",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/chat",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/health",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/polls",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/polls/active",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/polls/vote",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/rotate-key",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/start",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/stop",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/live-streams/{id}/superchat",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/superchats",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/ws",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/moderation/reports",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/campaigns",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/campaigns",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/rights/claims",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/rights/claims",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/rights/claims/{id}/dispute",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/rights/claims/{id}/resolve",
+    "auth": "Role(super_admin, platform_admin, moderator)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/rights/dmca-counter-notice",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/rights/dmca-takedown",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/settlements",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/settlements/earnings-summary",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/settlements/payout",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/channels",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/contracts",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/partners/contracts/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/me",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/payments/checkout",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/payments/confirm",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/payments/transactions",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/payments/webhooks/{provider}",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/playlists/",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/playlists/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/playlists/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/playlists/{id}/items",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/search",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/search/suggestions",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/earnings",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/settlements",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/analytics",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/claims",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/comments",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/dashboard",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/videos",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/studio/videos/{id}/edit-jobs",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/videos/{id}/edit-jobs/{jobId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/subscriptions/",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/subscriptions/{channelId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/subscriptions/{channelId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/uploads/",
+    "auth": "Auth"
+  },
+  {
+    "method": "PUT",
+    "path": "/v1/uploads/{id}/chunks/{partNumber}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/uploads/{id}/complete",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/uploads/{id}/parts",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/uploads/{id}/status",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/videos/{id}/comments",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/comments",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/videos/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/captions",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/videos/{id}/captions",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}/captions/{capId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/videos/{id}/like",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}/like",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/playback",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/me",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/blocked-users",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/blocked-users",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/blocked-users/{targetId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/delete-request",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/delete-request",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/history",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/history",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/mfa",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/mfa/disable",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/mfa/setup",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/mfa/verify",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/sessions",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/sessions/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/sessions/{id}/revoke",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/strikes",
+    "auth": "Auth"
+  }
+]

@@ -1,5 +1,22 @@
 # Global Video Platform — System Architecture Specification (Phase 0~7)
 
+## 0. As-Built Operating Topology (2026-11-16, code-audited)
+
+The diagram in §1 is the **target** architecture. The actually running topology is:
+
+```text
+browser -> console Workers (web/studio/partners/admin, /api)
+       -> api-proxy Worker (API_UPSTREAM secret)
+       -> cloudflared quick tunnel (*.trycloudflare.com, rotates on restart)
+       -> gvp-api.exe :18092 + gvp-media-worker.exe :8081 (operator PC)
+```
+
+Port `8080` on the operator PC is occupied by another process and intentionally avoided.
+The Go API serves from an **in-memory store** (PostgreSQL write-through covers videos/users/transactions only, and its
+8-table simplified schema conflicts with the 75-table migration schema — see `docs/IMPLEMENTATION_STATUS.md` §4.2).
+No Go code connects to NATS, Valkey, OpenSearch, or ClickHouse yet (stdlib-only workers); those compose services are un-wired.
+Authoritative current status: [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
+
 ## 1. Executive Architecture Overview
 
 The **Global Video Platform (GVP)** is a commercial-grade, multi-surface video ecosystem engineered around **4 independently deployed Nuxt 4 / Vue 3 web consoles**, a **Flutter iOS/Android mobile client**, and a **Go Modular Monolith API paired with 5 horizontally scalable background workers**.
