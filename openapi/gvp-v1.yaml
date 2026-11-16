@@ -1880,7 +1880,7 @@ paths:
     post:
       tags: [subscriptions]
       summary: "Create subscriptions"
-      operationId: CreateSubscriptionsByChannelid
+      operationId: CreateSubscriptionsByChannelId
       x-census: {generated: true, detail: pending}
       x-auth: "Auth"
       parameters:
@@ -1905,7 +1905,7 @@ paths:
     delete:
       tags: [subscriptions]
       summary: "Delete subscriptions"
-      operationId: DeleteSubscriptionsByChannelid
+      operationId: DeleteSubscriptionsByChannelId
       x-census: {generated: true, detail: pending}
       x-auth: "Auth"
       parameters:
@@ -2048,7 +2048,7 @@ paths:
     delete:
       tags: [videos]
       summary: "Delete videos captions"
-      operationId: DeleteVideosByIdCaptionsByCapid
+      operationId: DeleteVideosByIdCaptionsByCapId
       x-census: {generated: true, detail: pending}
       x-auth: "Auth"
       parameters:
@@ -2149,7 +2149,7 @@ paths:
     delete:
       tags: [me]
       summary: "Delete me blocked users"
-      operationId: DeleteMeBlockedUsersByTargetid
+      operationId: DeleteMeBlockedUsersByTargetId
       x-census: {generated: true, detail: pending}
       x-auth: "Auth"
       parameters:

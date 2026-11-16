@@ -276,9 +276,12 @@ def operation_id(method: str, path: str) -> str:
         if not part or part in ("v1",):
             continue
         if part.startswith("{") and part.endswith("}"):
-            parts.append("By" + part[1:-1].title().replace("-", "").replace("_", ""))
+            inner = part[1:-1].replace("-", "_")
+            camel = "".join(seg[:1].upper() + seg[1:] for seg in inner.split("_"))
+            parts.append("By" + camel)
         else:
-            parts.append("".join(w.title() for w in re.split(r"[-_]", part)))
+            camel = "".join(seg[:1].upper() + seg[1:] for seg in re.split(r"[-_]", part))
+            parts.append(camel)
     return VERB[method] + "".join(parts)
 
 
