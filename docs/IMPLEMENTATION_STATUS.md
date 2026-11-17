@@ -81,7 +81,7 @@ browser -> console workers (web/studio/partners/admin, /api)
 ### 4.4 재생·시청 — PARTIAL
 
 - `GET /v1/videos/{id}/playback`: **FIXED 2026-11-17** — HMAC-SHA256 서명 토큰(`v1.<b64id>.<exp>.<sig>`, 1h, 영상 바인딩) 발급 + private(비소유 404)·members_only(미자격 403) 검사 (`videos/playback_token.go`, `videos/visibility.go`). 지역/연령 검사는 정책 데이터 부재로 잔여.
-- 조회수 증가가 재생 API와 분석 이벤트(`valid_view`)에서 **중복 가산**되고 중복 제거 없음 → P1 (P0-4 잔여, P1-14에서 처리).
+- ~~조회수 중복 가산~~ **FIXED 2026-11-17 (P1-14):** 재생 허가·`valid_view`가 24h 시청자·영상 중복 제거(`store.CountView`)를 공유해 세션당 1회만 가산. 집계치는 P0-1 쓰루라이트로 PG에 영속.
 - HLS 서명·AES-128 키 발급·Widevine/FairPlay: MISSING (문서만 존재).
 
 ### 4.5 광고 (최상위 P0 비즈니스 요구) — PARTIAL
@@ -177,7 +177,8 @@ browser -> console workers (web/studio/partners/admin, /api)
     쇼츠·라이브·Shorts·채널 목록은 실 API 연동, 관리자 변경 UI에 TOTP 재인증 입력 추가. `GET /v1/live-streams/` 신설(141라우트) + 스트림키 공개 응답 차단.
 12. 크로스 콘솔 URL 현행화 + api-proxy 배포 자동화 + `/api 1042` 재검증.
 13. NATS JetStream 실연동 (미디어잡·분석 이벤트·아웃박스 릴레이) 또는 범위 축소 결정.
-14. 조회수/분석 중복 제거 + ClickHouse 싱크 또는 PG 롤업 확정.
+14. 조회수/분석 중복 제거 + ClickHouse 싱크 또는 PG 롤업 확정: **DONE 2026-11-17** — 유효 조회수 정의(24h 중복 제거) + 단일 가산 경로 + PG 영속.
+   웨어하우스 배치 싱크는 이벤트 버스 결정(P1-13)과 함께 후속.
 15. 라이브 실인제스트 범위 확정 (Cloudflare Stream 실연동 또는 RTMP 자체 구현).
 16. Shorts 촬영·업로드·음악 권리, 댓글 정책(차단어/제한), 알림·구독 피드 완성.
 17. 환불·정산 배치·실지급·세금계산서·광고 인보이스·미달 경고/보상 절차.

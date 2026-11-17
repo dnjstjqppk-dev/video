@@ -82,8 +82,15 @@ func (h *Handler) GetPlayback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Increment view count
-	video.ViewCount++
+	// P1-14: count at most one view per viewer per window (access unaffected).
+	viewerID := ""
+	if user != nil {
+		viewerID = user.ID
+	}
+	if h.Store.CountView(store.ViewerKey(r, viewerID), video.ID) {
+		video.ViewCount++
+		h.Store.PersistVideo(video)
+	}
 
 	playback := map[string]interface{}{
 		"video_id":         video.ID,

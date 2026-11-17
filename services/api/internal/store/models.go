@@ -447,6 +447,8 @@ type MemoryStore struct {
 	IdempotencyKeys map[string]string // idempotencyKey -> transactionID
 	Ledger          []LedgerEntry
 	AuditLogs       []map[string]interface{}
+	viewSeen        map[string]time.Time // P1-14: viewer|video -> last counted view
+	viewMu          sync.Mutex
 	Contracts       map[string]*PartnerContract
 }
 
@@ -485,6 +487,7 @@ func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 		Ledger:          make([]LedgerEntry, 0),
 		AuditLogs:       make([]map[string]interface{}, 0),
 		Contracts:       make(map[string]*PartnerContract),
+		viewSeen:        make(map[string]time.Time),
 	}
 	s.seedDefaults()
 	return s

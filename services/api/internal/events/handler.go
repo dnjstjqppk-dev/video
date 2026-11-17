@@ -41,15 +41,25 @@ func (h *Handler) RecordAnalyticsEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Increment view count if valid view event
+	// P1-14: valid_view shares the playback counting guard so one session
+	// increments ViewCount exactly once. Telemetry is always accepted.
+	counted := false
 	if event.EventType == "valid_view" {
-		if v, ok := h.Store.Videos[event.VideoID]; ok {
+		user := identity.GetUserFromContext(r.Context())
+		viewerID := ""
+		if user != nil {
+			viewerID = user.ID
+		}
+		if v, ok := h.Store.Videos[event.VideoID]; ok && h.Store.CountView(store.ViewerKey(r, viewerID), event.VideoID) {
 			v.ViewCount++
+			h.Store.PersistVideo(v)
+			counted = true
 		}
 	}
 
 	identity.WriteJSON(w, http.StatusAccepted, map[string]interface{}{
 		"status":      "ACCEPTED",
+		"counted":     counted,
 		"received_at": time.Now().Format(time.RFC3339),
 	})
 }

@@ -165,6 +165,28 @@ func TestPlaybackTokenForgeryRejected(t *testing.T) {
 	}
 }
 
+// P1-14: one viewer counts once per video; access itself is unaffected.
+func TestPlaybackCountsOncePerViewer(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+	s := seedVisibilityStore()
+	router := playbackRouter(s)
+	before := s.Videos["vid-pub"].ViewCount
+
+	if rec := getPlayback(t, router, "vid-pub", "creator-token"); rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if rec := getPlayback(t, router, "vid-pub", "creator-token"); rec.Code != http.StatusOK {
+		t.Fatalf("repeat playback must still grant access, got %d", rec.Code)
+	}
+	if rec := getPlayback(t, router, "vid-pub", "viewer-token"); rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if got := s.Videos["vid-pub"].ViewCount - before; got != 2 {
+		t.Fatalf("expected 2 counted views (creator once + viewer once), got %d", got)
+	}
+}
+
 // P0-4: production refuses to issue tokens without a configured secret.
 func TestPlaybackSigningRefusesWithoutSecretInProduction(t *testing.T) {
 	t.Setenv("GVP_ENV", "production")
