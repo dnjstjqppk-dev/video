@@ -77,6 +77,19 @@ const campaigns = ref<AdCampaign[]>(campaignsData.value || fallbackCampaigns)
 
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+const creativeFile = ref<File | null>(null)
+const creativeHeadline = ref('')
+const creativeDestinationUrl = ref('')
+const isUploading = ref(false)
+
+const creativeAccept = computed(() =>
+  newFormat.value === AdFormat.FEED ? 'image/jpeg,image/png,image/gif,image/webp' : 'video/mp4,video/webm,video/quicktime'
+)
+
+function onCreativeFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  creativeFile.value = input.files?.[0] || null
+}
 
 async function createCampaign() {
   errorMessage.value = null
@@ -85,7 +98,7 @@ async function createCampaign() {
   const payload: Partial<AdCampaign> = {
     name: newCampaignName.value,
     format: newFormat.value,
-    status: CampaignStatus.ACTIVE,
+    status: CampaignStatus.DRAFT,
     dailyBudget: dailyBudget.value,
     totalBudget: totalBudget.value,
     cpmBid: cpmBid.value,
@@ -96,9 +109,42 @@ async function createCampaign() {
   try {
     const created = await api.createPartnerCampaign(payload)
     campaigns.value.unshift(created)
-    successMessage.value = `캠페인 [${created.name}]이 성공적으로 등록되었습니다.`
+    successMessage.value = `캠페인 [${created.name}]이 초안으로 등록되었습니다.`
+    if (creativeFile.value) {
+      await uploadCreativeFor(created.id)
+    }
   } catch (err: any) {
     errorMessage.value = `캠페인 생성 실패: ${err?.message || 'API 서버 통신 오류'}`
+  }
+}
+
+async function uploadCreativeFor(campaignId: string) {
+  if (!creativeFile.value) return
+  isUploading.value = true
+  try {
+    const creative = await api.uploadCreative(campaignId, creativeFile.value, {
+      headline: creativeHeadline.value || newCampaignName.value,
+      destinationUrl: creativeDestinationUrl.value || undefined
+    })
+    successMessage.value = `소재 [${creative.id}]가 업로드되어 심사 대기 중입니다.`
+    creativeFile.value = null
+  } catch (err: any) {
+    errorMessage.value = `소재 업로드 실패: ${err?.message || 'API 서버 통신 오류'}`
+  } finally {
+    isUploading.value = false
+  }
+}
+
+async function submitForReview(cmp: AdCampaign) {
+  errorMessage.value = null
+  try {
+    const updated = await api.updateCampaignStatus(cmp.id, 'pending_review')
+    const idx = campaigns.value.findIndex(c => c.id === cmp.id)
+    const current = idx >= 0 ? campaigns.value[idx] : undefined
+    if (current) campaigns.value[idx] = { ...current, status: updated.status }
+    successMessage.value = `캠페인 [${cmp.name}]이 심사에 제출되었습니다.`
+  } catch (err: any) {
+    errorMessage.value = `심사 제출 실패: ${err?.message || 'API 서버 통신 오류'}`
   }
 }
 </script>
@@ -170,15 +216,46 @@ async function createCampaign() {
         </div>
       </div>
 
+      <div class="mt-5 grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-3">
+        <div>
+          <label class="text-xs font-medium text-slate-700">Creative File (mp4/webm/mov or jpg/png/gif/webp)</label>
+          <input
+            type="file"
+            :accept="creativeAccept"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+            @change="onCreativeFileChange"
+          />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-700">Creative Headline</label>
+          <input
+            v-model="creativeHeadline"
+            type="text"
+            placeholder="Optional — defaults to campaign name"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+          />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-700">Destination URL</label>
+          <input
+            v-model="creativeDestinationUrl"
+            type="url"
+            placeholder="https://…"
+            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+          />
+        </div>
+      </div>
+
       <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
         <p class="text-xs text-slate-500">
-          Creative Asset: <code class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-slate-800">s26_ultra_hdr_master_1080p60.mp4</code> (VAST 4.2 Verified)
+          Campaigns start as <code class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-slate-800">draft</code> — upload a creative, then submit for review.
         </p>
         <button
           type="submit"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+          :disabled="isUploading"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-60"
         >
-          Launch Ad Campaign
+          {{ isUploading ? 'Uploading Creative…' : 'Create Draft Campaign' }}
         </button>
       </div>
     </form>
@@ -195,6 +272,7 @@ async function createCampaign() {
             <th class="py-2.5 px-4">Impressions</th>
             <th class="py-2.5 px-4">Clicks (CTR)</th>
             <th class="py-2.5 px-4">Status</th>
+            <th class="py-2.5 px-4">Review</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -220,6 +298,16 @@ async function createCampaign() {
               <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium uppercase text-emerald-700">
                 {{ cmp.status }}
               </span>
+            </td>
+            <td class="py-3 px-4 border-b border-slate-100">
+              <button
+                v-if="cmp.status === 'draft'"
+                type="button"
+                class="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                @click="submitForReview(cmp)"
+              >
+                Submit for review
+              </button>
             </td>
           </tr>
         </tbody>

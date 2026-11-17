@@ -594,4 +594,24 @@ func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
 	if repRec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for advertiser reports, got %d", repRec.Code)
 	}
+
+	// 7. Billed proof (P0-5): served impression + click accrued spend on the
+	// campaign and surfaced in the advertiser-scoped report.
+	billed := memStore.Campaigns[createdCamp.ID]
+	if billed.SpentCents <= 0 || billed.Impressions < 1 || billed.Clicks < 1 {
+		t.Fatalf("expected billed funnel on campaign, got spent=%d imp=%d clicks=%d",
+			billed.SpentCents, billed.Impressions, billed.Clicks)
+	}
+	var billedRep struct {
+		Overview struct {
+			TotalSpendCents int64 `json:"total_spend_cents"`
+		} `json:"overview"`
+	}
+	if err := json.Unmarshal(repRec.Body.Bytes(), &billedRep); err != nil {
+		t.Fatalf("failed to decode billed report: %v", err)
+	}
+	if billedRep.Overview.TotalSpendCents < billed.SpentCents {
+		t.Fatalf("report must include funnel spend %d, got overview %d",
+			billed.SpentCents, billedRep.Overview.TotalSpendCents)
+	}
 }

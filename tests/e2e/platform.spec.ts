@@ -192,6 +192,33 @@ test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suit
       },
     });
     expect(campRes.status()).toBe(201);
+    const campBody = await campRes.json();
+    expect(campBody.status).toBe('draft');
+
+    // 3.1b Upload real creative bytes, fetch the stored asset, force preview (P0-5)
+    const spotMp4 = Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from('ftypmp42'), Buffer.alloc(20)]);
+    const uploadRes = await request.post(`${API_BASE_URL}/advertiser/campaigns/${campBody.id}/creatives`, {
+      headers,
+      multipart: {
+        file: { name: 'spot.mp4', mimeType: 'video/mp4', buffer: spotMp4 },
+        headline: 'Q4 Launch Spot',
+        destinationUrl: 'https://advertiser.test/q4',
+      },
+    });
+    expect(uploadRes.status()).toBe(201);
+    const creative = await uploadRes.json();
+    expect(creative.review_status).toBe('pending');
+    expect(creative.media_url).toContain('/asset');
+    const assetRes = await request.get(`${API_BASE_URL}${String(creative.media_url).replace(/^\/v1/, '')}`, { headers });
+    expect(assetRes.status()).toBe(200);
+    expect((await assetRes.body()).length).toBe(spotMp4.length);
+    const forcedRes = await request.post(`${API_BASE_URL}/ads/preview`, {
+      headers,
+      data: { campaign_id: campBody.id, slot_id: 'watch_preroll' },
+    });
+    expect(forcedRes.status()).toBe(200);
+    const forced = await forcedRes.json();
+    expect(forced.creative.campaign_id).toBe(campBody.id);
 
     // 3.2 List MCN Linked Channels
     const chRes = await request.get(`${API_BASE_URL}/partners/channels`, { headers });

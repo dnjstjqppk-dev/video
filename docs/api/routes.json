@@ -120,9 +120,19 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
+    "method": "POST",
+    "path": "/v1/ads/campaigns/{id}/creatives",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
     "method": "PATCH",
     "path": "/v1/ads/campaigns/{id}/status",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/creatives/{id}/asset",
+    "auth": "Public"
   },
   {
     "method": "POST",
@@ -157,6 +167,11 @@
   {
     "method": "GET",
     "path": "/v1/advertiser/campaigns/{id}",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/advertiser/campaigns/{id}/creatives",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
@@ -545,14 +560,19 @@
     "auth": "Auth"
   },
   {
+    "method": "POST",
+    "path": "/v1/videos/{id}/comments",
+    "auth": "Auth"
+  },
+  {
     "method": "GET",
     "path": "/v1/videos/{id}/comments",
     "auth": "Public"
   },
   {
-    "method": "POST",
-    "path": "/v1/videos/{id}/comments",
-    "auth": "Auth"
+    "method": "GET",
+    "path": "/v1/videos/{id}",
+    "auth": "Public"
   },
   {
     "method": "PATCH",
@@ -563,11 +583,6 @@
     "method": "DELETE",
     "path": "/v1/videos/{id}",
     "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/videos/{id}",
-    "auth": "Public"
   },
   {
     "method": "GET",
@@ -600,12 +615,12 @@
     "auth": "Public"
   },
   {
-    "method": "PATCH",
+    "method": "GET",
     "path": "/v1/me",
     "auth": "Auth"
   },
   {
-    "method": "GET",
+    "method": "PATCH",
     "path": "/v1/me",
     "auth": "Auth"
   },

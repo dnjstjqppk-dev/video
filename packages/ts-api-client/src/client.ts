@@ -493,12 +493,44 @@ export class ApiClient {
     return this.request('/v1/admin/ads/delivery-diagnostics');
   }
 
-  async getAdPreview(data: { slot_id: string; category?: string }): Promise<AdDecisionResponse> {
+  /** Resolve API-relative asset paths (e.g. uploaded creative URLs) against the API base. */
+  resolveUrl(path: string): string {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith('/v1/')) return `${this.baseUrl}${path}`;
+    return path;
+  }
+
+  async getAdPreview(data: { slot_id: string; category?: string; campaign_id?: string }): Promise<AdDecisionResponse> {
     const raw = await this.request<unknown>('/v1/ads/preview', {
       method: 'POST',
       body: JSON.stringify(data),
     });
     return mapAdDecision(raw);
+  }
+
+  async uploadCreative(
+    campaignId: string,
+    file: File,
+    meta: { headline?: string; destinationUrl?: string; callToAction?: string } = {}
+  ): Promise<AdCreative> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    if (meta.headline) form.append('headline', meta.headline);
+    if (meta.destinationUrl) form.append('destinationUrl', meta.destinationUrl);
+    if (meta.callToAction) form.append('callToAction', meta.callToAction);
+    const raw = await this.request<unknown>(`/v1/advertiser/campaigns/${campaignId}/creatives`, {
+      method: 'POST',
+      body: form,
+    });
+    return mapAdCreative(raw);
+  }
+
+  async updateCampaignStatus(campaignId: string, status: string): Promise<AdCampaign> {
+    const raw = await this.request<unknown>(`/v1/advertiser/campaigns/${campaignId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return mapCampaign(raw);
   }
 
   async getPartnerOverview(): Promise<{

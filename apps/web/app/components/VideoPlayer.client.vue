@@ -717,7 +717,7 @@ defineExpose({
         <!-- Pre-Roll Ad Player Surface & Overlay -->
         <div v-if="isAdPlaying && currentAd" class="absolute inset-0 z-30 flex flex-col justify-between bg-slate-950">
           <video
-            :src="currentAd.mediaUrl"
+            :src="api.resolveUrl(currentAd.mediaUrl)"
             autoplay
             playsinline
             class="h-full w-full object-contain"

@@ -2,7 +2,7 @@
 """Generate the API route census and synchronize the OpenAPI specification.
 
 Inputs (all committed, reviewable):
-  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 137 routes).
+  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 140 routes).
      Refresh: temporarily add a chi.Walk test in services/api/cmd/server,
      run `go test ./cmd/server/ -run TestZZDumpRoutes -v`, paste, delete.
   2. tests/openapi/gvp-v1.yaml: 23 hand-detailed paths + components.
@@ -55,7 +55,9 @@ GET /v1/ads/advertiser/reports
 GET /v1/ads/campaigns
 POST /v1/ads/campaigns
 GET /v1/ads/campaigns/{id}
+POST /v1/ads/campaigns/{id}/creatives
 PATCH /v1/ads/campaigns/{id}/status
+GET /v1/ads/creatives/{id}/asset
 POST /v1/ads/decision
 POST /v1/ads/events
 POST /v1/ads/preview
@@ -63,6 +65,7 @@ GET /v1/ads/reports
 GET /v1/advertiser/campaigns
 POST /v1/advertiser/campaigns
 GET /v1/advertiser/campaigns/{id}
+POST /v1/advertiser/campaigns/{id}/creatives
 PATCH /v1/advertiser/campaigns/{id}/status
 POST /v1/advertiser/decision
 POST /v1/advertiser/events
@@ -140,19 +143,19 @@ PUT /v1/uploads/{id}/chunks/{partNumber}
 POST /v1/uploads/{id}/complete
 POST /v1/uploads/{id}/parts
 GET /v1/uploads/{id}/status
-GET /v1/videos/{id}/comments
 POST /v1/videos/{id}/comments
+GET /v1/videos/{id}/comments
+GET /v1/videos/{id}
 PATCH /v1/videos/{id}
 DELETE /v1/videos/{id}
-GET /v1/videos/{id}
 GET /v1/videos/{id}/captions
 POST /v1/videos/{id}/captions
 DELETE /v1/videos/{id}/captions/{capId}
 POST /v1/videos/{id}/like
 DELETE /v1/videos/{id}/like
 GET /v1/videos/{id}/playback
-PATCH /v1/*/me
 GET /v1/*/me
+PATCH /v1/*/me
 GET /v1/*/me/blocked-users
 POST /v1/*/me/blocked-users
 DELETE /v1/*/me/blocked-users/{targetId}
@@ -174,6 +177,7 @@ GET /v1/*/me/strikes
 PUBLIC = {
     ("GET", "/healthz"), ("GET", "/ready"), ("GET", "/metrics"),
     ("POST", "/v1/ads/decision"), ("POST", "/v1/ads/events"),
+    ("GET", "/v1/ads/creatives/{id}/asset"),
     ("POST", "/v1/advertiser/decision"), ("POST", "/v1/advertiser/events"),
     ("POST", "/v1/events/analytics"),
     ("GET", "/v1/feed/home"), ("GET", "/v1/feed/shorts"),
@@ -315,7 +319,7 @@ def write_census_md(rows):
     out = ["# API Route Census (generated, chi.Walk verified)",
            "",
            "Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, "
-           f"{len(rows)} registrations). Generator: `python docs/generate_route_census.py` — do not hand-edit.",
+           f"{len(rows)} registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.",
            "",
            "Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·",
            "**HOLE** is public but must be guarded (P0). `/v1/*/` in chi output is the users-router mount artifact",

@@ -32,6 +32,7 @@ const averageCtr = computed(() => {
 // 3. Ad Preview Simulator
 const previewSlot = ref('watch_preroll')
 const previewCategory = ref('Technology')
+const previewCampaignId = ref('')
 const previewResult = ref<AdDecisionResponse | null>(null)
 const isPreviewLoading = ref(false)
 
@@ -40,7 +41,8 @@ async function runAdPreview() {
   try {
     previewResult.value = await api.getAdPreview({
       slot_id: previewSlot.value,
-      category: previewCategory.value
+      category: previewCategory.value,
+      campaign_id: previewCampaignId.value || undefined
     })
   } catch (err: any) {
     previewResult.value = {
@@ -174,6 +176,18 @@ onMounted(() => {
             </select>
           </div>
 
+          <div>
+            <label class="text-xs font-medium text-slate-700">Force Campaign (verification mode)</label>
+            <select
+              v-model="previewCampaignId"
+              class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+              @change="runAdPreview"
+            >
+              <option value="">Auto (decision engine)</option>
+              <option v-for="c in campaigns" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+
           <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div v-if="isPreviewLoading" class="py-6 text-center text-xs text-slate-500 animate-pulse">
               의사결정 엔진 조회 중... (Querying Decision Engine)
@@ -190,7 +204,7 @@ onMounted(() => {
               <div class="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                 <img
                   v-if="previewResult.creative.mediaUrl"
-                  :src="previewResult.creative.mediaUrl"
+                  :src="api.resolveUrl(previewResult.creative.mediaUrl)"
                   :alt="previewResult.creative.title"
                   class="h-full w-full object-cover"
                 />

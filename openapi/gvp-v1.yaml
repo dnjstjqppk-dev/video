@@ -636,6 +636,34 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /ads/campaigns/{id}/creatives:
+    post:
+      tags: [ads]
+      summary: "Create ads campaigns creatives"
+      operationId: CreateAdsCampaignsByIdCreatives
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /ads/campaigns/{id}/status:
     patch:
       tags: [ads]
@@ -662,6 +690,24 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/creatives/{id}/asset:
+    get:
+      tags: [ads]
+      summary: "Get ads creatives asset"
+      operationId: GetAdsCreativesByIdAsset
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/decision:
@@ -782,6 +828,34 @@ paths:
             type: string
       responses:
         '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/campaigns/{id}/creatives:
+    post:
+      tags: [advertiser]
+      summary: "Create advertiser campaigns creatives"
+      operationId: CreateAdvertiserCampaignsByIdCreatives
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -1928,23 +2002,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /videos/{id}/comments:
-    get:
-      tags: [videos]
-      summary: "Get videos comments"
-      operationId: GetVideosByIdComments
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
     post:
       tags: [videos]
       summary: "Create videos comments"
@@ -1970,7 +2027,41 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+    get:
+      tags: [videos]
+      summary: "Get videos comments"
+      operationId: GetVideosByIdComments
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
   /videos/{id}:
+    get:
+      tags: [videos]
+      summary: "Get videos"
+      operationId: GetVideosById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [videos]
       summary: "Update videos"
@@ -2013,23 +2104,6 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    get:
-      tags: [videos]
-      summary: "Get videos"
-      operationId: GetVideosById
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
         '404':
           $ref: '#/components/responses/NotFound'
   /videos/{id}/captions/{capId}:

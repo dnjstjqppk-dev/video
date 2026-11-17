@@ -1,6 +1,6 @@
 # API Route Census (generated, chi.Walk verified)
 
-Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 137 registrations). Generator: `python docs/generate_route_census.py` — do not hand-edit.
+Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 140 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
 
 Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·
 **HOLE** is public but must be guarded (P0). `/v1/*/` in chi output is the users-router mount artifact
@@ -18,8 +18,8 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `PATCH` | `/v1/me` | Auth | chi renders `/v1/*/me` |
 | `GET` | `/v1/me` | Auth | chi renders `/v1/*/me` |
+| `PATCH` | `/v1/me` | Auth | chi renders `/v1/*/me` |
 | `GET` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
 | `POST` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
 | `DELETE` | `/v1/me/blocked-users/{targetId}` | Auth | chi renders `/v1/*/me/blocked-users/{targetId}` |
@@ -51,11 +51,11 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/videos/{id}/comments` | Public |  |
 | `POST` | `/v1/videos/{id}/comments` | Auth |  |
+| `GET` | `/v1/videos/{id}/comments` | Public |  |
+| `GET` | `/v1/videos/{id}` | Public |  |
 | `PATCH` | `/v1/videos/{id}` | Auth |  |
 | `DELETE` | `/v1/videos/{id}` | Auth |  |
-| `GET` | `/v1/videos/{id}` | Public |  |
 | `GET` | `/v1/videos/{id}/captions` | Auth |  |
 | `POST` | `/v1/videos/{id}/captions` | Auth |  |
 | `DELETE` | `/v1/videos/{id}/captions/{capId}` | Auth |  |
@@ -151,7 +151,7 @@ for real paths `/v1/me...`.
 | `PATCH` | `/v1/partners/contracts/{id}` | Auth |  |
 | `GET` | `/v1/partners/me` | Auth |  |
 
-## ads (13)
+## ads (15)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
@@ -163,19 +163,22 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/ads/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
+| `POST` | `/v1/ads/campaigns/{id}/creatives` | Role(advertiser, partner_manager, platform_admin) |  |
 | `PATCH` | `/v1/ads/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/ads/creatives/{id}/asset` | Public |  |
 | `POST` | `/v1/ads/decision` | Public |  |
 | `POST` | `/v1/ads/events` | Public |  |
 | `POST` | `/v1/ads/preview` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/ads/reports` | Role(advertiser, partner_manager, platform_admin) |  |
 
-## advertiser (8)
+## advertiser (9)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/advertiser/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
+| `POST` | `/v1/advertiser/campaigns/{id}/creatives` | Role(advertiser, partner_manager, platform_admin) |  |
 | `PATCH` | `/v1/advertiser/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/advertiser/decision` | Public |  |
 | `POST` | `/v1/advertiser/events` | Public |  |

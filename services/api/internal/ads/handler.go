@@ -17,10 +17,54 @@ import (
 type Handler struct {
 	Store *store.MemoryStore
 	mu    sync.Mutex
+	// freqImpressions tracks SERVED decisions per user+campaign for hourly
+	// frequency capping (P0-5). Key: userID + "|" + campaignID.
+	freqImpressions map[string][]time.Time
+	// CreativeDir overrides the creative-asset root (tests; else env/default).
+	CreativeDir string
+	// creativeFiles maps creative IDs to stored files; creativeMIME to sniffed types.
+	creativeFiles map[string]string
+	creativeMIME  map[string]string
 }
 
+// hourlyCapPerUserCampaign bounds serves per user per campaign per hour until
+// per-campaign caps land with the persistent ad engine (P0-1).
+const hourlyCapPerUserCampaign = 3
+
+const freqWindow = time.Hour
+
 func NewHandler(s *store.MemoryStore) *Handler {
-	return &Handler{Store: s}
+	return &Handler{
+		Store:           s,
+		freqImpressions: make(map[string][]time.Time),
+		creativeFiles:   make(map[string]string),
+		creativeMIME:    make(map[string]string),
+	}
+}
+
+// capped reports whether the user already hit the hourly cap for the campaign.
+func (h *Handler) capped(userID, campaignID string) bool {
+	if userID == "" {
+		return false
+	}
+	key := userID + "|" + campaignID
+	cutoff := time.Now().Add(-freqWindow)
+	kept := h.freqImpressions[key][:0]
+	for _, at := range h.freqImpressions[key] {
+		if at.After(cutoff) {
+			kept = append(kept, at)
+		}
+	}
+	h.freqImpressions[key] = kept
+	return len(kept) >= hourlyCapPerUserCampaign
+}
+
+func (h *Handler) recordServe(userID, campaignID string) {
+	if userID == "" {
+		return
+	}
+	key := userID + "|" + campaignID
+	h.freqImpressions[key] = append(h.freqImpressions[key], time.Now())
 }
 
 func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
@@ -30,6 +74,9 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Post("/decision", h.MakeAdDecision)
 	r.Post("/events", h.RecordAdEvent)
 
+	// Public creative asset delivery (handler gates non-approved creatives)
+	r.Get("/creatives/{id}/asset", h.ServeCreativeAsset)
+
 	// Advertiser Portal endpoints (P0-8: authenticated advertiser roles only)
 	r.Group(func(pr chi.Router) {
 		pr.Use(auth.RequireRole("advertiser", "partner_manager", "platform_admin"))
@@ -38,6 +85,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Post("/campaigns", h.CreateCampaign)
 		pr.Get("/campaigns/{id}", h.GetCampaign)
 		pr.Patch("/campaigns/{id}/status", h.UpdateCampaignStatus)
+		pr.Post("/campaigns/{id}/creatives", h.UploadCreative)
 		pr.Get("/advertiser/reports", h.GetAdvertiserReports)
 		pr.Get("/reports", h.GetAdvertiserReports)
 	})
@@ -71,6 +119,7 @@ func (h *Handler) AdvertiserRoutes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Post("/campaigns", h.CreateCampaign)
 		pr.Get("/campaigns/{id}", h.GetCampaign)
 		pr.Patch("/campaigns/{id}/status", h.UpdateCampaignStatus)
+		pr.Post("/campaigns/{id}/creatives", h.UploadCreative)
 		pr.Get("/reports", h.GetAdvertiserReports)
 	})
 
@@ -175,6 +224,7 @@ func (h *Handler) MakeAdDecision(w http.ResponseWriter, r *http.Request) {
 		bidScore int64
 	}
 	var candidates []candidate
+	cappedOut := false
 
 	for _, camp := range h.Store.Campaigns {
 		// 1. Status check
@@ -188,6 +238,11 @@ func (h *Handler) MakeAdDecision(w http.ResponseWriter, r *http.Request) {
 		}
 		// 3. Schedule flight check
 		if (!camp.StartAt.IsZero() && now.Before(camp.StartAt)) || (!camp.EndAt.IsZero() && now.After(camp.EndAt)) {
+			continue
+		}
+		// 3b. Frequency cap check (P0-5)
+		if h.capped(req.UserID, camp.ID) {
+			cappedOut = true
 			continue
 		}
 		// 4. Category targeting check
@@ -234,10 +289,14 @@ func (h *Handler) MakeAdDecision(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(candidates) == 0 {
-		h.recordDecision(decisionID, req.SlotID, "", "", req.UserID, "UNFILLED", "NO_ELIGIBLE_CAMPAIGN", 0, nil)
+		reason := "NO_ELIGIBLE_CAMPAIGN"
+		if cappedOut {
+			reason = "FREQUENCY_CAPPED"
+		}
+		h.recordDecision(decisionID, req.SlotID, "", "", req.UserID, "UNFILLED", reason, 0, nil)
 		identity.WriteJSON(w, http.StatusOK, AdDecisionResponse{
 			AdAvailable: false,
-			Reason:      "NO_ELIGIBLE_CAMPAIGN",
+			Reason:      reason,
 		})
 		return
 	}
@@ -249,6 +308,7 @@ func (h *Handler) MakeAdDecision(w http.ResponseWriter, r *http.Request) {
 
 	winner := candidates[0]
 	h.recordDecision(decisionID, req.SlotID, winner.campaign.ID, winner.creative.ID, req.UserID, "SERVED", "MATCHED", winner.campaign.CpmBidCents, winner.creative)
+	h.recordServe(req.UserID, winner.campaign.ID)
 
 	identity.WriteJSON(w, http.StatusOK, AdDecisionResponse{
 		AdAvailable: true,
@@ -299,6 +359,42 @@ func (h *Handler) RecordAdEvent(w http.ResponseWriter, r *http.Request) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	camp, campExists := h.Store.Campaigns[payload.CampaignID]
+	if !campExists {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Campaign not found")
+		return
+	}
+
+	// P0-5: billing events must link to a real SERVED decision for this campaign.
+	switch payload.EventType {
+	case "impression", "click", "complete":
+		if payload.DecisionID == "" {
+			identity.WriteError(w, r, http.StatusBadRequest, "DECISION_REQUIRED", "Billing events require a decision_id")
+			return
+		}
+		dec, ok := h.Store.AdDecisions[payload.DecisionID]
+		if !ok || dec.Status != "SERVED" {
+			identity.WriteError(w, r, http.StatusBadRequest, "UNKNOWN_DECISION", "Decision does not exist or was not served")
+			return
+		}
+		if dec.CampaignID == "" || dec.CampaignID != payload.CampaignID {
+			identity.WriteError(w, r, http.StatusBadRequest, "DECISION_MISMATCH", "Decision is not bound to this campaign")
+			return
+		}
+	default:
+		if payload.DecisionID != "" {
+			dec, ok := h.Store.AdDecisions[payload.DecisionID]
+			if !ok {
+				identity.WriteError(w, r, http.StatusBadRequest, "UNKNOWN_DECISION", "Decision does not exist")
+				return
+			}
+			if dec.CampaignID != "" && dec.CampaignID != payload.CampaignID {
+				identity.WriteError(w, r, http.StatusBadRequest, "DECISION_MISMATCH", "Decision is not bound to this campaign")
+				return
+			}
+		}
+	}
+
 	// Idempotency check: prevent double charging on retry
 	if payload.EventID != "" {
 		if _, exists := h.Store.IdempotencyKeys["ad_event_"+payload.EventID]; exists {
@@ -306,12 +402,6 @@ func (h *Handler) RecordAdEvent(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.Store.IdempotencyKeys["ad_event_"+payload.EventID] = payload.CampaignID
-	}
-
-	camp, campExists := h.Store.Campaigns[payload.CampaignID]
-	if !campExists {
-		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Campaign not found")
-		return
 	}
 
 	var costCents int64 = 0
@@ -382,21 +472,41 @@ func (h *Handler) PreviewAdDecision(w http.ResponseWriter, r *http.Request) {
 		return ok && campaignVisible(camp, user)
 	}
 
-	var creative *store.AdCreative
+	// P0-5: forced assignment — preview a specific visible campaign.
 	if req.CampaignID != "" {
+		camp, ok := h.Store.Campaigns[req.CampaignID]
+		if !ok || !campaignVisible(camp, user) {
+			identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Campaign not found")
+			return
+		}
+		var forced *store.AdCreative
 		for _, c := range h.Store.AdCreatives {
-			if c.CampaignID == req.CampaignID && visible(c) {
-				creative = c
+			if c.CampaignID == req.CampaignID {
+				forced = c
 				break
 			}
 		}
+		if forced == nil {
+			identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Campaign has no creative asset to preview")
+			return
+		}
+		identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"ad_available":    true,
+			"preview_mode":    true,
+			"forced":          true,
+			"campaign_id":     camp.ID,
+			"campaign_status": camp.Status,
+			"creative":        forced,
+			"message":         "Preview mode active: no impressions or budget deducted",
+		})
+		return
 	}
-	if creative == nil {
-		for _, c := range h.Store.AdCreatives {
-			if visible(c) {
-				creative = c
-				break
-			}
+
+	var creative *store.AdCreative
+	for _, c := range h.Store.AdCreatives {
+		if visible(c) {
+			creative = c
+			break
 		}
 	}
 
