@@ -2,7 +2,7 @@
 
 > **Contract map (2026-11-16, chi.Walk verified):** this inventory documents the **target contract** (~60 endpoints
 > with rate limits, idempotency, and pagination semantics). The **implemented contract** is now fully inventoried in
-> [ROUTE_CENSUS.md](ROUTE_CENSUS.md) (141 chi registrations with auth guards) and [openapi/gvp-v1.yaml](../../openapi/gvp-v1.yaml)
+> [ROUTE_CENSUS.md](ROUTE_CENSUS.md) (143 chi registrations with auth guards) and [openapi/gvp-v1.yaml](../../openapi/gvp-v1.yaml)
 > (119 paths: 36 hand-detailed + 83 generated inventory, gated by `tests/contract/openapi_contract.test.ts`).
 > Per-endpoint detailed schemas for the generated inventory remain P1 backlog in [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
 

@@ -12,6 +12,42 @@ const suggestions = ref<string[]>([])
 const showSuggestions = ref(false)
 const showUserMenu = ref(false)
 
+const notifications = ref<Array<{ id: string; type: string; title: string; body: string; refType?: string; refId?: string; read: boolean }>>([])
+const unreadCount = ref(0)
+const showNotifications = ref(false)
+
+async function loadNotifications() {
+  if (!appStore.currentUser) return
+  try {
+    const res = await api.getNotifications(1, 20)
+    notifications.value = res.items
+    unreadCount.value = res.unread
+  } catch {
+    notifications.value = []
+    unreadCount.value = 0
+  }
+}
+
+async function openNotification(item: { id: string; read: boolean; refType?: string; refId?: string }) {
+  showNotifications.value = false
+  if (!item.read) {
+    try {
+      await api.markNotificationRead(item.id)
+      item.read = true
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    } catch {
+      // Keep unread state on failure
+    }
+  }
+  if (item.refType === 'video' && item.refId) {
+    router.push({ path: `/watch/${item.refId}` })
+  }
+}
+
+onMounted(() => {
+  loadNotifications()
+})
+
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 function onSearchInput() {
@@ -223,6 +259,44 @@ async function logout() {
           <span>Admin</span>
           <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10" /></svg>
         </a>
+
+        <div v-if="appStore.currentUser" class="relative">
+          <button
+            type="button"
+            aria-label="Notifications"
+            class="relative flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 transition hover:border-slate-400"
+            @click="showNotifications = !showNotifications"
+          >
+            <svg class="h-4 w-4 text-slate-700" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-4.5-5.8V4.5a1.5 1.5 0 0 0-3 0v.7A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z" />
+            </svg>
+            <span
+              v-if="unreadCount > 0"
+              class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white tabular-nums"
+            >
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
+            </span>
+          </button>
+          <div
+            v-if="showNotifications"
+            class="absolute right-0 top-10 z-50 max-h-96 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 text-slate-900 shadow-md"
+          >
+            <p v-if="notifications.length === 0" class="p-4 text-center text-xs text-slate-500">
+              {{ appStore.locale === 'ko' ? '새 알림이 없습니다.' : 'No notifications yet.' }}
+            </p>
+            <button
+              v-for="item in notifications"
+              :key="item.id"
+              type="button"
+              class="w-full rounded-md px-2.5 py-2 text-left hover:bg-slate-50"
+              :class="{ 'bg-slate-50': !item.read }"
+              @click="openNotification(item)"
+            >
+              <p class="text-xs font-semibold text-slate-900">{{ item.title }}</p>
+              <p class="mt-0.5 line-clamp-2 text-xs text-slate-600">{{ item.body }}</p>
+            </button>
+          </div>
+        </div>
 
         <div class="relative">
           <button

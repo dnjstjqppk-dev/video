@@ -24,6 +24,7 @@ import (
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/live"
 	"globalvideoplatform/services/api/internal/moderation"
+	"globalvideoplatform/services/api/internal/notifications"
 	"globalvideoplatform/services/api/internal/observability"
 	"globalvideoplatform/services/api/internal/partners"
 	"globalvideoplatform/services/api/internal/payments"
@@ -134,6 +135,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	uploadH := uploads.NewHandler(memStore)
 	recomH := recommendations.NewHandler(memStore)
 	commH := comments.NewHandler(memStore)
+	notifH := notifications.NewHandler(memStore)
 	liveH := live.NewHandler(memStore)
 	adsH := ads.NewHandler(memStore)
 	settleH := settlements.NewHandler(memStore)
@@ -224,6 +226,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 
 		// Events & Analytics Ingestion
 		v1.Mount("/events", eventH.Routes())
+		v1.Mount("/notifications", notifH.Routes(authMiddleware))
 	})
 
 	return r

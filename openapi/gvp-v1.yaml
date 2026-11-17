@@ -414,6 +414,29 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /notifications/:
+    get:
+      summary: List own notifications with unread count
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Notification inbox page
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/{id}/read:
+    post:
+      summary: Mark a notification read
+      operationId: markNotificationRead
+      responses:
+        '200':
+          description: Marked read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /search:
     get:
       summary: Search public videos and channels (visibility-filtered)
@@ -514,6 +537,21 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /admin/policies/:
+    get:
+      tags: [admin]
+      summary: "Get admin policies"
+      operationId: GetAdminPolicies
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [admin]
       summary: "Update admin policies"
@@ -526,21 +564,6 @@ paths:
           application/json:
             schema:
               type: object
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    get:
-      tags: [admin]
-      summary: "Get admin policies"
-      operationId: GetAdminPolicies
-      x-census: {generated: true, detail: pending}
-      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
       responses:
         '200':
           description: Success
@@ -731,6 +754,21 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/campaigns:
+    get:
+      tags: [ads]
+      summary: "Get ads campaigns"
+      operationId: GetAdsCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [ads]
       summary: "Create ads campaigns"
@@ -750,21 +788,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-    get:
-      tags: [ads]
-      summary: "Get ads campaigns"
-      operationId: GetAdsCampaigns
-      x-census: {generated: true, detail: pending}
-      x-auth: "Role(advertiser, partner_manager, platform_admin)"
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /ads/campaigns/{id}:
     get:
       tags: [ads]
@@ -1175,23 +1198,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /live-streams/{id}/chat:
-    get:
-      tags: [live-streams]
-      summary: "Get live streams chat"
-      operationId: GetLiveStreamsByIdChat
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
     post:
       tags: [live-streams]
       summary: "Create live streams chat"
@@ -1215,6 +1221,23 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [live-streams]
+      summary: "Get live streams chat"
+      operationId: GetLiveStreamsByIdChat
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
         '404':
           $ref: '#/components/responses/NotFound'
   /live-streams/{id}/health:
@@ -1446,6 +1469,21 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /partners/campaigns:
+    get:
+      tags: [partners]
+      summary: "Get partners campaigns"
+      operationId: GetPartnersCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [partners]
       summary: "Create partners campaigns"
@@ -1465,35 +1503,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-    get:
-      tags: [partners]
-      summary: "Get partners campaigns"
-      operationId: GetPartnersCampaigns
-      x-census: {generated: true, detail: pending}
-      x-auth: "Role(advertiser, partner_manager, platform_admin)"
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /partners/rights/claims:
-    get:
-      tags: [partners]
-      summary: "Get partners rights claims"
-      operationId: GetPartnersRightsClaims
-      x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
     post:
       tags: [partners]
       summary: "Create partners rights claims"
@@ -1511,6 +1521,19 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [partners]
+      summary: "Get partners rights claims"
+      operationId: GetPartnersRightsClaims
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /partners/rights/claims/{id}/dispute:
     post:
       tags: [partners]
@@ -1887,25 +1910,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /subscriptions/{channelId}:
-    delete:
-      tags: [subscriptions]
-      summary: "Delete subscriptions"
-      operationId: DeleteSubscriptionsByChannelId
-      x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
-      parameters:
-        - name: channelId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
     post:
       tags: [subscriptions]
       summary: "Create subscriptions"
@@ -1931,6 +1935,25 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [subscriptions]
+      summary: "Delete subscriptions"
+      operationId: DeleteSubscriptionsByChannelId
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /uploads/:
     post:
       tags: [uploads]
@@ -1950,6 +1973,23 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /videos/{id}/comments:
+    get:
+      tags: [videos]
+      summary: "Get videos comments"
+      operationId: GetVideosByIdComments
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [videos]
       summary: "Create videos comments"
@@ -1975,12 +2015,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-    get:
+  /videos/{id}:
+    delete:
       tags: [videos]
-      summary: "Get videos comments"
-      operationId: GetVideosByIdComments
+      summary: "Delete videos"
+      operationId: DeleteVideosById
       x-census: {generated: true, detail: pending}
-      x-auth: "Public"
+      x-auth: "Auth"
       parameters:
         - name: id
           in: path
@@ -1990,9 +2031,10 @@ paths:
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /videos/{id}:
     get:
       tags: [videos]
       summary: "Get videos"
@@ -2028,25 +2070,6 @@ paths:
           application/json:
             schema:
               type: object
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      tags: [videos]
-      summary: "Delete videos"
-      operationId: DeleteVideosById
-      x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
           description: Success
@@ -2207,10 +2230,10 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /me/history:
-    get:
+    delete:
       tags: [me]
-      summary: "Get me history"
-      operationId: GetMeHistory
+      summary: "Delete me history"
+      operationId: DeleteMeHistory
       x-census: {generated: true, detail: pending}
       x-auth: "Auth"
       responses:
@@ -2220,10 +2243,10 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-    delete:
+    get:
       tags: [me]
-      summary: "Delete me history"
-      operationId: DeleteMeHistory
+      summary: "Get me history"
+      operationId: GetMeHistory
       x-census: {generated: true, detail: pending}
       x-auth: "Auth"
       responses:

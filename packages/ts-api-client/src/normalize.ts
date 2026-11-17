@@ -21,6 +21,7 @@ import type {
   Payout,
   ModerationCase,
   PartnerContract,
+  NotificationItem,
 } from '@gvp/shared-types';
 
 type RecordAny = Record<string, any>;
@@ -239,6 +240,21 @@ export function mapComment(raw: unknown): Comment {
     userReaction: null,
     createdAt,
     updatedAt: asString(r.updatedAt, createdAt),
+  };
+}
+
+export function mapNotification(raw: unknown): NotificationItem {
+  const r = toCamelDeep<RecordAny>(raw as RecordAny);
+  return {
+    id: asString(r.id),
+    userId: asString(r.userId),
+    type: asString(r.type),
+    title: asString(r.title),
+    body: asString(r.body),
+    refType: r.refType ? asString(r.refType) : undefined,
+    refId: r.refId ? asString(r.refId) : undefined,
+    read: Boolean(r.read),
+    createdAt: asString(r.createdAt),
   };
 }
 

@@ -413,6 +413,29 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /notifications/:
+    get:
+      summary: List own notifications with unread count
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Notification inbox page
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications/{id}/read:
+    post:
+      summary: Mark a notification read
+      operationId: markNotificationRead
+      responses:
+        '200':
+          description: Marked read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /search:
     get:
       summary: Search public videos and channels (visibility-filtered)

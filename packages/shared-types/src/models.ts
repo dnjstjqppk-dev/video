@@ -374,3 +374,15 @@ export interface ModerationCase {
   reviewedAt?: string;
 }
 
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  refType?: string;
+  refId?: string;
+  read: boolean;
+  createdAt: string;
+}

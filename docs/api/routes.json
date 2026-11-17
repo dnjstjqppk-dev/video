@@ -45,12 +45,12 @@
     "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
   },
   {
-    "method": "PATCH",
+    "method": "GET",
     "path": "/v1/admin/policies/",
     "auth": "Role(super_admin, platform_admin (+support read on GET))"
   },
   {
-    "method": "GET",
+    "method": "PATCH",
     "path": "/v1/admin/policies/",
     "auth": "Role(super_admin, platform_admin (+support read on GET))"
   },
@@ -105,12 +105,12 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/v1/ads/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/v1/ads/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
@@ -155,12 +155,12 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/v1/advertiser/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/v1/advertiser/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
@@ -205,14 +205,14 @@
     "auth": "Auth"
   },
   {
-    "method": "PATCH",
-    "path": "/v1/channels/{id}",
-    "auth": "Auth"
-  },
-  {
     "method": "GET",
     "path": "/v1/channels/{id}",
     "auth": "Public"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/channels/{id}",
+    "auth": "Auth"
   },
   {
     "method": "POST",
@@ -290,14 +290,14 @@
     "auth": "Public"
   },
   {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}/chat",
-    "auth": "Public"
-  },
-  {
     "method": "POST",
     "path": "/v1/live-streams/{id}/chat",
     "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/chat",
+    "auth": "Public"
   },
   {
     "method": "GET",
@@ -355,22 +355,32 @@
     "auth": "Auth"
   },
   {
-    "method": "POST",
-    "path": "/v1/partners/campaigns",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
     "method": "GET",
-    "path": "/v1/partners/campaigns",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/partners/rights/claims",
+    "path": "/v1/notifications/",
     "auth": "Auth"
   },
   {
     "method": "POST",
+    "path": "/v1/notifications/{id}/read",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/campaigns",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/campaigns",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/rights/claims",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
     "path": "/v1/partners/rights/claims",
     "auth": "Auth"
   },
@@ -530,12 +540,12 @@
     "auth": "Auth"
   },
   {
-    "method": "DELETE",
+    "method": "POST",
     "path": "/v1/subscriptions/{channelId}",
     "auth": "Auth"
   },
   {
-    "method": "POST",
+    "method": "DELETE",
     "path": "/v1/subscriptions/{channelId}",
     "auth": "Auth"
   },
@@ -565,14 +575,19 @@
     "auth": "Auth"
   },
   {
+    "method": "GET",
+    "path": "/v1/videos/{id}/comments",
+    "auth": "Public"
+  },
+  {
     "method": "POST",
     "path": "/v1/videos/{id}/comments",
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/videos/{id}/comments",
-    "auth": "Public"
+    "method": "DELETE",
+    "path": "/v1/videos/{id}",
+    "auth": "Auth"
   },
   {
     "method": "GET",
@@ -581,11 +596,6 @@
   },
   {
     "method": "PATCH",
-    "path": "/v1/videos/{id}",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
     "path": "/v1/videos/{id}",
     "auth": "Auth"
   },
@@ -655,12 +665,12 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
+    "method": "DELETE",
     "path": "/v1/me/history",
     "auth": "Auth"
   },
   {
-    "method": "DELETE",
+    "method": "GET",
     "path": "/v1/me/history",
     "auth": "Auth"
   },

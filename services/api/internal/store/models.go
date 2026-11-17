@@ -108,6 +108,20 @@ type Comment struct {
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
+// Notification is one inbox item (P1-16). Types: new_comment, reply,
+// live_started, payout_ready.
+type Notification struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	RefType   string    `json:"ref_type,omitempty"`
+	RefID     string    `json:"ref_id,omitempty"`
+	Read      bool      `json:"read"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type LiveStream struct {
 	ID             string    `json:"id"`
 	ChannelID      string    `json:"channel_id"`
@@ -450,6 +464,7 @@ type MemoryStore struct {
 	AuditLogs       []map[string]interface{}
 	viewSeen        map[string]time.Time // P1-14: viewer|video -> last counted view
 	viewMu          sync.Mutex
+	Notifications   map[string][]*Notification // P1-16: userID -> inbox, newest first
 	Contracts       map[string]*PartnerContract
 }
 
@@ -489,6 +504,7 @@ func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 		AuditLogs:       make([]map[string]interface{}, 0),
 		Contracts:       make(map[string]*PartnerContract),
 		viewSeen:        make(map[string]time.Time),
+		Notifications:   make(map[string][]*Notification),
 	}
 	s.seedDefaults()
 	return s

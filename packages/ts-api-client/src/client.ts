@@ -21,7 +21,8 @@ import type {
   ApiErrorResponse,
   AnalyticsPlaybackEvent,
   StudioEditDecisionList,
-  StudioEditJob
+  StudioEditJob,
+  NotificationItem
 } from '@gvp/shared-types';
 import {
   toCamelDeep,
@@ -33,6 +34,7 @@ import {
   mapComment,
   mapVideoCaption,
   mapLiveStream,
+  mapNotification,
   mapAdCreative,
   mapAdDecision,
   mapCampaign,
@@ -332,6 +334,15 @@ export class ApiClient {
   }
 
   // --- Comments ---
+  async getNotifications(page = 1, limit = 20): Promise<{ items: NotificationItem[]; total: number; unread: number }> {
+    const raw = await this.request<{ items?: unknown[]; total?: number; unread?: number }>(`/v1/notifications/?page=${page}&limit=${limit}`);
+    return { items: (raw.items || []).map(mapNotification), total: raw.total || 0, unread: raw.unread || 0 };
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    await this.request(`/v1/notifications/${id}/read`, { method: 'POST' });
+  }
+
   async getVideoComments(videoId: string, page = 1, limit = 20, sort: 'top' | 'newest' = 'top'): Promise<{ items: Comment[]; total: number }> {
     const raw = await this.request<{ items: unknown[]; total: number }>(`/v1/videos/${videoId}/comments?page=${page}&limit=${limit}&sort=${sort}`);
     return { items: (raw.items || []).map(mapComment), total: raw.total || 0 };

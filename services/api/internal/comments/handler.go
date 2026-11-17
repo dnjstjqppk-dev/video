@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/notifications"
 	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
@@ -113,6 +114,10 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Comment content must not be empty")
 		return
 	}
+	if term, blocked := BlockedTerm(payload.Content); blocked {
+		identity.WriteError(w, r, http.StatusBadRequest, "POLICY_VIOLATION", "Comment contains a blocked term: "+term)
+		return
+	}
 
 	// Check if author is video channel owner
 	isChannelOwner := false
@@ -142,11 +147,41 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 	h.Store.Comments[videoID] = append(h.Store.Comments[videoID], comment)
 
 	// Increment video comment count
-	if video, ok := h.Store.Videos[videoID]; ok {
+	video, videoOK := h.Store.Videos[videoID]
+	if videoOK {
 		video.CommentCount++
 	}
 
+	// P1-16: notify the channel owner about new top-level comments and the
+	// parent author about replies (never notify the actor about themselves).
+	if videoOK {
+		if channel, ok := h.Store.Channels[video.ChannelID]; ok && channel != nil && channel.OwnerID != user.ID {
+			notifications.Notify(h.Store, channel.OwnerID, "new_comment",
+				"New comment on "+video.Title, preview(payload.Content),
+				"video", videoID)
+		}
+	}
+	if payload.ParentID != "" {
+		for _, c := range h.Store.Comments[videoID] {
+			if c.ID == payload.ParentID && c.UserID != user.ID {
+				notifications.Notify(h.Store, c.UserID, "reply",
+					user.DisplayName+" replied to you", preview(payload.Content),
+					"video", videoID)
+				break
+			}
+		}
+	}
+
 	identity.WriteJSON(w, http.StatusCreated, comment)
+}
+
+func preview(content string) string {
+	const maxPreview = 140
+	runes := []rune(content)
+	if len(runes) <= maxPreview {
+		return content
+	}
+	return string(runes[:maxPreview]) + "…"
 }
 
 func (h *Handler) LikeComment(w http.ResponseWriter, r *http.Request) {
