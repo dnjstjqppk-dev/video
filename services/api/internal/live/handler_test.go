@@ -112,8 +112,12 @@ func TestLiveStreamLifecycle(t *testing.T) {
 
 	var stream store.LiveStream
 	json.Unmarshal(rec.Body.Bytes(), &stream)
-	if stream.ID == "" || stream.Status != "idle" || stream.StreamKey == "" {
+	if stream.ID == "" || stream.Status != "idle" {
 		t.Fatalf("invalid stream created: %+v", stream)
+	}
+	// P1-15: without Stream credentials the ingest stays honestly empty.
+	if stream.StreamKey != "" || stream.RtmpsIngestURL != "" || stream.PlaybackHlsURL != "" {
+		t.Fatalf("unprovisioned stream must not invent ingest URLs: %+v", stream)
 	}
 
 	// 2. Start stream -> live

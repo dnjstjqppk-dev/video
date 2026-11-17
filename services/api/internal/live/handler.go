@@ -71,21 +71,29 @@ func (h *Handler) CreateStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	streamID := uuid.NewString()
-	streamKey := fmt.Sprintf("live_%s_%d", uuid.NewString()[:8], time.Now().Unix())
 
 	stream := &store.LiveStream{
-		ID:             streamID,
-		ChannelID:      channel.ID,
-		Title:          payload.Title,
-		Description:    payload.Description,
-		ThumbnailURL:   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800",
-		Status:         "idle",
-		StreamKey:      streamKey,
-		RtmpsIngestURL: "rtmps://live.cloudflare.com:443/live/",
-		SrtIngestURL:   "srt://live.cloudflare.com:10000",
-		PlaybackHlsURL: "https://customer-test.cloudflarestream.com/live-hls/manifest/video.m3u8",
-		ViewerCount:    0,
-		CreatedAt:      time.Now(),
+		ID:          streamID,
+		ChannelID:   channel.ID,
+		Title:       payload.Title,
+		Description: payload.Description,
+		Status:      "idle",
+		ViewerCount: 0,
+		CreatedAt:   time.Now(),
+	}
+
+	// P1-15: provision a real ingest when Stream credentials exist; without
+	// them the stream stays idle with empty ingest URLs (honest, not fake).
+	if client := StreamClientFromEnv(); client != nil {
+		input, err := client.CreateLiveInput(r.Context(), payload.Title)
+		if err != nil {
+			identity.WriteError(w, r, http.StatusServiceUnavailable, "STREAM_UNAVAILABLE", fmt.Sprintf("Live ingest provisioning failed: %v", err))
+			return
+		}
+		stream.StreamKey = input.RtmpsKey
+		stream.RtmpsIngestURL = input.RtmpsURL
+		stream.SrtIngestURL = input.SrtURL
+		stream.PlaybackHlsURL = input.HlsURL
 	}
 
 	h.Store.LiveStreams[streamID] = stream
@@ -175,11 +183,22 @@ func (h *Handler) HandleWebSocketChat(w http.ResponseWriter, r *http.Request) {
 	h.Hub.ServeWebSocket(w, r, id, userID, displayName, isMod, isCreator)
 }
 
+func (h *Handler) requireStreamOwner(w http.ResponseWriter, r *http.Request, stream *store.LiveStream) bool {
+	if h.ownsStream(identity.GetUserFromContext(r.Context()), stream) {
+		return true
+	}
+	identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only the channel owner can control this stream")
+	return false
+}
+
 func (h *Handler) StartStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	stream, ok := h.Store.LiveStreams[id]
 	if !ok {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Live stream not found")
+		return
+	}
+	if !h.requireStreamOwner(w, r, stream) {
 		return
 	}
 	stream.Status = "live"
@@ -194,6 +213,9 @@ func (h *Handler) StopStream(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Live stream not found")
 		return
 	}
+	if !h.requireStreamOwner(w, r, stream) {
+		return
+	}
 	stream.Status = "ended"
 	h.Hub.BroadcastToRoom(id, "stream_status", map[string]string{"status": "ended"})
 	identity.WriteJSON(w, http.StatusOK, stream)
@@ -206,8 +228,24 @@ func (h *Handler) RotateKey(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Live stream not found")
 		return
 	}
-	stream.StreamKey = fmt.Sprintf("live_%s_%d", uuid.NewString()[:8], time.Now().Unix())
-	identity.WriteJSON(w, http.StatusOK, map[string]string{"streamKey": stream.StreamKey})
+	if !h.requireStreamOwner(w, r, stream) {
+		return
+	}
+	// Cloudflare Stream has no key rotation; re-provisioning mints fresh ingest.
+	if client := StreamClientFromEnv(); client != nil {
+		input, err := client.CreateLiveInput(r.Context(), stream.Title)
+		if err != nil {
+			identity.WriteError(w, r, http.StatusServiceUnavailable, "STREAM_UNAVAILABLE", fmt.Sprintf("Live ingest re-provisioning failed: %v", err))
+			return
+		}
+		stream.StreamKey = input.RtmpsKey
+		stream.RtmpsIngestURL = input.RtmpsURL
+		stream.SrtIngestURL = input.SrtURL
+		stream.PlaybackHlsURL = input.HlsURL
+		identity.WriteJSON(w, http.StatusOK, map[string]string{"streamKey": stream.StreamKey})
+		return
+	}
+	identity.WriteError(w, r, http.StatusServiceUnavailable, "STREAM_UNAVAILABLE", "Live ingest is not provisioned")
 }
 
 func (h *Handler) CreateSuperChat(w http.ResponseWriter, r *http.Request) {

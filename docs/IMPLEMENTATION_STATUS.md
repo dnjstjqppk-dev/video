@@ -180,7 +180,8 @@ browser -> console workers (web/studio/partners/admin, /api)
    NATS 본연동은 멀티 인스턴스 시점으로 연기. 대신 미디어잡 PG 영속(00011 source_ref) + 디스패치 3회 재시도 + 부팅 스위프 + RUNNING→QUEUED 복귀로 QUEUED 영구 정체를 해소.
 14. 조회수/분석 중복 제거 + ClickHouse 싱크 또는 PG 롤업 확정: **DONE 2026-11-17** — 유효 조회수 정의(24h 중복 제거) + 단일 가산 경로 + PG 영속.
    웨어하우스 배치 싱크는 이벤트 버스 결정(P1-13)과 함께 후속.
-15. 라이브 실인제스트 범위 확정 (Cloudflare Stream 실연동 또는 RTMP 자체 구현).
+15. 라이브 실인제스트 범위 확정 (Cloudflare Stream 실연동 또는 RTMP 자체 구현): **DONE 2026-11-17 (Cloudflare Stream)** —
+   Live Inputs 프로비저닝 클라이언트 + 미구성 시 정직한 idle(빈 인제스트) + 스트림 제어 소유권 검사. 실계정 키 주입·웹훅 동기화는 운영 전환 시.
 16. Shorts 촬영·업로드·음악 권리, 댓글 정책(차단어/제한), 알림·구독 피드 완성.
 17. 환불·정산 배치·실지급·세금계산서·광고 인보이스·미달 경고/보상 절차.
 18. RBAC 15롤·조직 ABAC 전수 강제 + 침투/권한 격리 테스트: **PARTIAL 2026-11-17** —
