@@ -50,7 +50,7 @@ client IPs (see Rate limiting); without distribution the global limiter
 | Read p95 (feed/playback, loopback) | < 250 ms | measured p95 49–104 ms, 2.4x headroom |
 | Read availability (unlimited client) | 99.9% / 5 min | 2000/2000 OK under 50-way burst |
 | Process-crash RTO | < 30 s | measured 1.76 s |
-| Rate-limit behaviour | 429 + Retry-After, zero 5xx | observed live |
+| Rate-limit behavior | 429 + Retry-After, zero 5xx | observed live |
 
 Production K8s/RDS targets remain in `RUNBOOK_AND_DR.md` §1; the table
 above is the measured floor for the currently running stack.
