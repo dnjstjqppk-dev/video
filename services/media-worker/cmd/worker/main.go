@@ -52,6 +52,9 @@ type TranscodeJob struct {
 	JobID       string
 	VideoID     string
 	SourceR2Key string
+	// SourceURL optionally carries a presigned download URL (R2 mode) or a
+	// file:// URI (local mode); it takes precedence over SourceR2Key.
+	SourceURL   string
 	Attempt     int
 	MaxAttempts int
 }
@@ -132,6 +135,8 @@ type MediaWorker struct {
 	States      map[string]VideoState
 	DLQ         []TranscodeJob
 	R2Uploaded  map[string][]string
+	Probes      map[string]ProbeMetadata
+	Artifacts   map[string][]TranscodeArtifact
 	WorkDirRoot string
 }
 
@@ -140,8 +145,22 @@ func NewMediaWorker(workDirRoot string) *MediaWorker {
 		States:      make(map[string]VideoState),
 		DLQ:         make([]TranscodeJob, 0),
 		R2Uploaded:  make(map[string][]string),
+		Probes:      make(map[string]ProbeMetadata),
+		Artifacts:   make(map[string][]TranscodeArtifact),
 		WorkDirRoot: workDirRoot,
 	}
+}
+
+func (w *MediaWorker) setProbe(videoID string, meta ProbeMetadata) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.Probes[videoID] = meta
+}
+
+func (w *MediaWorker) setArtifacts(videoID string, artifacts []TranscodeArtifact) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.Artifacts[videoID] = artifacts
 }
 
 // Transition validates and performs state machine progression.
@@ -425,22 +444,34 @@ func EvaluateVideoQuality(vmafScore, psnrScore, ssimScore float64) (bool, string
 	return false, "POOR"
 }
 
-// ProcessJob executes the full transcode lifecycle with DLQ routing on failure.
-func (w *MediaWorker) ProcessJob(job TranscodeJob, meta ProbeMetadata) error {
-	if _, err := w.SanitizeWorkspacePath(job.SourceR2Key); err != nil {
-		_ = w.Transition(job.VideoID, StateUploaded)
-		_ = w.Transition(job.VideoID, StateFailed)
-		w.sendToDLQ(job)
-		return err
-	}
+// requireProbedSource reports whether real ffprobe/ffmpeg execution is
+// mandatory. P0-2 defaults to true; only an explicit "false" keeps the
+// legacy assumed-profile path for stacks without a media toolchain.
+func requireProbedSource() bool {
+	return os.Getenv("REQUIRE_PROBED_SOURCE") != "false"
+}
 
+// ProcessJob executes the full transcode lifecycle with DLQ routing on failure.
+// The default path probes and encodes for real; the legacy assumed-profile
+// path runs only with REQUIRE_PROBED_SOURCE=false.
+func (w *MediaWorker) ProcessJob(job TranscodeJob, meta ProbeMetadata) error {
 	if err := w.Transition(job.VideoID, StateUploaded); err != nil {
 		return err
 	}
 	if err := w.Transition(job.VideoID, StateValidating); err != nil {
 		return err
 	}
+	if requireProbedSource() {
+		return w.processReal(job)
+	}
+	return w.processLegacy(job, meta)
+}
 
+// processLegacy keeps the pre-P0-2 assumed-profile behavior for transitional
+// stacks. It validates the dispatcher hint and records artifact names only.
+func (w *MediaWorker) processLegacy(job TranscodeJob, meta ProbeMetadata) error {
+	slog.Warn("Transcode running on assumed source profile (REQUIRE_PROBED_SOURCE=false)",
+		"videoId", job.VideoID, "jobId", job.JobID)
 	if err := ValidateFFprobe(meta); err != nil {
 		_ = w.Transition(job.VideoID, StateFailed)
 		w.sendToDLQ(job)
@@ -477,6 +508,116 @@ func (w *MediaWorker) ProcessJob(job TranscodeJob, meta ProbeMetadata) error {
 	}
 
 	return w.Transition(job.VideoID, StateReady)
+}
+
+// processReal resolves the source, probes it with ffprobe, encodes the ABR
+// ladder plus stills with ffmpeg, and stages artifacts for API publishing.
+func (w *MediaWorker) processReal(job TranscodeJob) error {
+	fail := func(err error) error {
+		_ = w.Transition(job.VideoID, StateFailed)
+		w.sendToDLQ(job)
+		return err
+	}
+
+	sourceRef := job.SourceURL
+	if sourceRef == "" {
+		sourceRef = job.SourceR2Key
+	}
+	kind, target, err := ResolveSourceRef(sourceRef)
+	if err != nil {
+		return fail(err)
+	}
+
+	jobDir, err := os.MkdirTemp(w.WorkDirRoot, "job-"+job.VideoID+"-")
+	if err != nil {
+		return fail(err)
+	}
+	defer os.RemoveAll(jobDir)
+
+	inputPath := target
+	if kind == SourceRemote {
+		inputPath = filepath.Join(jobDir, "source")
+		if err := FetchRemoteSource(context.Background(), target, inputPath); err != nil {
+			return fail(err)
+		}
+		defer func() {
+			if kind == SourceRemote {
+				_ = os.Remove(inputPath)
+			}
+		}()
+	}
+
+	meta, err := RunFFprobe(context.Background(), inputPath)
+	if err != nil {
+		return fail(fmt.Errorf("probe failed: %w", err))
+	}
+	w.setProbe(job.VideoID, meta)
+
+	if err := w.Transition(job.VideoID, StateQueued); err != nil {
+		return err
+	}
+	if err := w.Transition(job.VideoID, StateProcessing); err != nil {
+		return err
+	}
+
+	ladder := configuredLadder(meta.Height)
+	outDir := filepath.Join(w.WorkDirRoot, job.VideoID)
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fail(err)
+	}
+	artifacts, err := RunTranscode(context.Background(), inputPath, outDir, ladder)
+	if err != nil {
+		return fail(err)
+	}
+	master, variants := GenerateHLSPlaylists(job.VideoID, ladder, meta.DurationSeconds)
+	masterPath := filepath.Join(outDir, "master.m3u8")
+	if err := os.WriteFile(masterPath, []byte(master), 0o644); err != nil {
+		return fail(err)
+	}
+	_ = variants
+	artifacts = append(artifacts, TranscodeArtifact{
+		Key: "master.m3u8", Path: masterPath,
+		ContentType: "application/vnd.apple.mpegurl", Bytes: int64(len(master)),
+	})
+	w.setArtifacts(job.VideoID, artifacts)
+
+	keys := make([]string, 0, len(artifacts))
+	for _, a := range artifacts {
+		keys = append(keys, fmt.Sprintf("hls/%s/%s", job.VideoID, a.Key))
+	}
+	w.mu.Lock()
+	w.R2Uploaded[job.VideoID] = keys
+	w.mu.Unlock()
+
+	slog.Info("Transcode completed", "videoId", job.VideoID, "jobId", job.JobID,
+		"width", meta.Width, "height", meta.Height, "duration", meta.DurationSeconds,
+		"renditions", len(ladder), "artifacts", len(artifacts))
+	return w.Transition(job.VideoID, StateReady)
+}
+
+// configuredLadder filters the source-height ladder by FFMPEG_PROFILES when set.
+func configuredLadder(sourceHeight int) []RenditionProfile {
+	ladder := SelectABRLadder(sourceHeight)
+	raw := os.Getenv("FFMPEG_PROFILES")
+	if strings.TrimSpace(raw) == "" {
+		return ladder
+	}
+	allowed := make(map[string]bool)
+	for _, name := range strings.Split(raw, ",") {
+		if trimmed := strings.TrimSpace(name); trimmed != "" {
+			allowed[trimmed] = true
+		}
+	}
+	var filtered []RenditionProfile
+	for _, r := range ladder {
+		if allowed[r.Name] {
+			filtered = append(filtered, r)
+		}
+	}
+	if len(filtered) == 0 {
+		return ladder
+	}
+	return filtered
 }
 
 // ProcessEditJob executes a non-destructive edit render: the source stays
@@ -587,6 +728,7 @@ type transcodeIntakeRequest struct {
 	JobID           string  `json:"jobId"`
 	VideoID         string  `json:"videoId"`
 	SourceR2Key     string  `json:"sourceR2Key"`
+	SourceURL       string  `json:"sourceUrl"`
 	Width           int     `json:"width"`
 	Height          int     `json:"height"`
 	DurationSeconds float64 `json:"durationSeconds"`
@@ -594,20 +736,6 @@ type transcodeIntakeRequest struct {
 	HasVideoStream  bool    `json:"hasVideoStream"`
 	Attempt         int     `json:"attempt"`
 	MaxAttempts     int     `json:"maxAttempts"`
-}
-
-// DefaultSourceProfile is the assumed source profile used when the dispatcher
-// ships no probe metadata (local/dev stacks without an ffprobe stage).
-// Production sets REQUIRE_PROBED_SOURCE=true to reject such jobs instead.
-func DefaultSourceProfile() ProbeMetadata {
-	return ProbeMetadata{
-		Width:           1920,
-		Height:          1080,
-		DurationSeconds: 60,
-		VideoCodec:      "h264",
-		AudioCodec:      "aac",
-		HasVideoStream:  true,
-	}
 }
 
 func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Request) {
@@ -632,9 +760,11 @@ func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Requ
 		JobID:       req.JobID,
 		VideoID:     req.VideoID,
 		SourceR2Key: req.SourceR2Key,
+		SourceURL:   req.SourceURL,
 		Attempt:     req.Attempt,
 		MaxAttempts: maxAttempts,
 	}
+	// Dispatched metadata is a hint only; the worker probes the source itself.
 	meta := ProbeMetadata{
 		Width:           req.Width,
 		Height:          req.Height,
@@ -642,26 +772,41 @@ func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Requ
 		VideoCodec:      req.VideoCodec,
 		HasVideoStream:  req.HasVideoStream,
 	}
-	probed := true
-	if err := ValidateFFprobe(meta); err != nil {
-		if os.Getenv("REQUIRE_PROBED_SOURCE") == "true" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"FAILED","error":%q}`, req.JobID, req.VideoID, "probed source metadata is required: "+err.Error())
-			return
-		}
-		probed = false
-		meta = DefaultSourceProfile()
-		slog.Warn("Transcode intake using assumed source profile", "videoId", req.VideoID, "jobId", req.JobID)
-	}
 	if err := h.worker.ProcessJob(job, meta); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"FAILED","error":%q}`, req.JobID, req.VideoID, err.Error())
 		return
 	}
+	h.worker.mu.RLock()
+	probe := h.worker.Probes[req.VideoID]
+	artifacts := h.worker.Artifacts[req.VideoID]
+	h.worker.mu.RUnlock()
+	probed := requireProbedSource()
+	type artifactJSON struct {
+		Key         string `json:"key"`
+		ContentType string `json:"contentType"`
+		Bytes       int64  `json:"bytes"`
+	}
+	keys := make([]artifactJSON, 0, len(artifacts))
+	for _, a := range artifacts {
+		keys = append(keys, artifactJSON{Key: a.Key, ContentType: a.ContentType, Bytes: a.Bytes})
+	}
+	resp := map[string]interface{}{
+		"jobId":   req.JobID,
+		"videoId": req.VideoID,
+		"state":   "READY",
+		"probed":  probed,
+		"probe": map[string]interface{}{
+			"width":           probe.Width,
+			"height":          probe.Height,
+			"durationSeconds": probe.DurationSeconds,
+			"videoCodec":      probe.VideoCodec,
+		},
+		"artifacts": keys,
+	}
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"READY","probed":%v}`, req.JobID, req.VideoID, probed)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // editRenderIntakeRequest carries the studio EDL plus the source reference.
@@ -746,6 +891,46 @@ func (h *healthServer) handleEditRenderIntake(w http.ResponseWriter, r *http.Req
 	fmt.Fprintf(w, `{"jobId":%q,"videoId":%q,"state":"READY"}`, req.JobID, req.VideoID)
 }
 
+// handleArtifactFetch streams one staged output file so the API can publish
+// it to object storage. Paths stay rooted under the worker output dir.
+func (h *healthServer) handleArtifactFetch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	rel := strings.TrimPrefix(r.URL.Path, "/artifacts/")
+	full, err := h.worker.SanitizeWorkspacePath(rel)
+	if err != nil {
+		http.Error(w, `{"error":"invalid artifact path"}`, http.StatusBadRequest)
+		return
+	}
+	content, err := os.ReadFile(full)
+	if err != nil {
+		http.Error(w, `{"error":"artifact not found"}`, http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", detectArtifactType(rel))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(content)
+}
+
+func detectArtifactType(key string) string {
+	switch {
+	case strings.HasSuffix(key, ".m3u8"):
+		return "application/vnd.apple.mpegurl"
+	case strings.HasSuffix(key, ".m4s"), strings.HasSuffix(key, ".mp4"):
+		return "video/mp4"
+	case strings.HasSuffix(key, ".jpg"), strings.HasSuffix(key, ".jpeg"):
+		return "image/jpeg"
+	case strings.HasSuffix(key, ".vtt"):
+		return "text/vtt"
+	case strings.HasSuffix(key, ".webp"):
+		return "image/webp"
+	default:
+		return "application/octet-stream"
+	}
+}
+
 func (h *healthServer) listenAndServe(ctx context.Context) error {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -766,7 +951,10 @@ func (h *healthServer) listenAndServe(ctx context.Context) error {
 	})
 	mux.HandleFunc("/jobs/transcode", h.handleTranscodeIntake)
 	mux.HandleFunc("/jobs/edit-render", h.handleEditRenderIntake)
-	server := &http.Server{Addr: ":" + port, Handler: mux, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
+	mux.HandleFunc("/artifacts/", h.handleArtifactFetch)
+	// No write deadline: transcode intakes legitimately run for minutes while
+	// the API waits for the READY/FAILED verdict. Read stays bounded.
+	server := &http.Server{Addr: ":" + port, Handler: mux, ReadTimeout: 30 * time.Second}
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

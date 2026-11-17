@@ -68,12 +68,12 @@ browser -> console workers (web/studio/partners/admin, /api)
 - 멀티파트 세션 생성·presigned 파트 URL(SigV4, R2/MinIO)·완료 검증: IMPLEMENTED (`uploads/s3.go`, `uploads/handler.go`).
 - 로컬 릴레이 모드(실바이트 수신·조립·디스크 저장): IMPLEMENTED.
 - 완료 → 미디어 워커 HTTP 디스패치(`/jobs/transcode`): IMPLEMENTED (`uploads/dispatch.go`).
-- **P0 MOCK:** 디스패치는 probe 메타데이터 없이 전송하고, 워커는 ffprobe/ffmpeg 실행·R2 I/O 없이 **가정 프로파일(1080p/60s)로 READY를 반환**한다
-  (`services/media-worker/cmd/worker/main.go` — `exec.Command` 전무, `ProcessJob`은 인메모리 전이 + 아티팩트명 나열).
-  즉 업로드 완료→READY는 아직 **가짜 완료**이며 Master Directive ARTICLE 2.3 미달이다.
-- 워커 도달 불가 시 재시도·큐·DLQ 복구 없음 (QUEUED 영구 정체): MISSING.
-- 썸네일·스토리보드·WebP·자막·챕터 생성: MISSING (인자 빌더 함수만 존재).
-- READY 전환 시 영상을 강제 `public`으로 뒤집는다 (`dispatch.go`) — 비공개 초안 정책과 충돌하므로 P1 수정 대상.
+- **P0 MOCK: FIXED 2026-11-17** — 워커가 ffprobe 실측 → ffmpeg ABR ladder·포스터·스토리보드 실인코딩 → 산출물을 API가 R2/MinIO에 게시한 뒤 READY로 전환한다.
+  실증: S3 업로드→트랜스코딩→게시→READY 전 구간을 실바이트로 통과(도커 ffmpeg + LocalStack S3, 게시 HLS를 ffprobe로 재생 검증).
+  `REQUIRE_PROBED_SOURCE` 기본 true(명시적 false만 구 전환 경로 허용). 실패 시 FAILED + 상태 API에 오류 노출 + DLQ 적재.
+- 워커 도달 불가 시 재시도·큐·DLQ 복구 없음 (QUEUED 영구 정체): MISSING (NATS 연동 시 해소, P1-13).
+- WebP 하이라이트·자막·챕터 생성: MISSING (인자 빌더만 존재, 후속).
+- ~~READY 전환 시 영상 강제 `public`~~ **FIXED 2026-11-17** — READY가 가시성을 건드리지 않아 비공개 초안이 유지된다.
 
 ### 4.4 재생·시청 — PARTIAL
 
@@ -153,7 +153,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 1. **이중 스키마 해소 + 영속 저장 완성** (ARTICLE 2.2): ~~`InitSchema` 간이 DDL 삭제, 마이그레이션 기준 저장 계층, 부팅 시 읽기, 재시작 내구성 검증~~ **DONE 2026-11-17 (코어 4종)** —
    사용자·채널·영상·결제+원장 영속화 + 실서버 재시작 증명 + PG 라운드트립 3종. 댓글·광고·라이브·소셜 전 도메인 확장은 후속 과제로 잔여.
-2. **진짜 트랜스코딩** (ARTICLE 2.3): ffprobe 실측 → 디스패치에 메타 전달 → 워커에서 ffmpeg 실실행(HLS ladder·썸네일·자막·챕터) → R2 업로드 → 실패 시 FAILED + 재시도/DLQ. `REQUIRE_PROBED_SOURCE=true`를 기본으로.
+2. **진짜 트랜스코딩** (ARTICLE 2.3): ~~ffprobe 실측 → ffmpeg 실실행(HLS ladder·썸네일) → R2 업로드 → 실패 시 FAILED + DLQ. `REQUIRE_PROBED_SOURCE=true` 기본~~ **DONE 2026-11-17** —
+   워커 실측/실인코딩 + API 게시 파이프라인 + 실바이트 E2E 증명. WebP·자막·챕터·NATS 재시도 큐는 잔여.
 3. **결제 fail-open 제거** (ARTICLE 2.4): ~~Toss/Stripe 시크릿 없으면 `ConfirmPayment` 거부~~ **DONE 2026-11-17** (목 테스트 8건). 환불·웹훅 재조정·원장 정합 테스트는 P1-17 잔여.
 4. **재생·검색 권한 검사** (ARTICLE 16): ~~HMAC 서명 playback 토큰(1h, 경로 바인딩) + 가시성/회원권 검사 + 검색 가시성 필터~~ **DONE 2026-11-17** (목 테스트 9건). 지역/연령 검사·유효 조회수 정의·중계복 제거는 잔여 (P1-14).
 5. **광고 E2E 실증** (ARTICLE 7): 소재 실업로드 → 심사 → 승인 → 인벤토리 → 결정 → **시청 프리롤 렌더링** → 유효 노출 집계 → 광고주 대시보드 전 구간 테스트 통과.

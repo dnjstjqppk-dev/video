@@ -96,7 +96,8 @@ func (h *Handler) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
 
 	s3cfg := S3ConfigFromEnv()
 	mode := "local"
-	if s3cfg.Configured() {
+	// UPLOAD_MODE=local pins the relay even when R2 output storage is set.
+	if s3cfg.Configured() && os.Getenv("UPLOAD_MODE") != "local" {
 		mode = "s3"
 	}
 	maxBytes := int64(maxLocalUploadBytes)
@@ -374,7 +375,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Dispatch asynchronously so the completion acknowledgement stays fast;
 	// the worker folds READY/FAILED back into the job and video records.
-	go h.dispatchTranscodeJob(job, video, session.R2Key)
+	go h.dispatchTranscodeJob(job, video, session)
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"uploadId": session.ID,
@@ -394,6 +395,7 @@ func (h *Handler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
 	status := "CREATED"
 	progress := 0
 	jobID := ""
+	jobError := ""
 	if session.Completed {
 		status = "QUEUED"
 	}
@@ -402,6 +404,7 @@ func (h *Handler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
 			jobID = job.ID
 			status = job.Status
 			progress = job.ProgressPct
+			jobError = job.Error
 			break
 		}
 	}
@@ -412,5 +415,6 @@ func (h *Handler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
 		"video_id":     session.VideoID,
 		"status":       status,
 		"progress_pct": progress,
+		"error":        jobError,
 	})
 }

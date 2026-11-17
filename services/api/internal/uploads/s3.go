@@ -28,6 +28,7 @@ type S3Config struct {
 	Endpoint       string // server-side base URL, e.g. http://r2-storage:9000
 	PublicEndpoint string // browser-facing base URL for presigned PUTs
 	Bucket         string
+	HLSBucket      string // published ABR HLS output bucket
 	AccessKey      string
 	SecretKey      string
 	Region         string
@@ -41,6 +42,7 @@ func S3ConfigFromEnv() S3Config {
 		Endpoint:       firstNonEmpty(os.Getenv("R2_ENDPOINT"), "http://localhost:9002"),
 		PublicEndpoint: firstNonEmpty(os.Getenv("R2_PUBLIC_ENDPOINT"), os.Getenv("R2_ENDPOINT"), "http://localhost:9002"),
 		Bucket:         firstNonEmpty(os.Getenv("R2_BUCKET_RAW"), "gvp-raw-uploads"),
+		HLSBucket:      firstNonEmpty(os.Getenv("R2_BUCKET_HLS"), "gvp-public-hls"),
 		AccessKey:      os.Getenv("R2_ACCESS_KEY_ID"),
 		SecretKey:      os.Getenv("R2_SECRET_ACCESS_KEY"),
 		Region:         firstNonEmpty(os.Getenv("R2_REGION"), "auto"),
@@ -182,6 +184,68 @@ func (c S3Config) PresignPartUpload(key, s3UploadID string, partNumber int, expi
 	return fmt.Sprintf("%s%s?%s", base, canonicalURI, canonicalQueryString(params)), nil
 }
 
+// PresignGet issues a presigned GET URL so the media worker can download a
+// raw source object without holding storage credentials (P0-2).
+func (c S3Config) PresignGet(key string, expires time.Duration) (string, error) {
+	if c.AccessKey == "" || c.SecretKey == "" {
+		return "", fmt.Errorf("object storage credentials are not configured")
+	}
+	if key == "" {
+		return "", fmt.Errorf("key is required")
+	}
+	base := strings.TrimSuffix(c.Endpoint, "/")
+	serverURL, err := url.Parse(base)
+	if err != nil || serverURL.Scheme == "" || serverURL.Host == "" {
+		return "", fmt.Errorf("invalid object-storage endpoint")
+	}
+	now := time.Now().UTC()
+	amzDate := now.Format("20060102T150405Z")
+	dateStamp := now.Format("20060102")
+	credentialScope := fmt.Sprintf("%s/%s/s3/aws4_request", dateStamp, c.Region)
+	canonicalURI := encodeS3Path("/" + c.Bucket + "/" + key)
+	params := map[string]string{
+		"X-Amz-Algorithm":     "AWS4-HMAC-SHA256",
+		"X-Amz-Credential":    c.AccessKey + "/" + credentialScope,
+		"X-Amz-Date":          amzDate,
+		"X-Amz-Expires":       fmt.Sprintf("%d", int64(expires/time.Second)),
+		"X-Amz-SignedHeaders": "host",
+	}
+	canonicalRequest := strings.Join([]string{
+		"GET",
+		canonicalURI,
+		canonicalQueryString(params),
+		"host:" + serverURL.Host,
+		"",
+		"host",
+		"UNSIGNED-PAYLOAD",
+	}, "\n")
+	stringToSign := strings.Join([]string{
+		"AWS4-HMAC-SHA256",
+		amzDate,
+		credentialScope,
+		sha256Hex([]byte(canonicalRequest)),
+	}, "\n")
+	signature := hex.EncodeToString(hmacSHA256(signingKey(c.SecretKey, dateStamp, c.Region, "s3"), []byte(stringToSign)))
+	params["X-Amz-Signature"] = signature
+	return fmt.Sprintf("%s%s?%s", base, canonicalURI, canonicalQueryString(params)), nil
+}
+
+// PutObject uploads one object to the given bucket (P0-2 artifact publish).
+func (c S3Config) PutObject(ctx context.Context, bucket, key, contentType string, body []byte) error {
+	if c.AccessKey == "" || c.SecretKey == "" {
+		return fmt.Errorf("object storage credentials are not configured")
+	}
+	target := strings.TrimSuffix(c.Endpoint, "/") + "/" + bucket + "/" + encodeS3Path(key)
+	resp, _, err := c.doSigned(ctx, http.MethodPut, target, body, contentType)
+	if err != nil {
+		return fmt.Errorf("put object failed: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("put object returned HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
 // signHeaderRequest attaches SigV4 Authorization headers for server-side calls.
 func (c S3Config) signHeaderRequest(req *http.Request, payloadHash string, now time.Time) {
 	now = now.UTC()
@@ -250,7 +314,12 @@ func (c S3Config) doSigned(ctx context.Context, method, rawURL string, body []by
 
 // EnsureBucket creates the raw-upload bucket when missing (idempotent).
 func (c S3Config) EnsureBucket(ctx context.Context) error {
-	target := strings.TrimSuffix(c.Endpoint, "/") + "/" + c.Bucket
+	return c.EnsureBucketNamed(ctx, c.Bucket)
+}
+
+// EnsureBucketNamed creates the named bucket when missing (idempotent).
+func (c S3Config) EnsureBucketNamed(ctx context.Context, bucket string) error {
+	target := strings.TrimSuffix(c.Endpoint, "/") + "/" + bucket
 	resp, body, err := c.doSigned(ctx, http.MethodPut, target, nil, "")
 	if err != nil {
 		return fmt.Errorf("ensure bucket request failed: %w", err)

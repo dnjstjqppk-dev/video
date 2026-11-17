@@ -27,6 +27,8 @@ func TestMediaWorkerABRLadderAndLifecycle(t *testing.T) {
 	}
 
 	// Execute full job lifecycle: UPLOADED -> VALIDATING -> QUEUED -> PROCESSING -> READY
+	// (legacy assumed-profile path; real execution is proven by the docker E2E).
+	t.Setenv("REQUIRE_PROBED_SOURCE", "false")
 	job := TranscodeJob{
 		JobID:       "job-1",
 		VideoID:     "vid-100",
@@ -149,6 +151,8 @@ func postIntake(t *testing.T, srv *healthServer, body string) *httptest.Response
 }
 
 func TestTranscodeIntakeExecutesJob(t *testing.T) {
+	// Legacy path: dispatched metadata is validated as a hint (probed=false).
+	t.Setenv("REQUIRE_PROBED_SOURCE", "false")
 	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
 	payload := `{"jobId":"job-intake-1","videoId":"vid-intake-1","sourceR2Key":"raw/user1/vid-intake-1.mp4",` +
 		`"width":1920,"height":1080,"durationSeconds":120,"videoCodec":"h264","hasVideoStream":true}`
@@ -163,8 +167,8 @@ func TestTranscodeIntakeExecutesJob(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
 		t.Fatalf("invalid intake response: %v", err)
 	}
-	if result.State != "READY" || !result.Probed {
-		t.Fatalf("expected READY/probed response, got %+v", result)
+	if result.State != "READY" || result.Probed {
+		t.Fatalf("expected READY/unprobed legacy response, got %+v", result)
 	}
 	if srv.worker.States["vid-intake-1"] != StateReady {
 		t.Fatalf("expected worker state READY, got %s", srv.worker.States["vid-intake-1"])
@@ -174,10 +178,18 @@ func TestTranscodeIntakeExecutesJob(t *testing.T) {
 func TestTranscodeIntakeAssumedProfileAndValidation(t *testing.T) {
 	srv := newHealthServer("media-worker", NewMediaWorker(t.TempDir()))
 
-	// No probe metadata: dev default assumes the 1080p source profile.
+	// Default (P0-2): bare keys without fetchable sources are rejected.
 	rec := postIntake(t, srv, `{"jobId":"job-intake-2","videoId":"vid-intake-2","sourceR2Key":"raw/user1/v.mp4"}`)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for unfetchable source by default, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Explicit legacy opt-out keeps the transitional assumed path.
+	t.Setenv("REQUIRE_PROBED_SOURCE", "false")
+	rec = postIntake(t, srv, `{"jobId":"job-intake-2b","videoId":"vid-intake-2b","sourceR2Key":"raw/user1/v.mp4",`+
+		`"width":1920,"height":1080,"durationSeconds":120,"videoCodec":"h264","hasVideoStream":true}`)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 with assumed profile, got %d: %s", rec.Code, rec.Body.String())
+		t.Fatalf("expected 200 under legacy opt-out, got %d: %s", rec.Code, rec.Body.String())
 	}
 	if !strings.Contains(rec.Body.String(), `"probed":false`) {
 		t.Fatalf("expected probed=false flag, got %s", rec.Body.String())

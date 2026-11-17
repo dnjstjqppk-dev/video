@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -86,15 +87,80 @@ func TestDispatchTranscodeJobReady(t *testing.T) {
 	srv := newUploadsTestServer()
 	defer srv.Close()
 	uploadID, videoID := runLocalUploadToCompletion(t, srv.Config.Handler)
-	pollUploadStatus(t, srv.Config.Handler, uploadID, "READY", 5*time.Second)
+	// P0-2: READY without publishable storage is a lie — without R2/MinIO the
+	// job must fail closed with an actionable error instead of fake READY.
+	pollUploadStatus(t, srv.Config.Handler, uploadID, "FAILED", 5*time.Second)
 
 	select {
 	case envelope := <-received:
 		if envelope["videoId"] != videoID || envelope["jobId"] == "" || envelope["sourceR2Key"] == "" {
 			t.Fatalf("worker received incomplete envelope: %v", envelope)
 		}
+		if envelope["sourceUrl"] == "" {
+			t.Fatalf("local dispatch must send a file:// sourceUrl: %v", envelope)
+		}
 	default:
 		t.Fatal("worker intake was never called")
+	}
+}
+
+// P0-2: worker READY + reachable storage publishes artifacts and completes.
+func TestDispatchPublishesArtifactsOnReady(t *testing.T) {
+	t.Setenv("GVP_LOCAL_MEDIA_DIR", t.TempDir())
+	t.Setenv("UPLOAD_MODE", "local")
+	playlist := "#EXTM3U\n#EXT-X-VERSION:6\n"
+	workerStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/jobs/transcode" && r.Method == http.MethodPost:
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"state":"READY","probed":true,` +
+				`"probe":{"width":640,"height":360,"durationSeconds":12,"videoCodec":"h264"},` +
+				`"artifacts":[{"key":"master.m3u8","contentType":"application/vnd.apple.mpegurl","bytes":24}]}`))
+		case strings.HasPrefix(r.URL.Path, "/artifacts/") && strings.HasSuffix(r.URL.Path, "/master.m3u8"):
+			w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+			w.Write([]byte(playlist))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer workerStub.Close()
+	t.Setenv("MEDIA_WORKER_URL", workerStub.URL)
+
+	putSeen := make(chan string, 4)
+	s3Stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.Header.Get("Authorization") == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		putSeen <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer s3Stub.Close()
+	t.Setenv("R2_ENDPOINT", s3Stub.URL)
+	t.Setenv("R2_ACCESS_KEY_ID", "test-key")
+	t.Setenv("R2_SECRET_ACCESS_KEY", "test-secret")
+	t.Setenv("R2_BUCKET_HLS", "pub-hls")
+	t.Setenv("R2_PUBLIC_HLS_BASE", "https://cdn.test/hls")
+
+	srv := newUploadsTestServer()
+	defer srv.Close()
+	uploadID, videoID := runLocalUploadToCompletion(t, srv.Config.Handler)
+	pollUploadStatus(t, srv.Config.Handler, uploadID, "READY", 10*time.Second)
+
+	want := "/pub-hls/hls/" + videoID + "/master.m3u8"
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		select {
+		case path := <-putSeen:
+			if path == want {
+				return
+			}
+		default:
+			if time.Now().After(deadline) {
+				t.Fatalf("expected artifact PUT to %q", want)
+			}
+			time.Sleep(25 * time.Millisecond)
+		}
 	}
 }
 
