@@ -1,214 +1,1083 @@
--- Generated from ordered migrations; use cmd/migrate for real deployments.
--- Phase 1: identity, organizations and access control. Credentials live in the OIDC provider.
-CREATE TABLE users (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
- oidc_issuer text NOT NULL, oidc_subject text NOT NULL,
- verified_email text, display_name varchar(120) NOT NULL DEFAULT '',
- locale varchar(12) NOT NULL DEFAULT 'ko-KR',
- status varchar(20) NOT NULL DEFAULT 'active' CHECK(status IN ('active','suspended','closed')),
- created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
- deleted_at timestamptz,
- UNIQUE(oidc_issuer,oidc_subject)
+-- Canonical PostgreSQL schema snapshot (generated, do not hand-edit).
+-- Source of truth: db/migrations/*.sql (goose Up sections).
+-- Regenerate: python docs/generate_schema.py
+
+-- ========== 00001_create_accounts.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00001: Accounts, Users, Sessions, Organizations, RBAC
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS roles (
+    name VARCHAR(64) PRIMARY KEY,
+    description TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX users_email_idx ON users(lower(verified_email)) WHERE verified_email IS NOT NULL;
-CREATE TABLE user_preferences (
- user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
- autoplay boolean NOT NULL DEFAULT true, history_enabled boolean NOT NULL DEFAULT true,
- personalized_ads boolean NOT NULL DEFAULT false,
- theme varchar(12) NOT NULL DEFAULT 'system',
- content_language varchar(12) NOT NULL DEFAULT 'ko',
- updated_at timestamptz NOT NULL DEFAULT now()
+
+INSERT INTO roles (name, description) VALUES
+    ('visitor', 'Unauthenticated visitor'),
+    ('registered_user', 'Standard registered consumer'),
+    ('creator', 'Creator with an active channel'),
+    ('channel_manager', 'Delegated channel manager'),
+    ('channel_editor', 'Delegated channel editor'),
+    ('channel_analyst', 'Delegated channel analytics viewer'),
+    ('advertiser', 'Ad campaign manager'),
+    ('mcn_manager', 'Multi-channel network representative'),
+    ('rights_owner', 'Copyright owner / content manager'),
+    ('partner_admin', 'Partner organization administrator'),
+    ('moderator', 'Trust & Safety content reviewer'),
+    ('support_agent', 'Customer support specialist'),
+    ('finance_admin', 'Settlement & ledger auditor'),
+    ('platform_admin', 'System operations administrator'),
+    ('super_admin', 'Unrestricted root administrator')
+ON CONFLICT (name) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS permissions (
+    name VARCHAR(64) PRIMARY KEY,
+    description TEXT,
+    category VARCHAR(64) NOT NULL
 );
-CREATE TABLE user_devices (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users(id),
- device_fingerprint_hash text NOT NULL, platform varchar(30) NOT NULL,
- push_token_ciphertext bytea, last_seen_at timestamptz, revoked_at timestamptz,
- created_at timestamptz NOT NULL DEFAULT now(),
- UNIQUE(user_id,device_fingerprint_hash)
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_name VARCHAR(64) REFERENCES roles(name) ON DELETE CASCADE,
+    permission_name VARCHAR(64) REFERENCES permissions(name) ON DELETE CASCADE,
+    PRIMARY KEY (role_name, permission_name)
 );
-CREATE TABLE organizations (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name varchar(160) NOT NULL,
- kind varchar(30) NOT NULL CHECK(kind IN ('advertiser','mcn','rights_owner','merchant','agency','internal')),
- verification_status varchar(24) NOT NULL DEFAULT 'pending' CHECK(verification_status IN ('pending','verified','rejected','suspended')),
- created_by uuid NOT NULL REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now(),
- updated_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz
+
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(64) NOT NULL UNIQUE,
+    password_hash VARCHAR(255),
+    role VARCHAR(64) NOT NULL REFERENCES roles(name) DEFAULT 'registered_user',
+    subscription_tier VARCHAR(32) NOT NULL DEFAULT 'free',
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    two_factor_secret VARCHAR(255),
+    zitadel_user_id VARCHAR(128) UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE organization_members (
- organization_id uuid NOT NULL REFERENCES organizations(id), user_id uuid NOT NULL REFERENCES users(id),
- role varchar(40) NOT NULL CHECK(role IN ('owner','admin','finance','manager','viewer')),
- joined_at timestamptz NOT NULL DEFAULT now(), revoked_at timestamptz,
- PRIMARY KEY(organization_id,user_id)
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    display_name VARCHAR(128) NOT NULL,
+    bio TEXT,
+    avatar_url TEXT,
+    banner_url TEXT,
+    country_code VARCHAR(4),
+    language VARCHAR(8) DEFAULT 'ko',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE roles (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code varchar(60) NOT NULL UNIQUE, description text NOT NULL DEFAULT '');
-CREATE TABLE permissions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code varchar(100) NOT NULL UNIQUE);
-CREATE TABLE role_permissions (role_id uuid NOT NULL REFERENCES roles(id),permission_id uuid NOT NULL REFERENCES permissions(id),PRIMARY KEY(role_id,permission_id));
-CREATE TABLE user_global_roles(user_id uuid NOT NULL REFERENCES users(id),role_id uuid NOT NULL REFERENCES roles(id),granted_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,role_id));
-CREATE TABLE user_security_events(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES users(id),event_code varchar(60) NOT NULL,ip_hash text,metadata jsonb NOT NULL DEFAULT '{}'::jsonb,created_at timestamptz NOT NULL DEFAULT now());
-CREATE INDEX user_security_events_user_created_idx ON user_security_events(user_id,created_at DESC);
 
-
--- Phase 2: channels, video catalog, assets, ingest and publication.
-CREATE TABLE channels (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),owner_id uuid NOT NULL REFERENCES users(id),
- handle varchar(30) NOT NULL CHECK(handle ~ '^[a-z0-9_-]{3,30}$'),
- name varchar(200) NOT NULL, description varchar(5000) NOT NULL DEFAULT '',
- avatar_asset_key text,banner_asset_key text,country char(2),
- status varchar(20) NOT NULL DEFAULT 'active' CHECK(status IN ('active','suspended','closed')),
- created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),deleted_at timestamptz
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    dark_mode BOOLEAN NOT NULL DEFAULT TRUE,
+    autoplay BOOLEAN NOT NULL DEFAULT TRUE,
+    default_quality VARCHAR(16) NOT NULL DEFAULT 'auto',
+    email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    push_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    restricted_mode BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE UNIQUE INDEX channels_handle_active_unique ON channels(lower(handle)) WHERE deleted_at IS NULL;
-CREATE INDEX channels_owner_idx ON channels(owner_id);
-CREATE TABLE channel_members(channel_id uuid NOT NULL REFERENCES channels(id),user_id uuid NOT NULL REFERENCES users(id),role varchar(24) NOT NULL CHECK(role IN('owner','manager','editor','analyst','moderator')),created_at timestamptz NOT NULL DEFAULT now(),revoked_at timestamptz,PRIMARY KEY(channel_id,user_id));
-CREATE TABLE videos (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(), channel_id uuid NOT NULL REFERENCES channels(id),
- title varchar(200) NOT NULL,description varchar(5000) NOT NULL DEFAULT '',
- visibility varchar(20) NOT NULL DEFAULT 'private' CHECK(visibility IN('private','unlisted','public','members','paid')),
- status varchar(24) NOT NULL DEFAULT 'draft' CHECK(status IN('draft','uploading','uploaded','validating','queued','processing','ready','failed','blocked','deleted')),
- kind varchar(12) NOT NULL DEFAULT 'video' CHECK(kind IN ('video','short','live_replay')),
- duration_ms bigint CHECK(duration_ms>=0),original_filename text,
- published_at timestamptz, scheduled_for timestamptz,
- age_restricted boolean NOT NULL DEFAULT false,allow_comments boolean NOT NULL DEFAULT true,
- created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),deleted_at timestamptz,
- CONSTRAINT public_requires_ready CHECK(visibility NOT IN ('public','unlisted','members','paid') OR status='ready')
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(128) NOT NULL UNIQUE,
+    ip_address INET,
+    user_agent TEXT,
+    is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX videos_public_idx ON videos(published_at DESC,id DESC) WHERE visibility='public' AND status='ready' AND deleted_at IS NULL;
-CREATE INDEX videos_channel_idx ON videos(channel_id,created_at DESC);
-CREATE TABLE video_assets (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),
- asset_kind varchar(30) NOT NULL CHECK(asset_kind IN ('original','hls_manifest','dash_manifest','thumbnail','caption','audio','preview')),
- storage_provider varchar(25) NOT NULL DEFAULT 'r2',object_key text NOT NULL UNIQUE,content_type text NOT NULL,
- size_bytes bigint NOT NULL CHECK(size_bytes>=0),checksum_sha256 char(64),created_at timestamptz NOT NULL DEFAULT now()
+
+CREATE INDEX idx_sessions_user ON sessions(user_id, is_revoked);
+
+CREATE TABLE IF NOT EXISTS devices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    device_fingerprint VARCHAR(128) NOT NULL,
+    device_type VARCHAR(32) NOT NULL, -- web, ios, android
+    fcm_token TEXT,
+    apns_token TEXT,
+    last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX video_assets_video_idx ON video_assets(video_id);
-CREATE TABLE video_variants (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),
- manifest_asset_id uuid REFERENCES video_assets(id),height integer CHECK(height>0),width integer CHECK(width>0),
- bitrate_bps integer CHECK(bitrate_bps>0),codec varchar(32) NOT NULL,
- state varchar(20) NOT NULL DEFAULT 'pending',created_at timestamptz NOT NULL DEFAULT now(),
- UNIQUE(video_id,height,codec)
+
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(32) NOT NULL, -- advertiser, mcn, rights_owner
+    contact_email VARCHAR(255) NOT NULL,
+    tax_id VARCHAR(64),
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE upload_sessions (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),
- user_id uuid NOT NULL REFERENCES users(id),object_key text NOT NULL UNIQUE,
- storage_upload_id text,upload_state varchar(24) NOT NULL DEFAULT 'created',
- expected_size_bytes bigint NOT NULL CHECK(expected_size_bytes>0),expected_sha256 char(64),
- expires_at timestamptz NOT NULL,completed_at timestamptz,created_at timestamptz NOT NULL DEFAULT now()
+
+CREATE TABLE IF NOT EXISTS organization_members (
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_role VARCHAR(64) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (organization_id, user_id)
 );
-CREATE TABLE upload_parts (upload_id uuid NOT NULL REFERENCES upload_sessions(id),part_number integer NOT NULL CHECK(part_number BETWEEN 1 AND 10000),etag text NOT NULL,size_bytes bigint NOT NULL CHECK(size_bytes>0),PRIMARY KEY(upload_id,part_number));
-CREATE TABLE media_jobs (
- id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),
- job_type varchar(32) NOT NULL, state varchar(20) NOT NULL DEFAULT 'queued',attempts integer NOT NULL DEFAULT 0,
- max_attempts integer NOT NULL DEFAULT 4,locked_until timestamptz,error_code text,
- created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+
+-- ========== 00002_create_content.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00002: Channels, Videos, Media Pipeline, Playlists
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS channels (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    handle VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(128) NOT NULL,
+    description TEXT,
+    avatar_url TEXT,
+    banner_url TEXT,
+    subscriber_count BIGINT NOT NULL DEFAULT 0,
+    video_count INT NOT NULL DEFAULT 0,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    monetization_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX media_jobs_state_idx ON media_jobs(state,created_at);
-CREATE TABLE video_chapters(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),start_ms bigint NOT NULL CHECK(start_ms>=0),title varchar(200) NOT NULL,UNIQUE(video_id,start_ms));
-CREATE TABLE captions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),language varchar(16) NOT NULL,kind varchar(16) NOT NULL,asset_id uuid REFERENCES video_assets(id),reviewed boolean NOT NULL DEFAULT false,UNIQUE(video_id,language,kind));
-CREATE TABLE video_territories(video_id uuid NOT NULL REFERENCES videos(id),country char(2) NOT NULL,allowed boolean NOT NULL,PRIMARY KEY(video_id,country));
 
+CREATE INDEX idx_channels_owner ON channels(owner_id);
+CREATE INDEX idx_channels_handle ON channels(handle);
 
--- Phase 2/3: interactions, history, community, playlists.
-CREATE TABLE channel_subscriptions(user_id uuid NOT NULL REFERENCES users(id),channel_id uuid NOT NULL REFERENCES channels(id),notification_level varchar(15) NOT NULL DEFAULT 'personalized',created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,channel_id));
-CREATE INDEX channel_subscriptions_channel_idx ON channel_subscriptions(channel_id);
-CREATE TABLE video_reactions(user_id uuid NOT NULL REFERENCES users(id),video_id uuid NOT NULL REFERENCES videos(id),reaction varchar(10) NOT NULL CHECK(reaction IN ('like','dislike')),created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,video_id));
-CREATE TABLE comments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid NOT NULL REFERENCES videos(id),author_id uuid NOT NULL REFERENCES users(id),parent_id uuid REFERENCES comments(id),body varchar(10000) NOT NULL,status varchar(20) NOT NULL DEFAULT 'visible',is_pinned boolean NOT NULL DEFAULT false,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),deleted_at timestamptz);
-CREATE INDEX comments_video_idx ON comments(video_id,created_at DESC);
-CREATE TABLE comment_reactions(user_id uuid NOT NULL REFERENCES users(id),comment_id uuid NOT NULL REFERENCES comments(id),reaction varchar(10) NOT NULL CHECK(reaction IN('like','dislike')),PRIMARY KEY(user_id,comment_id));
-CREATE TABLE playlists(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),owner_id uuid NOT NULL REFERENCES users(id),channel_id uuid REFERENCES channels(id),title varchar(200) NOT NULL,visibility varchar(16) NOT NULL DEFAULT 'private' CHECK(visibility IN('private','unlisted','public')),created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE playlist_items(playlist_id uuid NOT NULL REFERENCES playlists(id),video_id uuid NOT NULL REFERENCES videos(id),position integer NOT NULL CHECK(position>=0),added_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(playlist_id,video_id),UNIQUE(playlist_id,position));
-CREATE TABLE watch_progress(user_id uuid NOT NULL REFERENCES users(id),video_id uuid NOT NULL REFERENCES videos(id),position_ms bigint NOT NULL DEFAULT 0 CHECK(position_ms>=0),updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,video_id));
-CREATE TABLE watch_history(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id),video_id uuid NOT NULL REFERENCES videos(id),watched_at timestamptz NOT NULL DEFAULT now(),duration_ms bigint NOT NULL DEFAULT 0 CHECK(duration_ms>=0));
-CREATE INDEX watch_history_user_idx ON watch_history(user_id,watched_at DESC);
-CREATE TABLE notifications(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id),type varchar(40) NOT NULL,payload jsonb NOT NULL DEFAULT '{}'::jsonb,read_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
-CREATE INDEX notifications_unread_idx ON notifications(user_id,created_at DESC) WHERE read_at IS NULL;
-CREATE TABLE community_posts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),channel_id uuid NOT NULL REFERENCES channels(id),author_id uuid NOT NULL REFERENCES users(id),body varchar(10000) NOT NULL,media_asset_key text,status varchar(16) NOT NULL DEFAULT 'visible',created_at timestamptz NOT NULL DEFAULT now(),deleted_at timestamptz);
-CREATE TABLE community_votes(post_id uuid NOT NULL REFERENCES community_posts(id),user_id uuid NOT NULL REFERENCES users(id),option_index smallint NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(post_id,user_id));
+CREATE TABLE IF NOT EXISTS channel_members (
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(32) NOT NULL, -- manager, editor, viewer
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (channel_id, user_id)
+);
 
+CREATE TABLE IF NOT EXISTS videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    video_type VARCHAR(32) NOT NULL DEFAULT 'standard', -- standard, shorts, live_vod
+    visibility VARCHAR(32) NOT NULL DEFAULT 'private', -- public, unlisted, private, members_only, scheduled
+    status VARCHAR(32) NOT NULL DEFAULT 'CREATED', -- CREATED, UPLOADING, UPLOADED, VALIDATING, QUEUED, PROCESSING, READY, FAILED, BLOCKED, DELETED
+    duration_seconds INT NOT NULL DEFAULT 0,
+    thumbnail_url TEXT,
+    preview_url TEXT,
+    hls_master_url TEXT,
+    view_count BIGINT NOT NULL DEFAULT 0,
+    like_count BIGINT NOT NULL DEFAULT 0,
+    dislike_count BIGINT NOT NULL DEFAULT 0,
+    comment_count BIGINT NOT NULL DEFAULT 0,
+    tags TEXT[] NOT NULL DEFAULT '{}',
+    category VARCHAR(64) NOT NULL DEFAULT 'General',
+    is_age_restricted BOOLEAN NOT NULL DEFAULT FALSE,
+    published_at TIMESTAMPTZ,
+    scheduled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 4: live control & websocket messages. Managed ingest is controlled by Go.
-CREATE TABLE live_streams(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),channel_id uuid NOT NULL REFERENCES channels(id),title varchar(200) NOT NULL,description text NOT NULL DEFAULT '',state varchar(25) NOT NULL DEFAULT 'scheduled' CHECK(state IN('scheduled','ready','live','ended','failed','blocked')),provider varchar(30) NOT NULL DEFAULT 'cloudflare',provider_stream_id text UNIQUE,stream_key_secret_ref text,planned_start_at timestamptz,started_at timestamptz,ended_at timestamptz,replay_video_id uuid REFERENCES videos(id),created_at timestamptz NOT NULL DEFAULT now());
-CREATE INDEX live_streams_channel_idx ON live_streams(channel_id,created_at DESC);
-CREATE TABLE live_sessions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),stream_id uuid NOT NULL REFERENCES live_streams(id),started_at timestamptz NOT NULL DEFAULT now(),ended_at timestamptz,provider_event_id text UNIQUE,disconnects integer NOT NULL DEFAULT 0);
-CREATE TABLE live_chat_messages(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),stream_id uuid NOT NULL REFERENCES live_streams(id),author_id uuid NOT NULL REFERENCES users(id),body varchar(2000) NOT NULL,status varchar(16) NOT NULL DEFAULT 'visible',sent_at timestamptz NOT NULL DEFAULT now(),deleted_at timestamptz);
-CREATE INDEX live_chat_messages_stream_idx ON live_chat_messages(stream_id,sent_at DESC);
-CREATE TABLE live_chat_moderators(stream_id uuid NOT NULL REFERENCES live_streams(id),user_id uuid NOT NULL REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(stream_id,user_id));
-CREATE TABLE live_chat_bans(stream_id uuid NOT NULL REFERENCES live_streams(id),user_id uuid NOT NULL REFERENCES users(id),reason text NOT NULL DEFAULT '',expires_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(stream_id,user_id));
+CREATE INDEX idx_videos_channel ON videos(channel_id);
+CREATE INDEX idx_videos_visibility_status ON videos(visibility, status);
+CREATE INDEX idx_videos_published_at ON videos(published_at DESC) WHERE visibility = 'public' AND status = 'READY';
+CREATE INDEX idx_videos_type ON videos(video_type) WHERE visibility = 'public' AND status = 'READY';
 
+CREATE TABLE IF NOT EXISTS video_assets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    r2_bucket VARCHAR(128) NOT NULL,
+    r2_key TEXT NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    file_size_bytes BIGINT NOT NULL,
+    mime_type VARCHAR(64) NOT NULL,
+    checksum_sha256 VARCHAR(64),
+    video_codec VARCHAR(32),
+    audio_codec VARCHAR(32),
+    width INT,
+    height INT,
+    fps DOUBLE PRECISION,
+    bitrate BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 3/6: metadata for recommendation and analytics; high-volume events live in ClickHouse.
-CREATE TABLE analytics_rollups_daily(video_id uuid NOT NULL REFERENCES videos(id),metric_date date NOT NULL,views bigint NOT NULL DEFAULT 0 CHECK(views>=0),watch_ms bigint NOT NULL DEFAULT 0 CHECK(watch_ms>=0),impressions bigint NOT NULL DEFAULT 0 CHECK(impressions>=0),likes bigint NOT NULL DEFAULT 0 CHECK(likes>=0),updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(video_id,metric_date));
-CREATE TABLE channel_analytics_daily(channel_id uuid NOT NULL REFERENCES channels(id),metric_date date NOT NULL,subscribers_total bigint NOT NULL DEFAULT 0,views bigint NOT NULL DEFAULT 0,watch_ms bigint NOT NULL DEFAULT 0,updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(channel_id,metric_date));
-CREATE TABLE video_tags(video_id uuid NOT NULL REFERENCES videos(id),tag varchar(60) NOT NULL,PRIMARY KEY(video_id,tag));
-CREATE TABLE recommendation_feedback(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES users(id),video_id uuid NOT NULL REFERENCES videos(id),feedback varchar(24) NOT NULL CHECK(feedback IN('not_interested','dont_recommend_channel','liked','saved')),created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE recommendation_experiments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),name varchar(120) NOT NULL UNIQUE,config jsonb NOT NULL DEFAULT '{}'::jsonb,active boolean NOT NULL DEFAULT false,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE search_index_jobs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),video_id uuid REFERENCES videos(id),channel_id uuid REFERENCES channels(id),action varchar(16) NOT NULL CHECK(action IN('upsert','delete')),state varchar(16) NOT NULL DEFAULT 'queued',created_at timestamptz NOT NULL DEFAULT now(),CHECK(video_id IS NOT NULL OR channel_id IS NOT NULL));
+CREATE TABLE IF NOT EXISTS video_variants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    quality VARCHAR(16) NOT NULL, -- 240p, 360p, 480p, 720p, 1080p, 1440p, 2160p
+    manifest_r2_key TEXT NOT NULL,
+    width INT NOT NULL,
+    height INT NOT NULL,
+    bitrate BIGINT NOT NULL,
+    fps INT NOT NULL DEFAULT 30,
+    codec VARCHAR(32) NOT NULL DEFAULT 'avc1.64001f,mp4a.40.2',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
+CREATE TABLE IF NOT EXISTS upload_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    r2_upload_id TEXT NOT NULL,
+    r2_key TEXT NOT NULL,
+    part_size BIGINT NOT NULL,
+    total_parts INT NOT NULL,
+    file_size_bytes BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, COMPLETED, ABORTED, EXPIRED
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 5: ad campaigns, review, budgets, delivery and fraud prevention.
-CREATE TABLE advertiser_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid NOT NULL UNIQUE REFERENCES organizations(id),billing_currency char(3) NOT NULL DEFAULT 'KRW',state varchar(20) NOT NULL DEFAULT 'pending',created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE ad_campaigns(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),advertiser_id uuid NOT NULL REFERENCES advertiser_accounts(id),name varchar(200) NOT NULL,objective varchar(40) NOT NULL,pricing_model varchar(12) NOT NULL CHECK(pricing_model IN('CPM','CPC','CPV')),daily_budget_minor bigint NOT NULL CHECK(daily_budget_minor>=0),total_budget_minor bigint NOT NULL CHECK(total_budget_minor>=0),currency char(3) NOT NULL,start_at timestamptz NOT NULL,end_at timestamptz NOT NULL,state varchar(20) NOT NULL DEFAULT 'draft',created_at timestamptz NOT NULL DEFAULT now(),CHECK(end_at>start_at));
-CREATE INDEX ad_campaigns_advertiser_idx ON ad_campaigns(advertiser_id,state);
-CREATE TABLE ad_creatives(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),campaign_id uuid NOT NULL REFERENCES ad_campaigns(id),video_id uuid REFERENCES videos(id),asset_key text,landing_url text,review_state varchar(20) NOT NULL DEFAULT 'pending',reviewed_by uuid REFERENCES users(id),reviewed_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),CHECK(video_id IS NOT NULL OR asset_key IS NOT NULL));
-CREATE TABLE ad_targeting_rules(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),campaign_id uuid NOT NULL REFERENCES ad_campaigns(id),rule_type varchar(32) NOT NULL,rule_json jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE ad_placements(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),code varchar(60) NOT NULL UNIQUE,format varchar(40) NOT NULL,active boolean NOT NULL DEFAULT true);
-CREATE TABLE ad_budget_reservations(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),campaign_id uuid NOT NULL REFERENCES ad_campaigns(id),request_id uuid NOT NULL UNIQUE,reserved_minor bigint NOT NULL CHECK(reserved_minor>=0),settled_minor bigint NOT NULL DEFAULT 0 CHECK(settled_minor>=0),status varchar(20) NOT NULL DEFAULT 'reserved',expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE ad_delivery_events(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),campaign_id uuid NOT NULL REFERENCES ad_campaigns(id),creative_id uuid NOT NULL REFERENCES ad_creatives(id),placement_id uuid REFERENCES ad_placements(id),event_kind varchar(20) NOT NULL CHECK(event_kind IN('request','impression','view','click','complete','skip','invalid')),event_id uuid NOT NULL UNIQUE,invalid_reason text,occurred_at timestamptz NOT NULL,received_at timestamptz NOT NULL DEFAULT now());
-CREATE INDEX ad_delivery_events_campaign_idx ON ad_delivery_events(campaign_id,occurred_at DESC);
-CREATE TABLE ad_invoices(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),advertiser_id uuid NOT NULL REFERENCES advertiser_accounts(id),period_start date NOT NULL,period_end date NOT NULL,currency char(3) NOT NULL,amount_minor bigint NOT NULL CHECK(amount_minor>=0),state varchar(20) NOT NULL DEFAULT 'draft',created_at timestamptz NOT NULL DEFAULT now(),CHECK(period_end>=period_start));
+CREATE TABLE IF NOT EXISTS upload_parts (
+    upload_session_id UUID NOT NULL REFERENCES upload_sessions(id) ON DELETE CASCADE,
+    part_number INT NOT NULL,
+    etag VARCHAR(128) NOT NULL,
+    part_size_bytes BIGINT NOT NULL,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (upload_session_id, part_number)
+);
 
+CREATE TABLE IF NOT EXISTS media_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    job_type VARCHAR(32) NOT NULL, -- encode, thumbnail, storyboard, blur, audio_norm
+    status VARCHAR(32) NOT NULL DEFAULT 'QUEUED', -- QUEUED, RUNNING, SUCCEEDED, FAILED
+    progress_percent INT NOT NULL DEFAULT 0,
+    worker_id VARCHAR(64),
+    error_message TEXT,
+    retry_count INT NOT NULL DEFAULT 0,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 5: earnings, double-entry finance, premium, refunds & payout controls.
-CREATE TABLE monetization_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),channel_id uuid NOT NULL UNIQUE REFERENCES channels(id),state varchar(20) NOT NULL DEFAULT 'pending',verified_at timestamptz,paused_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE premium_plans(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),code varchar(50) NOT NULL UNIQUE,currency char(3) NOT NULL,price_minor bigint NOT NULL CHECK(price_minor>=0),billing_interval varchar(12) NOT NULL CHECK(billing_interval IN('month','year')),active boolean NOT NULL DEFAULT false);
-CREATE TABLE user_premium_subscriptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id),plan_id uuid NOT NULL REFERENCES premium_plans(id),provider varchar(30) NOT NULL,provider_subscription_id text UNIQUE,status varchar(20) NOT NULL,period_start timestamptz NOT NULL,period_end timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE channel_membership_plans(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),channel_id uuid NOT NULL REFERENCES channels(id),name varchar(120) NOT NULL,price_minor bigint NOT NULL CHECK(price_minor>0),currency char(3) NOT NULL,active boolean NOT NULL DEFAULT true);
-CREATE TABLE channel_memberships(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id),plan_id uuid NOT NULL REFERENCES channel_membership_plans(id),status varchar(20) NOT NULL,started_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz);
-CREATE TABLE payment_transactions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES users(id),provider varchar(30) NOT NULL,provider_reference text UNIQUE,kind varchar(30) NOT NULL,amount_minor bigint NOT NULL CHECK(amount_minor>=0),currency char(3) NOT NULL,status varchar(20) NOT NULL DEFAULT 'pending',idempotency_key varchar(160) UNIQUE,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE payment_webhook_events(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),provider varchar(30) NOT NULL,provider_event_id text NOT NULL,payload_hash char(64) NOT NULL,processed_at timestamptz,received_at timestamptz NOT NULL DEFAULT now(),UNIQUE(provider,provider_event_id));
-CREATE TABLE refunds(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),payment_id uuid NOT NULL REFERENCES payment_transactions(id),provider_ref text UNIQUE,amount_minor bigint NOT NULL CHECK(amount_minor>0),reason text NOT NULL,status varchar(20) NOT NULL DEFAULT 'requested',created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE ledger_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),owner_user_id uuid REFERENCES users(id),owner_org_id uuid REFERENCES organizations(id),owner_channel_id uuid REFERENCES channels(id),code varchar(120) NOT NULL UNIQUE,currency char(3) NOT NULL,account_type varchar(20) NOT NULL CHECK(account_type IN('asset','liability','revenue','expense','equity')),created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE ledger_transactions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),external_ref text UNIQUE,source_type varchar(40) NOT NULL,description text NOT NULL DEFAULT '',posted_at timestamptz NOT NULL DEFAULT now(),created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE ledger_entries(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),transaction_id uuid NOT NULL REFERENCES ledger_transactions(id),account_id uuid NOT NULL REFERENCES ledger_accounts(id),direction varchar(6) NOT NULL CHECK(direction IN('debit','credit')),amount_minor bigint NOT NULL CHECK(amount_minor>0),created_at timestamptz NOT NULL DEFAULT now());
-CREATE INDEX ledger_entries_tx_idx ON ledger_entries(transaction_id);
--- Ledger balancing MUST be enforced by the Go settlement transaction with row locking,
--- plus deferred database validation/immutable-write protection before finance GO.
-CREATE TABLE creator_earnings(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),channel_id uuid NOT NULL REFERENCES channels(id),source varchar(35) NOT NULL,source_ref text NOT NULL UNIQUE,amount_minor bigint NOT NULL,currency char(3) NOT NULL,status varchar(20) NOT NULL DEFAULT 'pending',ledger_transaction_id uuid REFERENCES ledger_transactions(id),earned_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE payout_accounts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid REFERENCES organizations(id),user_id uuid REFERENCES users(id),provider varchar(30) NOT NULL,provider_account_token_ref text NOT NULL,verified boolean NOT NULL DEFAULT false,created_at timestamptz NOT NULL DEFAULT now(),CHECK((organization_id IS NULL) <> (user_id IS NULL)));
-CREATE TABLE payouts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),payee_account_id uuid NOT NULL REFERENCES payout_accounts(id),amount_minor bigint NOT NULL CHECK(amount_minor>0),currency char(3) NOT NULL,state varchar(20) NOT NULL DEFAULT 'pending',provider_payout_ref text UNIQUE,approved_by uuid REFERENCES users(id),approved_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS thumbnails (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    r2_key TEXT NOT NULL,
+    url TEXT NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    timestamp_seconds DOUBLE PRECISION,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
+CREATE TABLE IF NOT EXISTS captions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    language VARCHAR(8) NOT NULL,
+    label VARCHAR(64) NOT NULL,
+    vtt_r2_key TEXT NOT NULL,
+    vtt_url TEXT NOT NULL,
+    is_auto_generated BOOLEAN NOT NULL DEFAULT FALSE,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 5/6: multi-tenant contracts, IP claims, disputes and ownership evidence.
-CREATE TABLE partner_contracts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid NOT NULL REFERENCES organizations(id),channel_id uuid REFERENCES channels(id),contract_type varchar(30) NOT NULL,version integer NOT NULL DEFAULT 1,terms_hash char(64) NOT NULL,document_key text NOT NULL,starts_at timestamptz NOT NULL,ends_at timestamptz,signature_state varchar(24) NOT NULL DEFAULT 'pending',created_at timestamptz NOT NULL DEFAULT now(),CHECK(ends_at IS NULL OR ends_at>starts_at));
-CREATE TABLE channel_partner_links(channel_id uuid NOT NULL REFERENCES channels(id),organization_id uuid NOT NULL REFERENCES organizations(id),contract_id uuid NOT NULL REFERENCES partner_contracts(id),share_basis_points integer NOT NULL DEFAULT 0 CHECK(share_basis_points BETWEEN 0 AND 10000),starts_at timestamptz NOT NULL,ends_at timestamptz,PRIMARY KEY(channel_id,organization_id,contract_id));
-CREATE TABLE rights_assets(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),organization_id uuid NOT NULL REFERENCES organizations(id),title varchar(300) NOT NULL,original_asset_key text NOT NULL,sha256 char(64),fingerprint_ref text,verified_status varchar(24) NOT NULL DEFAULT 'pending',created_at timestamptz NOT NULL DEFAULT now());
-CREATE INDEX rights_assets_sha_idx ON rights_assets(sha256) WHERE sha256 IS NOT NULL;
-CREATE TABLE rights_territories(asset_id uuid NOT NULL REFERENCES rights_assets(id),country char(2) NOT NULL,rights_kind varchar(32) NOT NULL,valid_from date NOT NULL,valid_until date,PRIMARY KEY(asset_id,country,rights_kind,valid_from));
-CREATE TABLE rights_evidence(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),asset_id uuid NOT NULL REFERENCES rights_assets(id),storage_key text NOT NULL,submitted_by uuid NOT NULL REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE copyright_claims(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),asset_id uuid NOT NULL REFERENCES rights_assets(id),video_id uuid NOT NULL REFERENCES videos(id),claimant_org_id uuid NOT NULL REFERENCES organizations(id),claim_kind varchar(24) NOT NULL CHECK(claim_kind IN('block','monetize','track')),status varchar(24) NOT NULL DEFAULT 'pending',reviewed_by uuid REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),resolved_at timestamptz);
-CREATE INDEX copyright_claims_video_idx ON copyright_claims(video_id,status);
-CREATE TABLE copyright_disputes(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),claim_id uuid NOT NULL REFERENCES copyright_claims(id),opened_by uuid NOT NULL REFERENCES users(id),reason text NOT NULL,status varchar(24) NOT NULL DEFAULT 'open',decided_by uuid REFERENCES users(id),decision_reason text,created_at timestamptz NOT NULL DEFAULT now(),resolved_at timestamptz);
-CREATE TABLE dispute_evidence(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),dispute_id uuid NOT NULL REFERENCES copyright_disputes(id),uploader_id uuid NOT NULL REFERENCES users(id),storage_key text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS chapters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    title VARCHAR(128) NOT NULL,
+    start_time_seconds INT NOT NULL,
+    end_time_seconds INT NOT NULL,
+    thumbnail_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
+CREATE TABLE IF NOT EXISTS playlists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    title VARCHAR(128) NOT NULL,
+    description TEXT,
+    visibility VARCHAR(32) NOT NULL DEFAULT 'public',
+    video_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 6: community safety, policy versions, immutable decision chronology.
-CREATE TABLE policies(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),code varchar(80) NOT NULL,version integer NOT NULL,body text NOT NULL,effective_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(code,version));
-CREATE TABLE content_reports(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),reporter_id uuid REFERENCES users(id),video_id uuid REFERENCES videos(id),comment_id uuid REFERENCES comments(id),live_id uuid REFERENCES live_streams(id),channel_id uuid REFERENCES channels(id),reason_code varchar(60) NOT NULL,details text NOT NULL DEFAULT '',status varchar(24) NOT NULL DEFAULT 'open',created_at timestamptz NOT NULL DEFAULT now(),CHECK(num_nonnulls(video_id,comment_id,live_id,channel_id)=1));
-CREATE TABLE moderation_cases(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),report_id uuid REFERENCES content_reports(id),assigned_to uuid REFERENCES users(id),priority smallint NOT NULL DEFAULT 3,status varchar(24) NOT NULL DEFAULT 'open',created_at timestamptz NOT NULL DEFAULT now(),closed_at timestamptz);
-CREATE TABLE moderation_decisions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),case_id uuid NOT NULL REFERENCES moderation_cases(id),policy_id uuid REFERENCES policies(id),actor_id uuid NOT NULL REFERENCES users(id),action varchar(60) NOT NULL,reason text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE moderation_appeals(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),decision_id uuid NOT NULL REFERENCES moderation_decisions(id),appellant_id uuid NOT NULL REFERENCES users(id),reason text NOT NULL,status varchar(24) NOT NULL DEFAULT 'open',reviewed_by uuid REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),resolved_at timestamptz);
-CREATE TABLE user_sanctions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id),decision_id uuid NOT NULL REFERENCES moderation_decisions(id),sanction_type varchar(40) NOT NULL,starts_at timestamptz NOT NULL,ends_at timestamptz,revoked_at timestamptz);
-CREATE TABLE blocked_terms(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),scope varchar(30) NOT NULL,channel_id uuid REFERENCES channels(id),term varchar(160) NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS playlist_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    playlist_id UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (playlist_id, video_id)
+);
 
+CREATE TABLE IF NOT EXISTS visibility_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    allowed_countries TEXT[] NOT NULL DEFAULT '{}',
+    blocked_countries TEXT[] NOT NULL DEFAULT '{}',
+    require_membership_tier VARCHAR(32),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Phase 0-7: auditable operations, outbox, flags and rollout tracking.
-CREATE TABLE audit_logs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),actor_user_id uuid REFERENCES users(id),actor_service varchar(80),organization_id uuid REFERENCES organizations(id),action varchar(120) NOT NULL,object_type varchar(60) NOT NULL,object_id uuid,request_id text,details jsonb NOT NULL DEFAULT '{}'::jsonb,created_at timestamptz NOT NULL DEFAULT now(),CHECK(actor_user_id IS NOT NULL OR actor_service IS NOT NULL));
-CREATE INDEX audit_logs_created_idx ON audit_logs(created_at DESC);
-CREATE TABLE admin_approvals(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),action varchar(80) NOT NULL,object_type varchar(60) NOT NULL,object_id uuid NOT NULL,requested_by uuid NOT NULL REFERENCES users(id),approved_by uuid REFERENCES users(id),decision varchar(20) NOT NULL DEFAULT 'pending',created_at timestamptz NOT NULL DEFAULT now(),decided_at timestamptz,CHECK(approved_by IS NULL OR approved_by<>requested_by));
-CREATE TABLE feature_flags(key varchar(120) PRIMARY KEY,enabled boolean NOT NULL DEFAULT false,rollout_percentage integer NOT NULL DEFAULT 0 CHECK(rollout_percentage BETWEEN 0 AND 100),rules jsonb NOT NULL DEFAULT '{}'::jsonb,updated_at timestamptz NOT NULL DEFAULT now());
-CREATE TABLE outbox_events(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),aggregate_type varchar(60) NOT NULL,aggregate_id uuid NOT NULL,event_type varchar(100) NOT NULL,payload jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),published_at timestamptz,retry_count integer NOT NULL DEFAULT 0);
-CREATE INDEX outbox_unpublished_idx ON outbox_events(created_at) WHERE published_at IS NULL;
-CREATE TABLE inbox_events(consumer_name varchar(100) NOT NULL,event_id uuid NOT NULL,processed_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(consumer_name,event_id));
-CREATE TABLE idempotency_keys(key varchar(160) NOT NULL,scope varchar(100) NOT NULL,request_hash char(64) NOT NULL,response_code integer,result_ref text,expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(scope,key));
-CREATE TABLE system_incidents(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),severity varchar(12) NOT NULL CHECK(severity IN('P0','P1','P2','P3')),title varchar(200) NOT NULL,details text,status varchar(24) NOT NULL DEFAULT 'open',opened_at timestamptz NOT NULL DEFAULT now(),closed_at timestamptz);
-CREATE TABLE deployment_records(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),service varchar(80) NOT NULL,environment varchar(20) NOT NULL,commit_sha char(40) NOT NULL,image_digest text,deployed_at timestamptz NOT NULL DEFAULT now(),result varchar(20) NOT NULL);
+-- ========== 00003_create_social.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00003: Subscriptions, Reactions, Comments, History, Notifications, Community
+-- ==========================================
 
+CREATE TABLE IF NOT EXISTS subscriptions (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    notification_level VARCHAR(16) NOT NULL DEFAULT 'all', -- all, personalized, none
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, channel_id)
+);
+
+CREATE INDEX idx_subscriptions_channel ON subscriptions(channel_id);
+
+CREATE TABLE IF NOT EXISTS video_reactions (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    reaction_type VARCHAR(16) NOT NULL, -- like, dislike
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, video_id)
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    like_count INT NOT NULL DEFAULT 0,
+    dislike_count INT NOT NULL DEFAULT 0,
+    reply_count INT NOT NULL DEFAULT 0,
+    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+    is_hearted BOOLEAN NOT NULL DEFAULT FALSE,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_comments_video ON comments(video_id, created_at DESC) WHERE parent_id IS NULL AND is_deleted = FALSE;
+CREATE INDEX idx_comments_parent ON comments(parent_id) WHERE parent_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS comment_reactions (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+    reaction_type VARCHAR(16) NOT NULL, -- like, dislike
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, comment_id)
+);
+
+CREATE TABLE IF NOT EXISTS watch_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    watched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, video_id)
+);
+
+CREATE TABLE IF NOT EXISTS watch_progress (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    last_position_seconds INT NOT NULL DEFAULT 0,
+    duration_seconds INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, video_id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(32) NOT NULL, -- upload, reply, mention, live, billing, moderation
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    target_url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS community_posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    image_urls TEXT[] NOT NULL DEFAULT '{}',
+    like_count INT NOT NULL DEFAULT 0,
+    comment_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS community_votes (
+    post_id UUID NOT NULL REFERENCES community_posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    poll_option_index INT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- ========== 00004_create_live.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00004: Live Streaming Infrastructure & Chat
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS live_streams (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    thumbnail_url TEXT,
+    status VARCHAR(32) NOT NULL DEFAULT 'idle', -- idle, preparing, live, disconnected, ended
+    stream_key VARCHAR(128) NOT NULL UNIQUE,
+    cloudflare_stream_uid VARCHAR(128),
+    rtmps_ingest_url TEXT NOT NULL,
+    srt_ingest_url TEXT NOT NULL,
+    playback_hls_url TEXT NOT NULL,
+    viewer_count INT NOT NULL DEFAULT 0,
+    peak_viewer_count INT NOT NULL DEFAULT 0,
+    scheduled_start_time TIMESTAMPTZ,
+    actual_start_time TIMESTAMPTZ,
+    ended_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_live_streams_channel ON live_streams(channel_id);
+CREATE INDEX idx_live_streams_status ON live_streams(status);
+
+CREATE TABLE IF NOT EXISTS live_inputs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    live_stream_id UUID NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    client_ip INET,
+    encoder_name VARCHAR(128),
+    resolution VARCHAR(32),
+    bitrate_kbps INT,
+    fps DOUBLE PRECISION,
+    connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    disconnected_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS live_chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    live_stream_id UUID NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    donation_amount_cents BIGINT,
+    currency VARCHAR(4) DEFAULT 'KRW',
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_live_chat_stream ON live_chat_messages(live_stream_id, created_at DESC) WHERE is_deleted = FALSE;
+
+CREATE TABLE IF NOT EXISTS live_recordings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    live_stream_id UUID NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
+    r2_key TEXT NOT NULL,
+    duration_seconds INT NOT NULL DEFAULT 0,
+    file_size_bytes BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS live_moderators (
+    live_stream_id UUID NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (live_stream_id, user_id)
+);
+
+-- ========== 00005_create_ads.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00005: Advertising Engine & Inventory
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS advertisers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    billing_address TEXT NOT NULL,
+    tax_number VARCHAR(64),
+    balance_cents BIGINT NOT NULL DEFAULT 0,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ad_campaigns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    advertiser_id UUID NOT NULL REFERENCES advertisers(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    format VARCHAR(32) NOT NULL, -- preroll, midroll, feed, shorts, display
+    status VARCHAR(32) NOT NULL DEFAULT 'draft', -- draft, pending_review, active, paused, completed, rejected
+    total_budget_cents BIGINT NOT NULL,
+    daily_budget_cents BIGINT NOT NULL,
+    spent_cents BIGINT NOT NULL DEFAULT 0,
+    cpm_bid_micros BIGINT NOT NULL DEFAULT 0,
+    cpc_bid_micros BIGINT NOT NULL DEFAULT 0,
+    target_categories TEXT[] NOT NULL DEFAULT '{}',
+    target_countries TEXT[] NOT NULL DEFAULT '{}',
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    impressions BIGINT NOT NULL DEFAULT 0,
+    clicks BIGINT NOT NULL DEFAULT 0,
+    views BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_campaigns_status ON ad_campaigns(status, start_date, end_date);
+
+CREATE TABLE IF NOT EXISTS ad_creatives (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    title VARCHAR(128) NOT NULL,
+    video_asset_id UUID REFERENCES video_assets(id) ON DELETE SET NULL,
+    media_url TEXT NOT NULL,
+    destination_url TEXT NOT NULL,
+    cta_text VARCHAR(32) NOT NULL DEFAULT 'Learn More',
+    duration_seconds INT NOT NULL DEFAULT 15,
+    skip_offset_seconds INT NOT NULL DEFAULT 5,
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ad_placements (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    time_offset_seconds INT NOT NULL DEFAULT 0,
+    placement_type VARCHAR(32) NOT NULL, -- preroll, midroll, postroll
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ad_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    creative_id UUID NOT NULL REFERENCES ad_creatives(id) ON DELETE CASCADE,
+    video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    event_type VARCHAR(32) NOT NULL, -- impression, click, view_25, view_50, view_75, complete, skip
+    billed_amount_cents BIGINT NOT NULL DEFAULT 0,
+    ip_hash VARCHAR(64) NOT NULL,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ad_events_campaign ON ad_events(campaign_id, event_type, created_at);
+
+CREATE TABLE IF NOT EXISTS ad_budget_allocations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    allocated_date DATE NOT NULL,
+    budget_cents BIGINT NOT NULL,
+    spent_cents BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (campaign_id, allocated_date)
+);
+
+-- ========== 00006_create_payments_and_ledger.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00006: Monetization, Billing, Double-Entry Ledger, Payouts
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS monetization_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE UNIQUE,
+    bank_name VARCHAR(64) NOT NULL,
+    account_number_encrypted TEXT NOT NULL,
+    account_holder_name VARCHAR(128) NOT NULL,
+    tax_identification_number VARCHAR(64),
+    status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending, active, suspended, rejected
+    payout_currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS memberships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    tier_name VARCHAR(64) NOT NULL,
+    monthly_price_cents BIGINT NOT NULL,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    perks TEXT[] NOT NULL DEFAULT '{}',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions_billing (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tier VARCHAR(32) NOT NULL, -- premium, premium_family, channel_membership
+    channel_id UUID REFERENCES channels(id) ON DELETE SET NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'active', -- active, past_due, canceled, paused
+    current_period_start TIMESTAMPTZ NOT NULL,
+    current_period_end TIMESTAMPTZ NOT NULL,
+    amount_cents BIGINT NOT NULL,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    external_subscription_id VARCHAR(128),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS payment_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    provider VARCHAR(32) NOT NULL, -- toss, stripe
+    external_transaction_id VARCHAR(128) NOT NULL UNIQUE,
+    amount_cents BIGINT NOT NULL,
+    fee_cents BIGINT NOT NULL DEFAULT 0,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    status VARCHAR(32) NOT NULL, -- pending, succeeded, failed, refunded, partially_refunded
+    idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+    payment_method VARCHAR(32) NOT NULL, -- card, virtual_account, easy_pay
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_payment_transactions_user ON payment_transactions(user_id);
+
+CREATE TABLE IF NOT EXISTS refunds (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES payment_transactions(id) ON DELETE RESTRICT,
+    refund_amount_cents BIGINT NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'completed',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Strict Double-Entry Ledger System (Section 14.3)
+CREATE TABLE IF NOT EXISTS ledger_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_number VARCHAR(64) NOT NULL UNIQUE,
+    account_name VARCHAR(128) NOT NULL,
+    account_type VARCHAR(32) NOT NULL, -- asset, liability, equity, revenue, expense
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    balance_cents BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed Essential System Ledger Accounts
+INSERT INTO ledger_accounts (account_number, account_name, account_type, currency) VALUES
+    ('1000-CASH', 'Platform Operating Cash', 'asset', 'KRW'),
+    ('2000-CREATOR-PAYABLE', 'Creator Earnings Payable', 'liability', 'KRW'),
+    ('2100-MCN-PAYABLE', 'MCN Share Payable', 'liability', 'KRW'),
+    ('2200-RIGHTS-PAYABLE', 'Copyright Royalties Payable', 'liability', 'KRW'),
+    ('4000-AD-REVENUE', 'Gross Ad Revenue', 'revenue', 'KRW'),
+    ('4100-SUB-REVENUE', 'Premium Subscription Revenue', 'revenue', 'KRW'),
+    ('5000-PG-FEE', 'Payment Gateway Processing Fees', 'expense', 'KRW')
+ON CONFLICT (account_number) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ledger_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL,
+    account_id UUID NOT NULL REFERENCES ledger_accounts(id) ON DELETE RESTRICT,
+    debit_cents BIGINT NOT NULL DEFAULT 0,
+    credit_cents BIGINT NOT NULL DEFAULT 0,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    description TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ledger_entries_transaction ON ledger_entries(transaction_id);
+CREATE INDEX idx_ledger_entries_account ON ledger_entries(account_id, created_at);
+
+CREATE TABLE IF NOT EXISTS creator_earnings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE RESTRICT,
+    period_date DATE NOT NULL,
+    ad_revenue_cents BIGINT NOT NULL DEFAULT 0,
+    membership_revenue_cents BIGINT NOT NULL DEFAULT 0,
+    donation_revenue_cents BIGINT NOT NULL DEFAULT 0,
+    platform_fee_cents BIGINT NOT NULL DEFAULT 0,
+    net_earnings_cents BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (channel_id, period_date)
+);
+
+CREATE TABLE IF NOT EXISTS payouts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE RESTRICT,
+    organization_id UUID REFERENCES organizations(id) ON DELETE RESTRICT,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    gross_amount_cents BIGINT NOT NULL,
+    tax_withheld_cents BIGINT NOT NULL DEFAULT 0,
+    net_amount_cents BIGINT NOT NULL,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending, approved, processing, paid, failed, on_hold
+    approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    payout_batch_id VARCHAR(128),
+    paid_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    advertiser_id UUID NOT NULL REFERENCES advertisers(id) ON DELETE RESTRICT,
+    invoice_number VARCHAR(64) NOT NULL UNIQUE,
+    amount_cents BIGINT NOT NULL,
+    tax_cents BIGINT NOT NULL,
+    total_cents BIGINT NOT NULL,
+    currency VARCHAR(4) NOT NULL DEFAULT 'KRW',
+    due_date DATE NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'issued', -- issued, paid, overdue, canceled
+    issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ========== 00007_create_copyright_and_moderation.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00007: Rights Management, Content Claims, Moderation & Safety
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS rights_owners (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    legal_name VARCHAR(255) NOT NULL,
+    country VARCHAR(4) NOT NULL,
+    verification_document_url TEXT,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS rights_assets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES rights_owners(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    isrc_code VARCHAR(32),
+    iswc_code VARCHAR(32),
+    custom_id VARCHAR(64),
+    fingerprint_hash VARCHAR(128) NOT NULL,
+    fingerprint_data_url TEXT,
+    asset_type VARCHAR(32) NOT NULL, -- sound_recording, composition, visual, audiovisual
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS rights_territories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_id UUID NOT NULL REFERENCES rights_assets(id) ON DELETE CASCADE,
+    territory_code VARCHAR(4) NOT NULL, -- ISO-3166-1 alpha-2 or 'WORLD'
+    ownership_percentage DOUBLE PRECISION NOT NULL DEFAULT 100.0,
+    policy VARCHAR(32) NOT NULL DEFAULT 'monetize', -- monetize, block, track
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (asset_id, territory_code)
+);
+
+CREATE TABLE IF NOT EXISTS copyright_claims (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_id UUID NOT NULL REFERENCES rights_assets(id) ON DELETE RESTRICT,
+    claimed_video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    rights_owner_id UUID NOT NULL REFERENCES rights_owners(id) ON DELETE RESTRICT,
+    claim_action VARCHAR(32) NOT NULL DEFAULT 'monetize', -- block, monetize, track
+    status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending, active, disputed, resolved, withdrawn
+    match_start_seconds INT NOT NULL,
+    match_end_seconds INT NOT NULL,
+    match_confidence DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_copyright_claims_video ON copyright_claims(claimed_video_id);
+CREATE INDEX idx_copyright_claims_owner ON copyright_claims(rights_owner_id);
+
+CREATE TABLE IF NOT EXISTS copyright_disputes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    claim_id UUID NOT NULL REFERENCES copyright_claims(id) ON DELETE CASCADE,
+    disputant_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    reason VARCHAR(64) NOT NULL, -- original_content, licensed, public_domain, fair_use
+    explanation TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'under_review', -- under_review, upheld, rejected, expired
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    reviewed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS dispute_evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dispute_id UUID NOT NULL REFERENCES copyright_disputes(id) ON DELETE CASCADE,
+    file_url TEXT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reporter_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    target_type VARCHAR(32) NOT NULL, -- video, comment, channel, post
+    target_id UUID NOT NULL,
+    category VARCHAR(64) NOT NULL, -- hate_speech, violence, harassment, spam, copyright, adult
+    description TEXT,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending, reviewing, resolved, dismissed
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_reports_target ON reports(target_type, target_id);
+
+CREATE TABLE IF NOT EXISTS moderation_cases (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_id UUID REFERENCES reports(id) ON DELETE SET NULL,
+    target_type VARCHAR(32) NOT NULL,
+    target_id UUID NOT NULL,
+    assigned_moderator_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending, approved, rejected, appealed, escalated
+    violation_code VARCHAR(64),
+    action_taken VARCHAR(64), -- none, age_restrict, geo_block, remove, ban_user
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- ========== 00008_create_operations_and_outbox.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00008: Operations, Audit Trail, Feature Flags, Transactional Outbox
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS admin_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    action_type VARCHAR(64) NOT NULL, -- user_ban, video_takedown, policy_change, payout_approval
+    target_entity_type VARCHAR(64) NOT NULL,
+    target_entity_id UUID NOT NULL,
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ip_address INET,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_role VARCHAR(64) NOT NULL,
+    action VARCHAR(128) NOT NULL,
+    resource_type VARCHAR(64) NOT NULL,
+    resource_id VARCHAR(128) NOT NULL,
+    request_id VARCHAR(128),
+    ip_address INET,
+    user_agent TEXT,
+    old_state JSONB,
+    new_state JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_logs_actor ON audit_logs(actor_id, created_at DESC);
+CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+
+CREATE TABLE IF NOT EXISTS feature_flags (
+    name VARCHAR(64) PRIMARY KEY,
+    description TEXT,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    percentage_rollout INT NOT NULL DEFAULT 0,
+    allowed_roles TEXT[] NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO feature_flags (name, description, is_enabled, percentage_rollout) VALUES
+    ('enable_4k_encoding', 'Support 4K 2160p HLS rendering', TRUE, 100),
+    ('enable_live_chat_donations', 'SuperChat donation feature', TRUE, 100),
+    ('enable_shorts_feed', 'Enable infinite swipe vertical shorts', TRUE, 100),
+    ('enable_ai_subtitle_generation', 'Automatic speech to text captions', TRUE, 50)
+ON CONFLICT (name) DO NOTHING;
+
+-- Transactional Outbox Pattern (Section 4.4)
+CREATE TABLE IF NOT EXISTS outbox_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    aggregate_type VARCHAR(64) NOT NULL, -- video, user, payment, moderation
+    aggregate_id UUID NOT NULL,
+    event_type VARCHAR(64) NOT NULL, -- VideoCreated, EncodingRequested, PaymentSucceeded
+    payload JSONB NOT NULL,
+    headers JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING', -- PENDING, PUBLISHED, FAILED
+    retry_count INT NOT NULL DEFAULT 0,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    published_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_outbox_events_pending ON outbox_events(created_at) WHERE status = 'PENDING';
+
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+    key VARCHAR(255) PRIMARY KEY,
+    request_hash VARCHAR(64) NOT NULL,
+    status_code INT NOT NULL,
+    response_body JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- ========== 00009_create_production_ad_engine.sql (Up) ==========
+-- +goose Up
+-- ============================================================================
+-- 00009: Production Ad Engine, Decision Logging, Telemetry & Diagnostics (ARTICLE 7)
+-- ============================================================================
+
+-- 1. AD INVENTORY SLOTS DEFINITION
+CREATE TABLE IF NOT EXISTS ad_slots (
+    id VARCHAR(64) PRIMARY KEY, -- e.g. watch_preroll, home_feed_banner, shorts_sponsored
+    name VARCHAR(128) NOT NULL,
+    format VARCHAR(32) NOT NULL, -- preroll, feed_banner, shorts_sponsored, midroll, display
+    width INT NOT NULL DEFAULT 1920,
+    height INT NOT NULL DEFAULT 1080,
+    min_duration_seconds INT NOT NULL DEFAULT 0,
+    max_duration_seconds INT NOT NULL DEFAULT 30,
+    is_skippable BOOLEAN NOT NULL DEFAULT TRUE,
+    skip_offset_seconds INT NOT NULL DEFAULT 5,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed production ad slots
+INSERT INTO ad_slots (id, name, format, width, height, min_duration_seconds, max_duration_seconds, is_skippable, skip_offset_seconds, is_active)
+VALUES 
+    ('watch_preroll', 'Main Player Pre-Roll Video', 'preroll', 1920, 1080, 5, 30, TRUE, 5, TRUE),
+    ('home_feed_banner', 'Home Feed Native Sponsored Card', 'feed_banner', 1280, 720, 0, 0, FALSE, 0, TRUE),
+    ('shorts_sponsored', 'Shorts Vertical Sponsored Feed Item', 'shorts_sponsored', 1080, 1920, 5, 60, TRUE, 5, TRUE)
+ON CONFLICT (id) DO UPDATE SET 
+    name = EXCLUDED.name,
+    format = EXCLUDED.format,
+    is_active = EXCLUDED.is_active;
+
+-- 2. AD FLIGHTS (Campaign pacing and flight schedule)
+CREATE TABLE IF NOT EXISTS ad_flights (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    name VARCHAR(128) NOT NULL,
+    start_at TIMESTAMPTZ NOT NULL,
+    end_at TIMESTAMPTZ NOT NULL,
+    pacing_strategy VARCHAR(32) NOT NULL DEFAULT 'even', -- even, asap, front_loaded
+    daily_budget_cents BIGINT NOT NULL DEFAULT 0,
+    spent_cents BIGINT NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'active', -- active, paused, completed
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_flights_campaign ON ad_flights(campaign_id, status);
+
+-- 3. AD TARGETING RULES
+CREATE TABLE IF NOT EXISTS ad_targeting_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    target_categories TEXT[] NOT NULL DEFAULT '{}',
+    target_platforms TEXT[] NOT NULL DEFAULT '{WEB,ANDROID,IOS}',
+    target_countries TEXT[] NOT NULL DEFAULT '{}',
+    target_languages TEXT[] NOT NULL DEFAULT '{}',
+    min_age INT DEFAULT NULL,
+    max_age INT DEFAULT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_targeting_campaign ON ad_targeting_rules(campaign_id);
+
+-- 4. AD CREATIVE REVIEWS & GOVERNANCE
+CREATE TABLE IF NOT EXISTS ad_creative_reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    creative_id UUID NOT NULL REFERENCES ad_creatives(id) ON DELETE CASCADE,
+    reviewer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    review_status VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending, approved, rejected
+    policy_reason TEXT,
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_creative_reviews_status ON ad_creative_reviews(review_status);
+
+-- 5. AD DELIVERY DECISIONS LOG (Decision Engine Telemetry)
+CREATE TABLE IF NOT EXISTS ad_delivery_decisions (
+    decision_id VARCHAR(64) PRIMARY KEY,
+    slot_id VARCHAR(64) NOT NULL REFERENCES ad_slots(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES ad_campaigns(id) ON DELETE SET NULL,
+    creative_id UUID REFERENCES ad_creatives(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status VARCHAR(32) NOT NULL, -- served, unfilled
+    reason VARCHAR(64) NOT NULL, -- WINNER_SELECTED, UNMATCHED_SLOT, NO_ELIGIBLE_CAMPAIGN, BUDGET_EXHAUSTED
+    bid_cpm_cents BIGINT NOT NULL DEFAULT 0,
+    decision_latency_ms INT NOT NULL DEFAULT 0,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_decisions_slot ON ad_delivery_decisions(slot_id, decided_at DESC);
+CREATE INDEX IF NOT EXISTS idx_decisions_campaign ON ad_delivery_decisions(campaign_id, decided_at DESC);
+
+-- 6. AD DELIVERY VERIFIED EVENTS (Audit-Proof Real Telemetry)
+CREATE TABLE IF NOT EXISTS ad_delivery_events (
+    event_id VARCHAR(64) PRIMARY KEY,
+    decision_id VARCHAR(64) NOT NULL REFERENCES ad_delivery_decisions(decision_id) ON DELETE CASCADE,
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    creative_id UUID REFERENCES ad_creatives(id) ON DELETE SET NULL,
+    event_type VARCHAR(32) NOT NULL, -- impression, start, first_quartile, midpoint, third_quartile, complete, click, skip
+    billed_cost_cents BIGINT NOT NULL DEFAULT 0,
+    idempotency_key VARCHAR(128) UNIQUE,
+    client_timestamp TIMESTAMPTZ NOT NULL,
+    server_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ip_hash VARCHAR(64) NOT NULL,
+    user_agent TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_events_type ON ad_delivery_events(campaign_id, event_type, server_timestamp DESC);
+
+-- 7. AD FREQUENCY CAPS
+CREATE TABLE IF NOT EXISTS ad_frequency_caps (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    device_id VARCHAR(128),
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    window_seconds INT NOT NULL DEFAULT 86400, -- 24 hours
+    max_impressions INT NOT NULL DEFAULT 3,
+    current_count INT NOT NULL DEFAULT 1,
+    last_impression_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_campaign_cap UNIQUE (user_id, campaign_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_frequency_caps_user ON ad_frequency_caps(user_id, campaign_id);
+
+-- 8. AD REPORTING DAILY (Aggregated Performance & P&L)
+CREATE TABLE IF NOT EXISTS ad_reporting_daily (
+    report_date DATE NOT NULL,
+    campaign_id UUID NOT NULL REFERENCES ad_campaigns(id) ON DELETE CASCADE,
+    slot_id VARCHAR(64) NOT NULL REFERENCES ad_slots(id) ON DELETE CASCADE,
+    format VARCHAR(32) NOT NULL,
+    requests BIGINT NOT NULL DEFAULT 0,
+    impressions BIGINT NOT NULL DEFAULT 0,
+    clicks BIGINT NOT NULL DEFAULT 0,
+    completes BIGINT NOT NULL DEFAULT 0,
+    skips BIGINT NOT NULL DEFAULT 0,
+    gross_spend_cents BIGINT NOT NULL DEFAULT 0,
+    net_revenue_cents BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (report_date, campaign_id, slot_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_reporting_date ON ad_reporting_daily(report_date DESC);
+
+-- ========== 00010_forward_roles_and_payments.sql (Up) ==========
+-- +goose Up
+-- ==========================================
+-- 00010: Forward fill for P0-1 persistence (roles + payment columns)
+-- Idempotent: safe to re-apply. Never edits 00001..00009.
+-- ==========================================
+
+-- Roles referenced by the API role matrix / seed users but missing from 00001.
+INSERT INTO roles (name, description) VALUES
+    ('viewer', 'Authenticated viewer without a channel'),
+    ('user', 'Standard registered consumer (alias)'),
+    ('premium_member', 'Paid premium subscriber'),
+    ('live_moderator', 'Live chat moderator'),
+    ('partner_manager', 'MCN partner manager'),
+    ('rights_holder', 'Copyright holder (portal alias)'),
+    ('partner_finance', 'Partner finance operator'),
+    ('finance_ops', 'Financial operations (alias)'),
+    ('security_auditor', 'Read-only security auditor')
+ON CONFLICT (name) DO NOTHING;
+
+-- Columns carried by the API payment transaction model.
+ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS tx_type VARCHAR(64);
+ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS checkout_url TEXT;
