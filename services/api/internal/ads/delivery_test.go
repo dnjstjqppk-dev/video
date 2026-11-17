@@ -71,7 +71,7 @@ func TestAdEventDecisionLinkage(t *testing.T) {
 	// Decision bound to another campaign is rejected.
 	s.Campaigns["camp-other"] = &store.AdCampaign{ID: "camp-other", AdvertiserID: "x", Name: "other", Status: "active"}
 	rec = postAds(t, router, "/events", "", map[string]interface{}{
-		"event_id": "evt-link-xcamp", "decision_id": decisionID,
+		"event_id": "evt-link-cross", "decision_id": decisionID,
 		"campaign_id": "camp-other", "event_type": "click",
 	})
 	if rec.Code != http.StatusBadRequest {
@@ -80,7 +80,7 @@ func TestAdEventDecisionLinkage(t *testing.T) {
 
 	// Billing events require a decision id.
 	rec = postAds(t, router, "/events", "", map[string]interface{}{
-		"event_id": "evt-link-nodec", "campaign_id": campaignID, "event_type": "impression",
+		"event_id": "evt-link-no-decision", "campaign_id": campaignID, "event_type": "impression",
 	})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for impression without decision, got %d", rec.Code)

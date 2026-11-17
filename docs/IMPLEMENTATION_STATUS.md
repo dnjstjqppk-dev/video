@@ -4,7 +4,8 @@
 - **브랜드:** StreamVerse (법인: Booking Network Co., Ltd. / Master Directive `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001`)
 - **판정:** 상용 불가 (COMMERCIAL NO-GO) — 아키텍처 테스트베드 + 프로토타입 단계. `docs/audits/COMMERCIAL_REMEDIATION_AUDIT.md`의 NO-GO 판정을 유지한다.
 - **분류 기준:** `IMPLEMENTED / PARTIAL / MOCK / BROKEN / MISSING / UNVERIFIED` (Master Directive ARTICLE 1)
-- **2026-11-17 remediated:** P0-3 결제 fail-closed, P0-8 광고 인증·테넌트 격리, P0-4 재생 서명·가시성 (조회수 중복 제거·지역/연령 검사는 잔여). 상세 §4.4/§4.5/§4.6의 `FIXED 2026-11-17` 표기 및 §6 참조.
+- **2026-11-17 remediated:** P0-1(코어 4종 영속화) · P0-2(실측/실인코딩/게시) · P0-3(결제 fail-closed) · P0-4(재생 서명·가시성) · P0-5(소재 파이프라인·연동검증·빈도제한) · P0-7(MFA 재인증) · P0-8(광고 인증·격리).
+  P0-6은 코드 완료, ZITADEL 실테넌트 발급(사용자 작업) 대기. 상세 §4·§5의 `FIXED/DONE 2026-11-17` 표기 및 §6 참조.
 
 ---
 
@@ -47,10 +48,12 @@ browser -> console workers (web/studio/partners/admin, /api)
 - JWKS RS256 검증·issuer/audience/exp/nbf 검증: 코드상 IMPLEMENTED, 실테넌트 연동은 UNVERIFIED (프로덕션 ZITADEL 테넌트 없음).
 - 개발 토큰(`admin/creator/viewer/advertiser-token`)의 운영 차단 게이트: 코드상 IMPLEMENTED (production + 미설정 시 불가).
 - **P0:** 현 배포는 `GVP_ENV=test` + `GVP_ALLOW_DEV_TOKENS=true`로 기동 중이라 데모 로그인이 열려 있다. 실사용자 전환 전 OIDC 필수 (`docs/operations/OIDC_SETUP.md`).
+  코드 준비 상태 **VERIFIED 2026-11-17:** 운영 부팅 거부(실증 로그) + 데모 토큰 운영 차단(단위 테스트) + JWKS 검증 + 4콘솔 login/callback/logout 완비.
+  잔여는 ZITADEL 실테넌트 발급·클라이언트 등록·시크릿 주입으로 **운영자(사용자) 작업**이며, 완료 전까지 P0-6은 OPEN 유지.
 - RBAC 역할 게이트 + BOLA 소유권 확인(채널/영상/업로드/댓글): IMPLEMENTED (핸들러 내 검사 + `ownership_test.go`).
 - 관리자 IP 화이트리스트: IMPLEMENTED (`security.AdminGuard`, `/v1/admin` 그룹 적용).
 - 사용자 TOTP MFA 발급/검증/해제 엔드포인트: IMPLEMENTED (`/v1/me/mfa/*`, `users/handler.go`).
-- 관리자 MFA 강제·민감 작업 재인증: MISSING (역할 게이트에 MFA 클레임 검사 없음).
+- 관리자 MFA 강제·민감 작업 재인증: **FIXED 2026-11-17** — 계정 제재·모더레이션 해결·정책/킬스위치 변경·소재 승인/거절·정산 승인이 TOTP 재인증(미등록 412·오코드 401)을 요구하고 전 건 감사 로그를 남긴다 (`identity.RequireStepUp`).
 - 조직 단위 ABAC(광고주·파트너 격리): PARTIAL (광고 엔진은 캠페인 단위 검사, 조직 스코프 강제 미확인).
 
 ### 4.2 영속 저장 — PARTIAL (이중 스키마 해소됨, 코어 4종 영속화)
@@ -87,8 +90,9 @@ browser -> console workers (web/studio/partners/admin, /api)
 - 이벤트 수집·미리보기·캠페인 CRUD·소재 승인/거절·광고주 리포트·Admin 송출 진단: IMPLEMENTED (인메모리).
 - 홈 피드 배너 슬롯: 실배선 (`apps/web/app/pages/index.vue`의 `getAdDecision` + 노출/클릭 전송).
 - Admin Ad Delivery Inspector: 실배선 (`apps/admin/app/pages/ads.vue`).
-- **MISSING:** 시청 페이지 프리롤/미드롤 연동 (watch 페이지에 광고 호출 전무), 소재 파일의 실제 스토리지 업로드·검수 파이프라인,
-  예약형 강제 배정 검증 모드, 노출 조건 정의(플레이어 수신≠노출) 강제, 빈도 제한 집행 확인, E2E(등록→심사→송출→집계) 실증.
+- **정정 2026-11-17:** 시청 프리롤은 이미 배선돼 있었다 (`VideoPlayer.client.vue` onMounted→결정→렌더링→impression/skip/complete/click). 기존 "호출 전무" 기재는 오기.
+- **FIXED 2026-11-17:** 소재 멀티파트 업로드(타입/용량/MIME 검증·검수 대기·승인 전 접근 통제) + 과금 이벤트의 결정 연동 강제 + 시간당 빈도 제한 + 강제 지정 프리뷰 모드 + E2E(등록→심사→송출→과금→리포트) 실증.
+- 잔여: 예약형 인벤토리 보장 계약 절차(미달 경고/보상), 노출 유효 조건의 시청 시간 임계값(현재 결정 연동+중복 제거 수준).
 - 노출 이벤트가 마운트 시점에 무조건 발사되어 유효 노출 정의 미달 소지: P1.
 - **P0 인증 구멍: FIXED 2026-11-17** — `/v1/ads/*`·`/v1/advertiser/*` 캠페인/리포트/미리보기는 광고주 역할 게이트 + 광고주 스코프 격리, `/v1/ads/admin/*`는 플랫폼 관리자 게이트.
   생성 시 `draft` + 소재 `pending` (ARTICLE 7.1 상태머신 강제), 승인/거절 감사 로그 기록, `/advertiser` 전용 라우터로 중복 마운트 해소(143→137라우트).
@@ -157,9 +161,9 @@ browser -> console workers (web/studio/partners/admin, /api)
    워커 실측/실인코딩 + API 게시 파이프라인 + 실바이트 E2E 증명. WebP·자막·챕터·NATS 재시도 큐는 잔여.
 3. **결제 fail-open 제거** (ARTICLE 2.4): ~~Toss/Stripe 시크릿 없으면 `ConfirmPayment` 거부~~ **DONE 2026-11-17** (목 테스트 8건). 환불·웹훅 재조정·원장 정합 테스트는 P1-17 잔여.
 4. **재생·검색 권한 검사** (ARTICLE 16): ~~HMAC 서명 playback 토큰(1h, 경로 바인딩) + 가시성/회원권 검사 + 검색 가시성 필터~~ **DONE 2026-11-17** (목 테스트 9건). 지역/연령 검사·유효 조회수 정의·중계복 제거는 잔여 (P1-14).
-5. **광고 E2E 실증** (ARTICLE 7): 소재 실업로드 → 심사 → 승인 → 인벤토리 → 결정 → **시청 프리롤 렌더링** → 유효 노출 집계 → 광고주 대시보드 전 구간 테스트 통과.
-6. **운영 인증 전환**: ZITADEL 실테넌트 발급 + 4콘솔/모바일 클라이언트 등록 + `GVP_ENV=production`, 개발 토큰 완전 차단 검증.
-7. **관리자 MFA + 민감 작업 재인증 + 감사 무결성** (ARTICLE 2.1/9).
+5. **광고 E2E 실증** (ARTICLE 7): **DONE 2026-11-17** — 소재 실업로드 → 심사 → 승인 → 결정 → 프리롤 렌더링(기 배선 확인) → 연동 검증된 노출/클릭 과금 → 광고주 리포트 전 구간 테스트 통과(Go E2E + Playwright).
+6. **운영 인증 전환**: 코드 완료·실증됨(부팅 거부 + 토큰 차단). ZITADEL 실테넌트 발급 + 4콘솔/모바일 클라이언트 등록 + `GVP_ENV=production` 전환은 **사용자 작업 (외부 의존)** — 완료 후 로그인 플로우·401 증명으로 종결.
+7. **관리자 MFA + 민감 작업 재인증 + 감사 무결성** (ARTICLE 2.1/9): **DONE 2026-11-17** — 중앙 step-up 헬퍼 + 6종 변경 API 적용 + Playwright 실등록/재인증 증명.
 8. **광고 서피스 인증·테넌트 격리** (ARTICLE 2.1/7): ~~`/v1/ads`·`/v1/advertiser` 마운트에 인증/역할/광고주 스코프 강제,
    생성 시 자동 승인 제거(DRAFT→심사 상태머신), 중복 마운트 해소, 승인/거절 감사 로그~~ **DONE 2026-11-17** (목 테스트 6건 + E2E 상태머신).
 
@@ -204,3 +208,5 @@ browser -> console workers (web/studio/partners/admin, /api)
 - 감사 보고서 2종은 역사 기록이므로 수정하지 않았다.
 - **2026-11-17 P0-3/P0-8/P0-4 수정분:** `docs/api/ROUTE_CENSUS.md` + `routes.json` + `openapi/gvp-v1.yaml`을 chi 실측 137라우트로 재생성(HOLE 0건).
   증거: Go 25pkg + 워커 6 + 통합 1 그린, 계약/OWASP 9/9, Playwright 4/4(로컬 18086), 신규 목 테스트 23건(결제 8·광고 6·재생/검색 9).
+- **2026-11-17 P0-7/P0-5/P0-1/P0-2/P0-6 수정분:** 센서스 140라우트(소재 업로드/조회 3종 추가, HOLE 0건 유지).
+  증거: Go 전 패키지 + PG 라운드트립 3종(실 PG) + 실서버 재시작 내구 + 도커 ffmpeg 실인코딩 + LocalStack S3 전 구간 E2E + Playwright 4/4(MFA/TOTP·업로드 포함).

@@ -60,7 +60,9 @@ The controls in §1–§4 are the **target posture**. Code audit found these gap
 2. **Payment confirmation fail-open** — **FIXED 2026-11-17**: `ConfirmPayment` refuses unconfigured/unknown providers
    and verifies Toss DONE + Stripe paid sessions server-side (`payments/handler.go`, `payments/stripe.go`).
 3. **Current deployment runs dev tokens** (`GVP_ENV=test`, `GVP_ALLOW_DEV_TOKENS=true`); production OIDC tenant not provisioned.
-4. **Admin MFA / step-up re-auth missing**: role gates do not verify `amr: ["mfa"]`; `admin.brand.com` MFA claim unenforced.
+4. **Admin MFA / step-up re-auth** — **FIXED 2026-11-17**: all admin mutations (sanctions, moderation, policy,
+   creative review, settlement approval) require TOTP step-up via `identity.RequireStepUp` with full audit logging.
+   OIDC `amr` claim verification still lands with the production tenant (P0-6).
 5. **AES-128 key release / Widevine / FairPlay**: no key-release endpoint or DRM packaging in code.
 6. **PII at-rest encryption** (AES-256-GCM payout accounts) and log-redaction coverage: UNVERIFIED in code — needs proof test.
 7. Rate limiting is single-instance in-memory (no Valkey); multi-replica enforcement pending.

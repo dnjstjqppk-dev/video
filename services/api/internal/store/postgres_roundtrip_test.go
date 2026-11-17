@@ -38,7 +38,7 @@ func TestPostgresUserRoundTrip(t *testing.T) {
 
 	id := uuid.NewString()
 	u := &User{
-		ID: id, Email: "pg-" + id[:8] + "@test.local", Username: "pguser" + id[:8],
+		ID: id, Email: "pg-" + id[:8] + "@test.local", Username: "pg-user" + id[:8],
 		Role: "creator", SubscriptionTier: "free", IsVerified: true, IsActive: true,
 		DisplayName: "PG Test", Bio: "round trip", AvatarURL: "https://test.local/a.png",
 		CreatedAt: time.Now().UTC().Round(time.Millisecond),
@@ -56,9 +56,9 @@ func TestPostgresUserRoundTrip(t *testing.T) {
 
 	// Restart durability: a fresh memory store hydrates the persisted row.
 	mem := NewMemoryStoreWithDB(pg)
-	hctx, hcancel := pgCtx()
-	defer hcancel()
-	if err := mem.Hydrate(hctx); err != nil {
+	secondCtx, secondCancel := pgCtx()
+	defer secondCancel()
+	if err := mem.Hydrate(secondCtx); err != nil {
 		t.Fatalf("Hydrate: %v", err)
 	}
 	hydrated, ok := mem.Users[id]
@@ -100,9 +100,9 @@ func TestPostgresChannelVideoRoundTrip(t *testing.T) {
 	}
 
 	mem := NewMemoryStoreWithDB(pg)
-	hctx, hcancel := pgCtx()
-	defer hcancel()
-	if err := mem.Hydrate(hctx); err != nil {
+	secondCtx, secondCancel := pgCtx()
+	defer secondCancel()
+	if err := mem.Hydrate(secondCtx); err != nil {
 		t.Fatalf("Hydrate: %v", err)
 	}
 	v, ok := mem.Videos[vidID]
@@ -144,9 +144,9 @@ func TestPostgresTransactionRoundTrip(t *testing.T) {
 	}
 
 	mem := NewMemoryStoreWithDB(pg)
-	hctx, hcancel := pgCtx()
-	defer hcancel()
-	if err := mem.Hydrate(hctx); err != nil {
+	secondCtx, secondCancel := pgCtx()
+	defer secondCancel()
+	if err := mem.Hydrate(secondCtx); err != nil {
 		t.Fatalf("Hydrate: %v", err)
 	}
 	got, ok := mem.Transactions[txID]
