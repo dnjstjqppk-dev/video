@@ -158,22 +158,22 @@ async function logout() {
               <path d="M8 5v14l11-7z" />
             </svg>
           </span>
-          <span class="text-base font-bold tracking-tight text-slate-900">StreamVerse</span>
-          <span class="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+          <span class="hidden text-base font-bold tracking-tight text-slate-900 min-[420px]:inline">StreamVerse</span>
+          <span class="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600 min-[420px]:inline">
             {{ appStore.locale === 'ko' ? 'KR' : 'GLOBAL' }}
           </span>
         </NuxtLink>
       </div>
 
       <!-- Center: Search Bar with Autocomplete -->
-      <div class="relative mx-4 flex max-w-xl flex-1 items-center">
-        <form class="flex w-full gap-1.5" @submit.prevent="submitSearch()">
-          <div class="relative flex flex-1 items-center">
+      <div class="relative mx-4 flex min-w-0 max-w-xl flex-1 items-center">
+        <form class="flex w-full min-w-0 gap-1.5" @submit.prevent="submitSearch()">
+          <div class="relative flex min-w-0 flex-1 items-center">
             <input
               v-model="searchQuery"
               type="search"
               :placeholder="appStore.locale === 'ko' ? '동영상, 쇼츠, 라이브, 채널 검색...' : 'Search videos, Shorts, live streams, channels...'"
-              class="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+              class="h-9 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
               @focus="showSuggestions = true; onSearchInput()"
               @input="onSearchInput"
               @blur="onSearchBlur"

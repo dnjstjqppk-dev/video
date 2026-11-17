@@ -447,6 +447,27 @@ function seekToPosition(event: MouseEvent) {
   appStore.saveWatchProgress(props.videoId, targetSeconds)
 }
 
+function onSeekKeydown(event: KeyboardEvent) {
+  const step = duration.value > 0 ? Math.max(5, duration.value / 20) : 5
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    event.stopPropagation()
+    seekRelative(-step)
+  } else if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    event.stopPropagation()
+    seekRelative(step)
+  } else if (event.key === 'Home') {
+    event.preventDefault()
+    event.stopPropagation()
+    seekToSeconds(0)
+  } else if (event.key === 'End') {
+    event.preventDefault()
+    event.stopPropagation()
+    seekToSeconds(duration.value)
+  }
+}
+
 function seekToSeconds(seconds: number) {
   currentTime.value = seconds
   if (videoRef.value) {
@@ -867,8 +888,16 @@ defineExpose({
       <div class="relative border-t border-slate-200 bg-white px-4 py-3 text-slate-900">
         <!-- TASK-122: Timeline Scrub Bar with Storyboard Sheet Hover Preview -->
         <div
-          class="relative mb-3 h-2 w-full cursor-pointer rounded-md bg-slate-200 transition-all"
+          class="player-seekbar relative mb-3 h-2 w-full cursor-pointer rounded-md bg-slate-200 transition-all"
+          role="slider"
+          tabindex="0"
+          aria-label="Seek"
+          aria-valuemin="0"
+          :aria-valuemax="Math.round(duration)"
+          :aria-valuenow="Math.round(currentTime)"
+          :aria-valuetext="`${formatTime(currentTime)} of ${formatTime(duration)}`"
           @click="seekToPosition"
+          @keydown="onSeekKeydown"
           @mousemove="onTimelineMouseMove"
           @mouseleave="onTimelineMouseLeave"
         >
@@ -960,6 +989,8 @@ defineExpose({
                 type="button"
                 class="rounded-md p-1.5 text-slate-700 transition hover:bg-slate-100"
                 title="Mute (m)"
+                :aria-label="isMuted ? 'Unmute (m)' : 'Mute (m)'"
+                :aria-pressed="isMuted"
                 @click="toggleMute"
               >
                 <svg v-if="isMuted || volume === 0" class="h-4 w-4 fill-current text-red-600" viewBox="0 0 24 24">
@@ -975,6 +1006,7 @@ defineExpose({
                 max="1"
                 step="0.05"
                 :value="isMuted ? 0 : volume"
+                aria-label="Volume"
                 class="hidden h-1 w-16 accent-blue-600 sm:block"
                 @input="setVolume"
               />
@@ -1138,6 +1170,7 @@ defineExpose({
               type="button"
               class="rounded-md p-1.5 text-slate-700 transition hover:bg-slate-100"
               title="Picture-in-Picture (i)"
+              aria-label="Picture-in-Picture (i)"
               @click="togglePiP"
             >
               <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -1150,6 +1183,7 @@ defineExpose({
               type="button"
               class="rounded-md p-1.5 text-slate-700 transition hover:bg-slate-100"
               title="Fullscreen (f)"
+              aria-label="Fullscreen (f)"
               @click="toggleFullscreen"
             >
               <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -1162,3 +1196,19 @@ defineExpose({
     </div>
   </div>
 </template>
+
+<style scoped>
+.player-seekbar:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #1D4ED8;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping,
+  .animate-pulse {
+    animation: none;
+  }
+}
+</style>

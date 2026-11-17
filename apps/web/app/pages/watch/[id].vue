@@ -38,28 +38,40 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      innerHTML: computed(() =>
-        JSON.stringify({
+      innerHTML: computed(() => {
+        // Fetch failures (unknown id, API outage) must render the error
+        // block, not crash SSR. Emit a minimal WebPage schema instead of
+        // a VideoObject when there is no video to describe.
+        const v = video.value
+        if (!v) {
+          return JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: 'StreamVerse',
+            url: `${config.public.siteUrl}/watch/${videoId.value}`
+          })
+        }
+        return JSON.stringify({
           '@context': 'https://schema.org',
           '@type': 'VideoObject',
-          name: activeVideo.value.title,
-          description: activeVideo.value.description,
-          thumbnailUrl: [activeVideo.value.thumbnailUrl],
-          uploadDate: activeVideo.value.publishedAt || activeVideo.value.createdAt,
-          duration: `PT${Math.floor(activeVideo.value.durationSeconds / 60)}M${activeVideo.value.durationSeconds % 60}S`,
-          contentUrl: activeVideo.value.hlsMasterUrl,
-          embedUrl: `${config.public.siteUrl}/watch/${activeVideo.value.id}`,
+          name: v.title,
+          description: v.description,
+          thumbnailUrl: [v.thumbnailUrl],
+          uploadDate: v.publishedAt || v.createdAt,
+          duration: `PT${Math.floor(v.durationSeconds / 60)}M${v.durationSeconds % 60}S`,
+          contentUrl: v.hlsMasterUrl,
+          embedUrl: `${config.public.siteUrl}/watch/${v.id}`,
           interactionStatistic: {
             '@type': 'InteractionCounter',
             interactionType: { '@type': 'WatchAction' },
-            userInteractionCount: activeVideo.value.viewCount
+            userInteractionCount: v.viewCount
           },
           author: {
             '@type': 'Person',
-            name: activeVideo.value.channel?.name || 'GVP Creator'
+            name: v.channel?.name || 'GVP Creator'
           }
         })
-      )
+      })
     }
   ]
 })
