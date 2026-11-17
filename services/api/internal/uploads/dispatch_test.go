@@ -104,6 +104,34 @@ func TestDispatchTranscodeJobReady(t *testing.T) {
 	}
 }
 
+// P1-13: transient worker failures retry with backoff before folding back.
+func TestDispatchRetriesTransientFailures(t *testing.T) {
+	t.Setenv("GVP_LOCAL_MEDIA_DIR", t.TempDir())
+	t.Setenv("UPLOAD_MODE", "local")
+	t.Setenv("TRANSCODER_DISPATCH_BACKOFF_MS", "1")
+	attempts := 0
+	workerStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts < 3 {
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"state":"FAILED","error":"bad source"}`))
+	}))
+	defer workerStub.Close()
+	t.Setenv("MEDIA_WORKER_URL", workerStub.URL)
+
+	srv := newUploadsTestServer()
+	defer srv.Close()
+	uploadID, _ := runLocalUploadToCompletion(t, srv.Config.Handler)
+	pollUploadStatus(t, srv.Config.Handler, uploadID, "FAILED", 10*time.Second)
+	if attempts != 3 {
+		t.Fatalf("expected 3 dispatch attempts, got %d", attempts)
+	}
+}
+
 // P0-2: worker READY + reachable storage publishes artifacts and completes.
 func TestDispatchPublishesArtifactsOnReady(t *testing.T) {
 	t.Setenv("GVP_LOCAL_MEDIA_DIR", t.TempDir())

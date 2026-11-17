@@ -176,7 +176,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 11. 시드 폴백의 Empty State 전환 (데이터 없음은 빈 화면, 오류는 오류로): **DONE 2026-11-17** — 4콘솔 17파일의 시드 렌더·가짜 성공을 빈/오류 상태로 전환,
     쇼츠·라이브·Shorts·채널 목록은 실 API 연동, 관리자 변경 UI에 TOTP 재인증 입력 추가. `GET /v1/live-streams/` 신설(141라우트) + 스트림키 공개 응답 차단.
 12. 크로스 콘솔 URL 현행화 + api-proxy 배포 자동화 + `/api 1042` 재검증.
-13. NATS JetStream 실연동 (미디어잡·분석 이벤트·아웃박스 릴레이) 또는 범위 축소 결정.
+13. NATS JetStream 실연동 (미디어잡·분석 이벤트·아웃박스 릴레이) 또는 범위 축소 결정: **DONE 2026-11-17 (범위 축소)** —
+   NATS 본연동은 멀티 인스턴스 시점으로 연기. 대신 미디어잡 PG 영속(00011 source_ref) + 디스패치 3회 재시도 + 부팅 스위프 + RUNNING→QUEUED 복귀로 QUEUED 영구 정체를 해소.
 14. 조회수/분석 중복 제거 + ClickHouse 싱크 또는 PG 롤업 확정: **DONE 2026-11-17** — 유효 조회수 정의(24h 중복 제거) + 단일 가산 경로 + PG 영속.
    웨어하우스 배치 싱크는 이벤트 버스 결정(P1-13)과 함께 후속.
 15. 라이브 실인제스트 범위 확정 (Cloudflare Stream 실연동 또는 RTMP 자체 구현).

@@ -645,3 +645,4 @@ phase,table,column,type,primary_key
 00009_create_production_ad_engine,ad_reporting_daily,updated_at,TIMESTAMPTZ,False
 00010_forward_roles_and_payments,payment_transactions,tx_type,VARCHAR(64),False
 00010_forward_roles_and_payments,payment_transactions,checkout_url,TEXT,False
+00011_media_job_source,media_jobs,source_ref,TEXT,False

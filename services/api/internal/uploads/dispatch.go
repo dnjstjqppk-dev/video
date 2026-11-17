@@ -36,6 +36,19 @@ func transcoderTimeout() time.Duration {
 	return 30 * time.Minute
 }
 
+// dispatchAttempts bounds intake retries (P1-13); backoff grows linearly.
+func dispatchAttempts() int { return 3 }
+
+func dispatchBackoff(attempt int) time.Duration {
+	base := 2 * time.Second
+	if v := os.Getenv("TRANSCODER_DISPATCH_BACKOFF_MS"); v != "" {
+		if ms, err := time.ParseDuration(v + "ms"); err == nil && ms >= 0 {
+			base = ms
+		}
+	}
+	return time.Duration(attempt) * base
+}
+
 type transcodeDispatch struct {
 	JobID       string `json:"jobId"`
 	VideoID     string `json:"videoId"`
@@ -116,37 +129,105 @@ func (h *Handler) dispatchTranscodeJob(job *store.MediaJob, video *store.Video, 
 		return
 	}
 	client := &http.Client{Timeout: transcoderTimeout()}
-	resp, err := client.Post(base+"/jobs/transcode", "application/json", bytes.NewReader(body))
-	if err != nil {
-		slog.Error("Transcode dispatch unreachable", "jobId", job.ID, "worker", base, "error", err)
-		return
-	}
-	defer resp.Body.Close()
 	var result transcodeDispatchResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		slog.Error("Transcode dispatch bad response", "jobId", job.ID, "status", resp.StatusCode, "error", err)
+	var lastStatus int
+	sent := false
+	for attempt := 1; attempt <= dispatchAttempts(); attempt++ {
+		resp, err := client.Post(base+"/jobs/transcode", "application/json", bytes.NewReader(body))
+		if err != nil {
+			slog.Error("Transcode dispatch unreachable", "jobId", job.ID, "worker", base, "attempt", attempt, "error", err)
+			if attempt < dispatchAttempts() {
+				time.Sleep(dispatchBackoff(attempt))
+				continue
+			}
+			return
+		}
+		lastStatus = resp.StatusCode
+		decodeErr := json.NewDecoder(resp.Body).Decode(&result)
+		resp.Body.Close()
+		if decodeErr != nil {
+			slog.Error("Transcode dispatch bad response", "jobId", job.ID, "status", resp.StatusCode, "attempt", attempt, "error", decodeErr)
+			if resp.StatusCode >= 500 && attempt < dispatchAttempts() {
+				time.Sleep(dispatchBackoff(attempt))
+				continue
+			}
+			return
+		}
+		sent = true
+		// Definitive verdicts leave the loop; 5xx without a verdict retries.
+		if lastStatus == http.StatusOK || lastStatus == http.StatusUnprocessableEntity || result.State == "FAILED" || result.State == "READY" {
+			break
+		}
+		sent = false
+		if attempt < dispatchAttempts() {
+			time.Sleep(dispatchBackoff(attempt))
+			continue
+		}
+	}
+	if !sent {
+		slog.Error("Transcode dispatch unexpected state", "jobId", job.ID, "status", lastStatus, "state", result.State)
 		return
 	}
 	switch {
-	case resp.StatusCode == http.StatusOK && result.State == "READY":
+	case lastStatus == http.StatusOK && result.State == "READY":
 		h.publishReady(job, video, base, &result)
-	case resp.StatusCode == http.StatusUnprocessableEntity || result.State == "FAILED":
+	case lastStatus == http.StatusUnprocessableEntity || result.State == "FAILED":
 		msg := result.Error
 		if msg == "" {
 			msg = "media worker rejected transcode job"
 		}
 		h.failJob(job, video, msg)
 	default:
-		slog.Error("Transcode dispatch unexpected state", "jobId", job.ID, "status", resp.StatusCode, "state", result.State)
+		slog.Error("Transcode dispatch unexpected state", "jobId", job.ID, "status", lastStatus, "state", result.State)
 	}
 }
 
 func (h *Handler) failJob(job *store.MediaJob, video *store.Video, msg string) {
 	job.Status = "FAILED"
 	job.Error = msg
+	now := time.Now()
+	job.CompletedAt = &now
 	video.Status = "FAILED"
 	h.Store.PersistVideo(video)
+	h.Store.PersistMediaJob(job)
 	slog.Error("Transcode job failed", "jobId", job.ID, "videoId", video.ID, "error", msg)
+}
+
+// SweepQueuedJobs re-dispatches jobs left QUEUED by an earlier outage or
+// restart (P1-13). It runs once at boot; definitive FAILED jobs stay failed.
+func (h *Handler) SweepQueuedJobs() int {
+	swept := 0
+	for _, job := range h.Store.MediaJobs {
+		if job.Status != "QUEUED" {
+			continue
+		}
+		video, ok := h.Store.Videos[job.VideoID]
+		if !ok {
+			continue
+		}
+		session := &store.UploadSession{ID: "", VideoID: job.VideoID, R2Key: sourceR2Key(job.InputURI), StoredPath: sourceLocalPath(job.InputURI)}
+		if strings.HasPrefix(job.InputURI, "file://") {
+			session.Mode = "local"
+		} else {
+			session.Mode = "s3"
+		}
+		swept++
+		go h.dispatchTranscodeJob(job, video, session)
+	}
+	if swept > 0 {
+		slog.Info("Sweep re-dispatching stuck transcode jobs", "count", swept)
+	}
+	return swept
+}
+
+// sourceR2Key recovers the object key from a stored r2:// source reference.
+func sourceR2Key(inputURI string) string {
+	return strings.TrimPrefix(inputURI, "r2://")
+}
+
+// sourceLocalPath recovers the filesystem path from a file:// reference.
+func sourceLocalPath(inputURI string) string {
+	return strings.TrimPrefix(inputURI, "file://")
 }
 
 // publishReady fetches worker-staged artifacts, uploads them to the public
@@ -207,6 +288,7 @@ func (h *Handler) publishReady(job *store.MediaJob, video *store.Video, workerBa
 	job.ProgressPct = 100
 	job.CompletedAt = &now
 	h.Store.PersistVideo(video)
+	h.Store.PersistMediaJob(job)
 	slog.Info("Transcode job completed", "jobId", job.ID, "videoId", video.ID,
 		"probed", result.Probed, "artifacts", published,
 		"duration", video.DurationSeconds, "hls", video.HlsMasterURL)

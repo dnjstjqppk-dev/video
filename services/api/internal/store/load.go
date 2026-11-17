@@ -148,6 +148,37 @@ func (p *PostgresStore) LoadTransactions(ctx context.Context) ([]*PaymentTransac
 	return out, rows.Err()
 }
 
+// LoadMediaJobs reads all transcode jobs, mapping stale RUNNING back to QUEUED.
+func (p *PostgresStore) LoadMediaJobs(ctx context.Context) ([]*MediaJob, error) {
+	rows, err := p.DB.QueryContext(ctx, `SELECT
+		id, video_id, status, progress_percent, COALESCE(error_message, ''),
+		COALESCE(source_ref, ''), completed_at, created_at
+		FROM media_jobs`)
+	if err != nil {
+		return nil, fmt.Errorf("load media jobs: %w", err)
+	}
+	defer rows.Close()
+	var out []*MediaJob
+	for rows.Next() {
+		var job MediaJob
+		var pgStatus string
+		var completed sql.NullTime
+		if err := rows.Scan(
+			&job.ID, &job.VideoID, &pgStatus, &job.ProgressPct, &job.Error,
+			&job.InputURI, &completed, &job.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan media job: %w", err)
+		}
+		job.Status = pgToMemoryJobStatus(pgStatus)
+		if completed.Valid {
+			at := completed.Time
+			job.CompletedAt = &at
+		}
+		out = append(out, &job)
+	}
+	return out, rows.Err()
+}
+
 func (p *PostgresStore) loadLedgerEntries(ctx context.Context, txID string) ([]LedgerEntry, error) {
 	rows, err := p.DB.QueryContext(ctx, `SELECT
 		e.id, e.transaction_id, a.account_number, e.debit_cents, e.credit_cents,

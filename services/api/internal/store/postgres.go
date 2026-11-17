@@ -48,7 +48,7 @@ func NewPostgresStore(connStr string) (*PostgresStore, error) {
 // requiredTables are the migration tables the persistence layer writes.
 var requiredTables = []string{
 	"roles", "users", "user_profiles", "channels", "videos",
-	"payment_transactions", "ledger_accounts", "ledger_entries",
+	"payment_transactions", "ledger_accounts", "ledger_entries", "media_jobs",
 }
 
 // VerifySchema checks that the migrated schema (db/migrations, incl. 00010)
@@ -77,6 +77,16 @@ func (p *PostgresStore) VerifySchema(ctx context.Context) error {
 	}
 	if !colExists {
 		missing = append(missing, "column payment_transactions.tx_type (apply db/migrations/00010)")
+	}
+	var jobColExists bool
+	err = p.DB.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'media_jobs' AND column_name = 'source_ref')`,
+	).Scan(&jobColExists)
+	if err != nil {
+		return fmt.Errorf("schema check failed for media_jobs.source_ref: %w", err)
+	}
+	if !jobColExists {
+		missing = append(missing, "column media_jobs.source_ref (apply db/migrations/00011)")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("postgres schema incomplete, run db/migrations against DATABASE_URL: %s", strings.Join(missing, ", "))
@@ -318,6 +328,67 @@ func (p *PostgresStore) SaveTransaction(ctx context.Context, tx *PaymentTransact
 	return dbTx.Commit()
 }
 
+// memoryToPGJobStatus maps memory lifecycle states to migration states.
+func memoryToPGJobStatus(status string) string {
+	switch status {
+	case "PROCESSING":
+		return "RUNNING"
+	case "READY":
+		return "SUCCEEDED"
+	case "QUEUED", "FAILED":
+		return status
+	default:
+		return "QUEUED"
+	}
+}
+
+// pgToMemoryJobStatus maps migration states back. Stale RUNNING rows come
+// back as QUEUED so the boot sweep re-dispatches them (P1-13).
+func pgToMemoryJobStatus(status string) string {
+	switch status {
+	case "RUNNING":
+		return "QUEUED"
+	case "SUCCEEDED":
+		return "READY"
+	case "QUEUED", "FAILED":
+		return status
+	default:
+		return "QUEUED"
+	}
+}
+
+// SaveMediaJob inserts or updates a transcode job in PostgreSQL.
+func (p *PostgresStore) SaveMediaJob(ctx context.Context, job *MediaJob) error {
+	if job == nil {
+		return fmt.Errorf("nil job")
+	}
+	if !validUUID(job.ID) {
+		return fmt.Errorf("job id %q is not a UUID", job.ID)
+	}
+	if !validUUID(job.VideoID) {
+		return fmt.Errorf("job video id %q is not a UUID", job.VideoID)
+	}
+	_, err := p.DB.ExecContext(ctx, `INSERT INTO media_jobs (
+		id, video_id, job_type, status, progress_percent, error_message,
+		source_ref, started_at, completed_at
+	) VALUES ($1, $2, 'encode', $3, $4, $5, $6, $7, $8)
+	ON CONFLICT (id) DO UPDATE SET
+		status = EXCLUDED.status,
+		progress_percent = EXCLUDED.progress_percent,
+		error_message = EXCLUDED.error_message,
+		source_ref = EXCLUDED.source_ref,
+		started_at = EXCLUDED.started_at,
+		completed_at = EXCLUDED.completed_at;`,
+		job.ID, job.VideoID, memoryToPGJobStatus(job.Status), job.ProgressPct,
+		nullIfEmpty(job.Error), nullIfEmpty(job.InputURI),
+		nullTime(job.CreatedAt), nullTimePtr(job.CompletedAt),
+	)
+	if err != nil {
+		return fmt.Errorf("upsert media_jobs: %w", err)
+	}
+	return nil
+}
+
 // Close closes the database connection pool.
 func (p *PostgresStore) Close() error {
 	if p.DB != nil {
@@ -360,4 +431,11 @@ func nullTime(t time.Time) sql.NullTime {
 		return sql.NullTime{}
 	}
 	return sql.NullTime{Time: t, Valid: true}
+}
+
+func nullTimePtr(t *time.Time) sql.NullTime {
+	if t == nil || t.IsZero() {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
 }

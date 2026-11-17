@@ -29,6 +29,83 @@ func pgCtx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 10*time.Second)
 }
 
+// P1-13: job status mapping across the memory/persistence boundary.
+func TestMediaJobStatusMapping(t *testing.T) {
+	cases := map[string][2]string{
+		"QUEUED":     {"QUEUED", "QUEUED"},
+		"PROCESSING": {"RUNNING", "QUEUED"},
+		"READY":      {"SUCCEEDED", "READY"},
+		"FAILED":     {"FAILED", "FAILED"},
+	}
+	for memory, want := range cases {
+		if got := memoryToPGJobStatus(memory); got != want[0] {
+			t.Fatalf("memoryToPG(%s) = %s, want %s", memory, got, want[0])
+		}
+	}
+	pgCases := map[string]string{"QUEUED": "QUEUED", "RUNNING": "QUEUED", "SUCCEEDED": "READY", "FAILED": "FAILED"}
+	for pg, want := range pgCases {
+		if got := pgToMemoryJobStatus(pg); got != want {
+			t.Fatalf("pgToMemory(%s) = %s, want %s", pg, got, want)
+		}
+	}
+}
+
+// P1-13: media jobs persist and rehydrate (RUNNING returns as QUEUED).
+func TestPostgresMediaJobRoundTrip(t *testing.T) {
+	pg := pgTestStore(t)
+	ctx, cancel := pgCtx()
+	defer cancel()
+
+	vidID := uuid.NewString()
+	ownerID := uuid.NewString()
+	if err := pg.SaveUser(ctx, &User{
+		ID: ownerID, Email: "job-" + ownerID[:8] + "@test.local", Username: "job" + ownerID[:8],
+		Role: "creator", SubscriptionTier: "free", IsActive: true, DisplayName: "Job",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+	chID := uuid.NewString()
+	if err := pg.SaveChannel(ctx, &Channel{
+		ID: chID, OwnerID: ownerID, Handle: "@job" + chID[:8], Name: "Job Ch",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveChannel: %v", err)
+	}
+	if err := pg.SaveVideo(ctx, &Video{
+		ID: vidID, ChannelID: chID, Title: "Job Vid", Visibility: "public",
+		Status: "READY", CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveVideo: %v", err)
+	}
+	job := &MediaJob{
+		ID: uuid.NewString(), VideoID: vidID, InputURI: "file:///tmp/x.mp4",
+		Status: "PROCESSING", ProgressPct: 10, CreatedAt: time.Now().UTC(),
+	}
+	if err := pg.SaveMediaJob(ctx, job); err != nil {
+		t.Fatalf("SaveMediaJob: %v", err)
+	}
+	jobs, err := pg.LoadMediaJobs(ctx)
+	if err != nil {
+		t.Fatalf("LoadMediaJobs: %v", err)
+	}
+	found := false
+	for _, j := range jobs {
+		if j.ID == job.ID {
+			found = true
+			if j.Status != "QUEUED" {
+				t.Fatalf("RUNNING must rehydrate as QUEUED, got %s", j.Status)
+			}
+			if j.InputURI != "file:///tmp/x.mp4" {
+				t.Fatalf("source_ref lost: %q", j.InputURI)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("saved job missing after load")
+	}
+}
+
 // P0-1: users persist to the real migration schema (users + user_profiles)
 // and rehydrate on a fresh store (restart durability).
 func TestPostgresUserRoundTrip(t *testing.T) {

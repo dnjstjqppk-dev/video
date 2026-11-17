@@ -363,7 +363,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		inputURI = "file://" + session.StoredPath
 	}
 	job := &store.MediaJob{
-		ID:           "job-" + uuid.NewString(),
+		ID:           uuid.NewString(),
 		VideoID:      video.ID,
 		InputURI:     inputURI,
 		OutputPrefix: "r2://public-hls/" + video.ID + "/",
@@ -372,6 +372,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:    now,
 	}
 	h.Store.MediaJobs[job.ID] = job
+	h.Store.PersistMediaJob(job)
 
 	// Dispatch asynchronously so the completion acknowledgement stays fast;
 	// the worker folds READY/FAILED back into the job and video records.

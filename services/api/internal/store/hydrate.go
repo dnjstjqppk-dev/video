@@ -41,8 +41,15 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 	for _, tx := range txs {
 		s.Transactions[tx.ID] = tx
 	}
+	jobs, err := s.DB.LoadMediaJobs(ctx)
+	if err != nil {
+		return fmt.Errorf("hydrate media jobs: %w", err)
+	}
+	for _, job := range jobs {
+		s.MediaJobs[job.ID] = job
+	}
 	slog.Info("Memory store hydrated from PostgreSQL",
 		"users", len(users), "channels", len(channels),
-		"videos", len(videos), "transactions", len(txs))
+		"videos", len(videos), "transactions", len(txs), "jobs", len(jobs))
 	return nil
 }

@@ -137,6 +137,22 @@ func (s *MemoryStore) PersistUser(u *User) {
 	}
 }
 
+// PersistMediaJob writes a transcode job through to PostgreSQL (best effort).
+func (s *MemoryStore) PersistMediaJob(job *MediaJob) {
+	if !s.persistEnabled() || job == nil {
+		return
+	}
+	if !validUUID(job.ID) {
+		slog.Warn("MediaJob write-through skipped: non-UUID id", "job_id", job.ID)
+		return
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	if err := s.DB.SaveMediaJob(ctx, job); err != nil {
+		slog.Warn("MediaJob write-through failed", "job_id", job.ID, "error", err)
+	}
+}
+
 // PersistTransaction writes a payment transaction and its ledger entries
 // through to PostgreSQL (best effort). The in-memory copy remains the
 // source of truth for the request lifecycle.

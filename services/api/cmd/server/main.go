@@ -289,6 +289,8 @@ func main() {
 			slog.Warn("PostgreSQL hydration failed, serving from memory seeds", "error", err)
 		}
 		cancel()
+		// P1-13: re-dispatch jobs stuck QUEUED by an earlier outage or restart.
+		go uploads.NewHandler(memStore).SweepQueuedJobs()
 	}
 	r := buildRouter(memStore)
 
