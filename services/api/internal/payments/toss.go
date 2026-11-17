@@ -39,6 +39,62 @@ type TossPaymentConfirmation struct {
 
 func (t *TossPaymentsAdapter) ProviderName() string { return "toss" }
 
+// CancelPayment cancels a Toss payment in full and returns the cancel receipt id.
+func (t *TossPaymentsAdapter) CancelPayment(paymentKey, reason string) (string, error) {
+	key := t.getSecretKey()
+	if key == "" {
+		return "", fmt.Errorf("Toss Payments is not configured")
+	}
+	if paymentKey == "" {
+		return "", fmt.Errorf("paymentKey is required for cancel")
+	}
+	if strings.ContainsAny(paymentKey, "/?#") {
+		return "", fmt.Errorf("invalid paymentKey")
+	}
+	if reason == "" {
+		reason = "customer request"
+	}
+	client := t.Client
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+	bodyBytes, _ := json.Marshal(map[string]interface{}{"cancelReason": reason})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://api.tosspayments.com/v1/payments/"+paymentKey+"/cancel", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", t.basicAuthHeader())
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Toss request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("Toss returned HTTP %d", resp.StatusCode)
+	}
+	var receipt struct {
+		Status  string `json:"status"`
+		Cancels []struct {
+			TransactionKey string `json:"transactionKey"`
+			CancelAmount   int64  `json:"cancelAmount"`
+		} `json:"cancels"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&receipt); err != nil {
+		return "", fmt.Errorf("Invalid Toss response")
+	}
+	if receipt.Status != "CANCELED" || len(receipt.Cancels) == 0 {
+		return "", fmt.Errorf("Toss cancel not confirmed (status %q)", receipt.Status)
+	}
+	if receipt.Cancels[0].TransactionKey != "" {
+		return receipt.Cancels[0].TransactionKey, nil
+	}
+	return paymentKey + ":canceled", nil
+}
+
 func (t *TossPaymentsAdapter) getSecretKey() string {
 	if t.SecretKey != "" {
 		return t.SecretKey

@@ -28,6 +28,7 @@ type StripeSessionStatus struct {
 	Currency          string
 	ClientReferenceID string
 	TransactionID     string
+	PaymentIntent     string
 }
 
 // RetrieveSession fetches a Checkout Session from the Stripe API so /confirm can
@@ -68,6 +69,7 @@ func (s *StripeAdapter) RetrieveSession(sessionID string) (*StripeSessionStatus,
 		AmountTotal       int64             `json:"amount_total"`
 		Currency          string            `json:"currency"`
 		ClientReferenceID string            `json:"client_reference_id"`
+		PaymentIntent     string            `json:"payment_intent"`
 		Metadata          map[string]string `json:"metadata"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&session); err != nil {
@@ -80,7 +82,62 @@ func (s *StripeAdapter) RetrieveSession(sessionID string) (*StripeSessionStatus,
 		Currency:          session.Currency,
 		ClientReferenceID: session.ClientReferenceID,
 		TransactionID:     session.Metadata["transaction_id"],
+		PaymentIntent:     session.PaymentIntent,
 	}, nil
+}
+
+// RefundSession refunds a paid Checkout Session in full: it resolves the
+// underlying payment intent, then creates the refund against it.
+func (s *StripeAdapter) RefundSession(sessionID, reason string) (string, error) {
+	key := s.getAPIKey()
+	if key == "" {
+		return "", fmt.Errorf("Stripe is not configured")
+	}
+	session, err := s.RetrieveSession(sessionID)
+	if err != nil {
+		return "", err
+	}
+	if session.PaymentIntent == "" {
+		return "", fmt.Errorf("Stripe session has no payment intent")
+	}
+	form := url.Values{}
+	form.Set("reason", "requested_by_customer")
+	if reason != "" {
+		form.Set("metadata[reason]", reason)
+	}
+	ctx, cancelRequest := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelRequest()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://api.stripe.com/v1/payment_intents/"+session.PaymentIntent+"/refunds",
+		strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := s.Client
+	if client == nil {
+		client = &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("Stripe request failed")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("Stripe returned HTTP %d", resp.StatusCode)
+	}
+	var refund struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&refund); err != nil {
+		return "", fmt.Errorf("Invalid Stripe response")
+	}
+	if refund.Status != "" && refund.Status != "succeeded" && refund.Status != "pending" {
+		return "", fmt.Errorf("Stripe refund status %q", refund.Status)
+	}
+	return refund.ID, nil
 }
 
 func (s *StripeAdapter) createSession(txID string, amount int64, currency, kind string) (string, error) {

@@ -88,6 +88,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Post("/campaigns/{id}/creatives", h.UploadCreative)
 		pr.Get("/advertiser/reports", h.GetAdvertiserReports)
 		pr.Get("/reports", h.GetAdvertiserReports)
+		pr.Get("/alerts", h.GetDeliveryAlerts)
 	})
 
 	// Admin Governance & Diagnostic endpoints (P0-8: platform admins only)
@@ -121,9 +122,57 @@ func (h *Handler) AdvertiserRoutes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Patch("/campaigns/{id}/status", h.UpdateCampaignStatus)
 		pr.Post("/campaigns/{id}/creatives", h.UploadCreative)
 		pr.Get("/reports", h.GetAdvertiserReports)
+		pr.Get("/alerts", h.GetDeliveryAlerts)
 	})
 
 	return r
+}
+
+// DeliveryAlert flags a campaign whose spend pace deviates from its time
+// pace (P1-17 under/over-delivery monitoring).
+type DeliveryAlert struct {
+	CampaignID string  `json:"campaign_id"`
+	Name       string  `json:"name"`
+	Kind       string  `json:"kind"` // UNDER_DELIVERY | OVER_DELIVERY
+	SpendPace  float64 `json:"spend_pace"`
+	TimePace   float64 `json:"time_pace"`
+}
+
+// GetDeliveryAlerts lists pacing alerts for the caller's campaigns.
+func (h *Handler) GetDeliveryAlerts(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	now := time.Now()
+	alerts := make([]DeliveryAlert, 0)
+	for _, camp := range h.Store.Campaigns {
+		if !campaignVisible(camp, user) {
+			continue
+		}
+		if camp.Status != "active" || camp.TotalBudgetCents <= 0 {
+			continue
+		}
+		if camp.StartAt.IsZero() || camp.EndAt.IsZero() || !camp.EndAt.After(camp.StartAt) {
+			continue
+		}
+		if now.Before(camp.StartAt) || now.After(camp.EndAt) {
+			continue
+		}
+		timePace := now.Sub(camp.StartAt).Hours() / camp.EndAt.Sub(camp.StartAt).Hours()
+		spendPace := float64(camp.SpentCents) / float64(camp.TotalBudgetCents)
+		deviation := spendPace - timePace
+		if deviation <= -0.25 {
+			alerts = append(alerts, DeliveryAlert{CampaignID: camp.ID, Name: camp.Name, Kind: "UNDER_DELIVERY", SpendPace: spendPace, TimePace: timePace})
+		} else if deviation >= 0.25 {
+			alerts = append(alerts, DeliveryAlert{CampaignID: camp.ID, Name: camp.Name, Kind: "OVER_DELIVERY", SpendPace: spendPace, TimePace: timePace})
+		}
+	}
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{"alerts": alerts})
 }
 
 func isPlatformAdmin(user *store.User) bool {

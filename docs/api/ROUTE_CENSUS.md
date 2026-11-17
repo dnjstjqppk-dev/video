@@ -1,6 +1,6 @@
 # API Route Census (generated, chi.Walk verified)
 
-Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 143 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
+Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 146 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
 
 Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·
 **HOLE** is public but must be guarded (P0). `/v1/*/` in chi output is the users-router mount artifact
@@ -18,15 +18,15 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/me` | Auth | chi renders `/v1/*/me` |
 | `PATCH` | `/v1/me` | Auth | chi renders `/v1/*/me` |
-| `GET` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
+| `GET` | `/v1/me` | Auth | chi renders `/v1/*/me` |
 | `POST` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
+| `GET` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
 | `DELETE` | `/v1/me/blocked-users/{targetId}` | Auth | chi renders `/v1/*/me/blocked-users/{targetId}` |
-| `POST` | `/v1/me/delete-request` | Auth | chi renders `/v1/*/me/delete-request` |
 | `DELETE` | `/v1/me/delete-request` | Auth | chi renders `/v1/*/me/delete-request` |
-| `DELETE` | `/v1/me/history` | Auth | chi renders `/v1/*/me/history` |
+| `POST` | `/v1/me/delete-request` | Auth | chi renders `/v1/*/me/delete-request` |
 | `GET` | `/v1/me/history` | Auth | chi renders `/v1/*/me/history` |
+| `DELETE` | `/v1/me/history` | Auth | chi renders `/v1/*/me/history` |
 | `GET` | `/v1/me/mfa` | Auth | chi renders `/v1/*/me/mfa` |
 | `POST` | `/v1/me/mfa/disable` | Auth | chi renders `/v1/*/me/mfa/disable` |
 | `POST` | `/v1/me/mfa/setup` | Auth | chi renders `/v1/*/me/mfa/setup` |
@@ -53,14 +53,14 @@ for real paths `/v1/me...`.
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/videos/{id}/comments` | Public |  |
 | `POST` | `/v1/videos/{id}/comments` | Auth |  |
-| `DELETE` | `/v1/videos/{id}` | Auth |  |
 | `GET` | `/v1/videos/{id}` | Public |  |
 | `PATCH` | `/v1/videos/{id}` | Auth |  |
-| `POST` | `/v1/videos/{id}/captions` | Auth |  |
+| `DELETE` | `/v1/videos/{id}` | Auth |  |
 | `GET` | `/v1/videos/{id}/captions` | Auth |  |
+| `POST` | `/v1/videos/{id}/captions` | Auth |  |
 | `DELETE` | `/v1/videos/{id}/captions/{capId}` | Auth |  |
-| `DELETE` | `/v1/videos/{id}/like` | Auth |  |
 | `POST` | `/v1/videos/{id}/like` | Auth |  |
+| `DELETE` | `/v1/videos/{id}/like` | Auth |  |
 | `GET` | `/v1/videos/{id}/playback` | Public |  |
 
 ## comments (4)
@@ -105,8 +105,8 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/live-streams/` | Public | trailing-slash route |
 | `POST` | `/v1/live-streams/` | Auth | trailing-slash route |
 | `GET` | `/v1/live-streams/{id}` | Public |  |
-| `POST` | `/v1/live-streams/{id}/chat` | Auth |  |
 | `GET` | `/v1/live-streams/{id}/chat` | Public |  |
+| `POST` | `/v1/live-streams/{id}/chat` | Auth |  |
 | `GET` | `/v1/live-streams/{id}/health` | Public |  |
 | `POST` | `/v1/live-streams/{id}/polls` | Auth |  |
 | `GET` | `/v1/live-streams/{id}/polls/active` | Public |  |
@@ -138,8 +138,8 @@ for real paths `/v1/me...`.
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
-| `POST` | `/v1/partners/rights/claims` | Auth |  |
 | `GET` | `/v1/partners/rights/claims` | Auth |  |
+| `POST` | `/v1/partners/rights/claims` | Auth |  |
 | `POST` | `/v1/partners/rights/claims/{id}/dispute` | Auth |  |
 | `POST` | `/v1/partners/rights/claims/{id}/resolve` | Role(super_admin, platform_admin, moderator) |  |
 | `POST` | `/v1/partners/rights/dmca-counter-notice` | Auth |  |
@@ -152,7 +152,7 @@ for real paths `/v1/me...`.
 | `PATCH` | `/v1/partners/contracts/{id}` | Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin) |  |
 | `GET` | `/v1/partners/me` | Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin) |  |
 
-## ads (15)
+## ads (16)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
@@ -161,6 +161,7 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/ads/admin/creatives/{id}/reject` | Role(super_admin, platform_admin) |  |
 | `GET` | `/v1/ads/admin/diagnostics` | Role(super_admin, platform_admin) |  |
 | `GET` | `/v1/ads/advertiser/reports` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/ads/alerts` | Auth |  |
 | `GET` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/ads/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
@@ -172,12 +173,13 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/ads/preview` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/ads/reports` | Role(advertiser, partner_manager, platform_admin) |  |
 
-## advertiser (9)
+## advertiser (10)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/advertiser/alerts` | Auth |  |
 | `POST` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/advertiser/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/advertiser/campaigns/{id}/creatives` | Role(advertiser, partner_manager, platform_admin) |  |
 | `PATCH` | `/v1/advertiser/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
@@ -204,7 +206,7 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/admin/users` | Role(super_admin, platform_admin (+support read on GET /users)) |  |
 | `PATCH` | `/v1/admin/users/{id}/status` | Role(super_admin, platform_admin (+support read on GET /users)) |  |
 
-## payments (4)
+## payments (5)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
@@ -212,6 +214,7 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/payments/confirm` | Auth |  |
 | `GET` | `/v1/payments/transactions` | Auth |  |
 | `POST` | `/v1/payments/webhooks/{provider}` | Public |  |
+| `POST` | `/v1/payments/{orderId}/refund` | Auth |  |
 
 ## playlists (4)
 
@@ -227,8 +230,8 @@ for real paths `/v1/me...`.
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/subscriptions/` | Auth | trailing-slash route |
-| `POST` | `/v1/subscriptions/{channelId}` | Auth |  |
 | `DELETE` | `/v1/subscriptions/{channelId}` | Auth |  |
+| `POST` | `/v1/subscriptions/{channelId}` | Auth |  |
 
 ## moderation (1)
 

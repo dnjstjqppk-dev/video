@@ -109,6 +109,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Use(auth.RequireAuth)
 		pr.Post("/checkout", h.CreateCheckout)
 		pr.Post("/confirm", h.ConfirmPayment)
+		pr.Post("/{orderId}/refund", h.RefundPayment)
 		pr.Get("/transactions", h.ListTransactions)
 	})
 
@@ -316,6 +317,7 @@ func (h *Handler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tx.Status = "succeeded"
+	tx.ProviderRef = payload.PaymentKey
 	entries := CreateDoubleEntryLedger(tx.ID, tx.AmountCents, tx.Currency)
 	tx.LedgerEntries = entries
 	h.Store.Ledger = append(h.Store.Ledger, entries...)

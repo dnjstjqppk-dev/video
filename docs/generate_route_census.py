@@ -2,7 +2,7 @@
 """Generate the API route census and synchronize the OpenAPI specification.
 
 Inputs (all committed, reviewable):
-  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 143 routes).
+  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 146 routes).
      Refresh: temporarily add a chi.Walk test in services/api/cmd/server,
      run `go test ./cmd/server/ -run TestZZDumpRoutes -v`, paste, delete.
   2. tests/openapi/gvp-v1.yaml: 36 hand-detailed paths + components.
@@ -52,6 +52,7 @@ POST /v1/ads/admin/creatives/{id}/approve
 POST /v1/ads/admin/creatives/{id}/reject
 GET /v1/ads/admin/diagnostics
 GET /v1/ads/advertiser/reports
+GET /v1/ads/alerts
 GET /v1/ads/campaigns
 POST /v1/ads/campaigns
 GET /v1/ads/campaigns/{id}
@@ -62,8 +63,9 @@ POST /v1/ads/decision
 POST /v1/ads/events
 POST /v1/ads/preview
 GET /v1/ads/reports
-GET /v1/advertiser/campaigns
+GET /v1/advertiser/alerts
 POST /v1/advertiser/campaigns
+GET /v1/advertiser/campaigns
 GET /v1/advertiser/campaigns/{id}
 POST /v1/advertiser/campaigns/{id}/creatives
 PATCH /v1/advertiser/campaigns/{id}/status
@@ -89,8 +91,8 @@ GET /v1/feed/subscriptions
 GET /v1/live-streams/
 POST /v1/live-streams/
 GET /v1/live-streams/{id}
-POST /v1/live-streams/{id}/chat
 GET /v1/live-streams/{id}/chat
+POST /v1/live-streams/{id}/chat
 GET /v1/live-streams/{id}/health
 POST /v1/live-streams/{id}/polls
 GET /v1/live-streams/{id}/polls/active
@@ -106,8 +108,8 @@ GET /v1/notifications/
 POST /v1/notifications/{id}/read
 GET /v1/partners/campaigns
 POST /v1/partners/campaigns
-POST /v1/partners/rights/claims
 GET /v1/partners/rights/claims
+POST /v1/partners/rights/claims
 POST /v1/partners/rights/claims/{id}/dispute
 POST /v1/partners/rights/claims/{id}/resolve
 POST /v1/partners/rights/dmca-counter-notice
@@ -123,6 +125,7 @@ POST /v1/payments/checkout
 POST /v1/payments/confirm
 GET /v1/payments/transactions
 POST /v1/payments/webhooks/{provider}
+POST /v1/payments/{orderId}/refund
 POST /v1/playlists/
 GET /v1/playlists/{id}
 PATCH /v1/playlists/{id}
@@ -139,8 +142,8 @@ GET /v1/studio/videos
 POST /v1/studio/videos/{id}/edit-jobs
 GET /v1/studio/videos/{id}/edit-jobs/{jobId}
 GET /v1/subscriptions/
-POST /v1/subscriptions/{channelId}
 DELETE /v1/subscriptions/{channelId}
+POST /v1/subscriptions/{channelId}
 POST /v1/uploads/
 PUT /v1/uploads/{id}/chunks/{partNumber}
 POST /v1/uploads/{id}/complete
@@ -148,24 +151,24 @@ POST /v1/uploads/{id}/parts
 GET /v1/uploads/{id}/status
 GET /v1/videos/{id}/comments
 POST /v1/videos/{id}/comments
-DELETE /v1/videos/{id}
 GET /v1/videos/{id}
 PATCH /v1/videos/{id}
-POST /v1/videos/{id}/captions
+DELETE /v1/videos/{id}
 GET /v1/videos/{id}/captions
+POST /v1/videos/{id}/captions
 DELETE /v1/videos/{id}/captions/{capId}
-DELETE /v1/videos/{id}/like
 POST /v1/videos/{id}/like
+DELETE /v1/videos/{id}/like
 GET /v1/videos/{id}/playback
-GET /v1/*/me
 PATCH /v1/*/me
-GET /v1/*/me/blocked-users
+GET /v1/*/me
 POST /v1/*/me/blocked-users
+GET /v1/*/me/blocked-users
 DELETE /v1/*/me/blocked-users/{targetId}
-POST /v1/*/me/delete-request
 DELETE /v1/*/me/delete-request
-DELETE /v1/*/me/history
+POST /v1/*/me/delete-request
 GET /v1/*/me/history
+DELETE /v1/*/me/history
 GET /v1/*/me/mfa
 POST /v1/*/me/mfa/disable
 POST /v1/*/me/mfa/setup

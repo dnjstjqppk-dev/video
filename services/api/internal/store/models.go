@@ -403,17 +403,21 @@ type LedgerEntry struct {
 }
 
 type PaymentTransaction struct {
-	ID             string        `json:"id"`
-	UserID         string        `json:"user_id"`
-	Provider       string        `json:"provider"` // stripe, toss
-	IdempotencyKey string        `json:"idempotency_key"`
-	Type           string        `json:"type"` // membership, super_chat, ad_topup, premium_subscription
-	AmountCents    int64         `json:"amount_cents"`
-	Currency       string        `json:"currency"`
-	Status         string        `json:"status"` // pending, succeeded, failed, refunded
-	CheckoutURL    string        `json:"checkout_url,omitempty"`
-	LedgerEntries  []LedgerEntry `json:"ledger_entries,omitempty"`
-	CreatedAt      time.Time     `json:"created_at"`
+	ID              string        `json:"id"`
+	UserID          string        `json:"user_id"`
+	Provider        string        `json:"provider"` // stripe, toss
+	ProviderRef     string        `json:"provider_ref,omitempty"` // Toss paymentKey / Stripe session id
+	ProviderRefund  string        `json:"provider_refund,omitempty"`
+	IdempotencyKey  string        `json:"idempotency_key"`
+	Type            string        `json:"type"` // membership, super_chat, ad_topup, premium_subscription
+	AmountCents     int64         `json:"amount_cents"`
+	RefundedCents   int64         `json:"refunded_cents,omitempty"`
+	Currency        string        `json:"currency"`
+	Status          string        `json:"status"` // pending, succeeded, failed, refunded
+	CheckoutURL     string        `json:"checkout_url,omitempty"`
+	LedgerEntries   []LedgerEntry `json:"ledger_entries,omitempty"`
+	CreatedAt       time.Time     `json:"created_at"`
+	RefundedAt      *time.Time    `json:"refunded_at,omitempty"`
 }
 
 type PartnerContract struct {

@@ -236,6 +236,25 @@ paths:
       responses:
         '200':
           description: Settlement overview
+  /payments/{orderId}/refund:
+    post:
+      summary: Refund a succeeded transaction with reversing ledger entries
+      operationId: refundPayment
+      responses:
+        '200':
+          description: Refunded (or idempotent replay)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Invalid state for refund
+        '503':
+          description: Provider not configured (UNAVAILABLE)
   /payments/confirm:
     post:
       summary: Confirm a payment out-of-band with the provider (fail-closed)

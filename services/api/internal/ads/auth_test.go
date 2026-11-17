@@ -248,6 +248,52 @@ func TestCreativeReviewAdminOnlyWithAudit(t *testing.T) {
 	}
 }
 
+// P1-17: pacing alerts flag under/over-delivery for own campaigns only.
+func TestDeliveryAlertsPacing(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+	s := store.NewMemoryStore()
+	router := testRouter(s)
+
+	now := time.Now()
+	s.Campaigns["camp-under"] = &store.AdCampaign{
+		ID: "camp-under", AdvertiserID: "44444444-4444-4444-4444-444444444444",
+		Name: "Under", Status: "active", TotalBudgetCents: 100000, SpentCents: 1000,
+		StartAt: now.Add(-20 * 24 * time.Hour), EndAt: now.Add(10 * 24 * time.Hour),
+	}
+	s.Campaigns["camp-over"] = &store.AdCampaign{
+		ID: "camp-over", AdvertiserID: "44444444-4444-4444-4444-444444444444",
+		Name: "Over", Status: "active", TotalBudgetCents: 100000, SpentCents: 95000,
+		StartAt: now.Add(-2 * 24 * time.Hour), EndAt: now.Add(28 * 24 * time.Hour),
+	}
+
+	rec := doAds(t, router, http.MethodGet, "/alerts", "advertiser-token", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var body struct {
+		Alerts []DeliveryAlert `json:"alerts"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	kinds := map[string]string{}
+	for _, a := range body.Alerts {
+		kinds[a.CampaignID] = a.Kind
+	}
+	if kinds["camp-under"] != "UNDER_DELIVERY" {
+		t.Fatalf("expected UNDER_DELIVERY, got %+v", body.Alerts)
+	}
+	if kinds["camp-over"] != "OVER_DELIVERY" {
+		t.Fatalf("expected OVER_DELIVERY, got %+v", body.Alerts)
+	}
+
+	rec = doAds(t, router, http.MethodGet, "/alerts", "", nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 anonymous, got %d", rec.Code)
+	}
+}
+
 // P0-8: status transitions follow the review state machine.
 func TestCampaignStatusTransitionsGuarded(t *testing.T) {
 	t.Setenv("GVP_ENV", "test")
