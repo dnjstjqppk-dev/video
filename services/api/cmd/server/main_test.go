@@ -370,9 +370,10 @@ func TestAdDecisionTelemetryAndDiagnostics(t *testing.T) {
 		t.Fatalf("expected 200 or 202 for ad click event, got %d", rec.Code)
 	}
 
-	// 3. Ad Preview endpoint
+	// 3. Ad Preview endpoint (P0-8: authenticated advertiser session)
 	prevBody := []byte(`{"slot_id":"home_feed_banner","category":"Technology"}`)
 	req = httptest.NewRequest(http.MethodPost, "/v1/ads/preview", bytes.NewReader(prevBody))
+	req.Header.Set("Authorization", "Bearer advertiser-token")
 	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -445,7 +446,7 @@ func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
 		"callToAction": "Explore Design"
 	}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/partners/campaigns", bytes.NewReader(campPayload))
-	req.Header.Set("Authorization", "Bearer creator-token")
+	req.Header.Set("Authorization", "Bearer advertiser-token")
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -454,19 +455,46 @@ func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
 	}
 	var createdCamp struct {
 		ID        string   `json:"id"`
+		Status    string   `json:"status"`
 		Creatives []string `json:"creatives"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &createdCamp); err != nil || createdCamp.ID == "" || len(createdCamp.Creatives) == 0 {
 		t.Fatalf("failed to decode created campaign: %v", err)
 	}
+	if createdCamp.Status != "draft" {
+		t.Fatalf("expected draft status on creation (ARTICLE 7.1), got %s", createdCamp.Status)
+	}
 
-	// 2. Creative Governance & Approval (ARTICLE 7.2 Step 5)
+	// 1b. Advertiser submits the draft for review (draft -> pending_review)
+	submitReq := httptest.NewRequest(http.MethodPatch, "/v1/advertiser/campaigns/"+createdCamp.ID+"/status", bytes.NewReader([]byte(`{"status":"pending_review"}`)))
+	submitReq.Header.Set("Authorization", "Bearer advertiser-token")
+	submitReq.Header.Set("Content-Type", "application/json")
+	submitRec := httptest.NewRecorder()
+	router.ServeHTTP(submitRec, submitReq)
+	if submitRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for review submit, got %d: %s", submitRec.Code, submitRec.Body.String())
+	}
+
+	// 2. Creative Governance & Approval (ARTICLE 7.2 Step 5, P0-8: admin only)
 	creativeID := createdCamp.Creatives[0]
 	apprReq := httptest.NewRequest(http.MethodPost, "/v1/ads/admin/creatives/"+creativeID+"/approve", nil)
+	apprReq.Header.Set("Authorization", "Bearer admin-token")
 	apprRec := httptest.NewRecorder()
 	router.ServeHTTP(apprRec, apprReq)
 	if apprRec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for creative approval, got %d", apprRec.Code)
+	}
+
+	// 2b. Admin moves the campaign through review into serving (pending_review -> approved -> active)
+	for _, status := range []string{"approved", "active"} {
+		actReq := httptest.NewRequest(http.MethodPatch, "/v1/advertiser/campaigns/"+createdCamp.ID+"/status", bytes.NewReader([]byte(`{"status":"`+status+`"}`)))
+		actReq.Header.Set("Authorization", "Bearer admin-token")
+		actReq.Header.Set("Content-Type", "application/json")
+		actRec := httptest.NewRecorder()
+		router.ServeHTTP(actRec, actReq)
+		if actRec.Code != http.StatusOK {
+			t.Fatalf("expected 200 for status %s, got %d: %s", status, actRec.Code, actRec.Body.String())
+		}
 	}
 
 	// 3. User requests Ad Decision for watch_preroll (ARTICLE 7.2 Step 8-10)
@@ -537,7 +565,15 @@ func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
 		t.Fatalf("expected 200 for delivery diagnostics, got %d", diagRec.Code)
 	}
 
+	repAnon := httptest.NewRequest(http.MethodGet, "/v1/advertiser/reports", nil)
+	repAnonRec := httptest.NewRecorder()
+	router.ServeHTTP(repAnonRec, repAnon)
+	if repAnonRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for anonymous advertiser reports, got %d", repAnonRec.Code)
+	}
+
 	repReq := httptest.NewRequest(http.MethodGet, "/v1/advertiser/reports", nil)
+	repReq.Header.Set("Authorization", "Bearer advertiser-token")
 	repRec := httptest.NewRecorder()
 	router.ServeHTTP(repRec, repReq)
 	if repRec.Code != http.StatusOK {

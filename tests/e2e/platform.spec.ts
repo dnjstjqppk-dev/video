@@ -29,7 +29,7 @@ test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suit
     const playback = await playbackRes.json();
     expect(playback.video_id).toBe(targetVideoId);
     expect(playback.hls_master_url).toContain('.m3u8');
-    expect(playback.playback_token).toContain('pb_token_');
+    expect(playback.playback_token).toMatch(/^v1\./);
     expect(Array.isArray(playback.chapters)).toBe(true);
     expect(Array.isArray(playback.captions)).toBe(true);
 
@@ -135,7 +135,8 @@ test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suit
   });
 
   test('3. Partner Portal Surface: Ad Campaign -> MCN Channels -> Copyright Claim -> Settlement Statement', async ({ request }) => {
-    const headers = { Authorization: 'Bearer creator-token' };
+    // P0-8: campaign management requires an advertiser-role session.
+    const headers = { Authorization: 'Bearer advertiser-token' };
 
     // 3.1 Create Ad Campaign
     const campRes = await request.post(`${API_BASE_URL}/partners/campaigns`, {

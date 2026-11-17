@@ -245,18 +245,74 @@ func (h *Handler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if adapter, ok := h.Adapters[provider]; ok {
-		if tossAdapter, isToss := adapter.(*TossPaymentsAdapter); isToss && tossAdapter.getSecretKey() != "" {
-			confirmation, err := tossAdapter.ConfirmPayment(payload.PaymentKey, payload.OrderID, payload.Amount)
-			if err != nil {
-				identity.WriteError(w, r, http.StatusPaymentRequired, "PAYMENT_FAILED", fmt.Sprintf("Toss confirmation failed: %v", err))
-				return
-			}
-			if confirmation != nil && confirmation.Status != "" && confirmation.Status != "DONE" {
-				identity.WriteError(w, r, http.StatusBadRequest, "PAYMENT_NOT_DONE", "Payment status is not DONE")
-				return
-			}
+	// Fail-closed verification: every provider must confirm the payment
+	// out-of-band before the transaction may transition to succeeded.
+	adapter, ok := h.Adapters[provider]
+	if !ok {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Unsupported payment provider")
+		return
+	}
+	if tx.Provider != "" && tx.Provider != provider {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Confirmation provider does not match transaction provider")
+		return
+	}
+	if payload.Amount != tx.AmountCents {
+		identity.WriteError(w, r, http.StatusConflict, "AMOUNT_MISMATCH", "Confirmation amount does not match transaction amount")
+		return
+	}
+
+	switch a := adapter.(type) {
+	case *TossPaymentsAdapter:
+		if a.getSecretKey() == "" {
+			identity.WriteError(w, r, http.StatusServiceUnavailable, "UNAVAILABLE", "Payment provider is not configured")
+			return
 		}
+		if payload.PaymentKey == "" {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "paymentKey is required")
+			return
+		}
+		confirmation, err := a.ConfirmPayment(payload.PaymentKey, payload.OrderID, payload.Amount)
+		if err != nil {
+			identity.WriteError(w, r, http.StatusPaymentRequired, "PAYMENT_FAILED", fmt.Sprintf("Toss confirmation failed: %v", err))
+			return
+		}
+		if confirmation == nil || confirmation.Status != "DONE" {
+			identity.WriteError(w, r, http.StatusBadRequest, "PAYMENT_NOT_DONE", "Payment status is not DONE")
+			return
+		}
+		if confirmation.TotalAmount != tx.AmountCents {
+			identity.WriteError(w, r, http.StatusConflict, "AMOUNT_MISMATCH", "Provider-confirmed amount does not match transaction amount")
+			return
+		}
+	case *StripeAdapter:
+		if a.getAPIKey() == "" {
+			identity.WriteError(w, r, http.StatusServiceUnavailable, "UNAVAILABLE", "Payment provider is not configured")
+			return
+		}
+		if payload.PaymentKey == "" {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Stripe session id (paymentKey) is required")
+			return
+		}
+		session, err := a.RetrieveSession(payload.PaymentKey)
+		if err != nil {
+			identity.WriteError(w, r, http.StatusPaymentRequired, "PAYMENT_FAILED", fmt.Sprintf("Stripe verification failed: %v", err))
+			return
+		}
+		if session.PaymentStatus != "paid" {
+			identity.WriteError(w, r, http.StatusBadRequest, "PAYMENT_NOT_DONE", "Stripe session is not paid")
+			return
+		}
+		if session.AmountTotal != tx.AmountCents || !strings.EqualFold(session.Currency, tx.Currency) {
+			identity.WriteError(w, r, http.StatusConflict, "AMOUNT_MISMATCH", "Provider-confirmed amount does not match transaction amount")
+			return
+		}
+		if session.ClientReferenceID != tx.ID && session.TransactionID != tx.ID {
+			identity.WriteError(w, r, http.StatusConflict, "SESSION_MISMATCH", "Stripe session is not bound to this transaction")
+			return
+		}
+	default:
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Unsupported payment provider")
+		return
 	}
 
 	tx.Status = "succeeded"

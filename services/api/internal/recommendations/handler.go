@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/store"
+	"globalvideoplatform/services/api/internal/videos"
 )
 
 type Handler struct {
@@ -93,11 +94,15 @@ func (h *Handler) Feedback(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
 	page, limit := identity.ParsePagination(r, 20)
+	user := identity.GetUserFromContext(r.Context())
 	var matchedVideos []*store.Video
 	var matchedChannels []*store.Channel
 
 	if query != "" {
 		for _, v := range h.Store.Videos {
+			if !videos.SearchVisible(user, v, h.Store.Channels) {
+				continue
+			}
 			if strings.Contains(strings.ToLower(v.Title), query) || strings.Contains(strings.ToLower(v.Description), query) {
 				matchedVideos = append(matchedVideos, v)
 			}
@@ -123,9 +128,13 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SearchSuggestions(w http.ResponseWriter, r *http.Request) {
 	q := strings.ToLower(r.URL.Query().Get("q"))
+	user := identity.GetUserFromContext(r.Context())
 	suggestions := []string{}
 	if q != "" {
 		for _, v := range h.Store.Videos {
+			if !videos.SearchVisible(user, v, h.Store.Channels) {
+				continue
+			}
 			if strings.HasPrefix(strings.ToLower(v.Title), q) {
 				suggestions = append(suggestions, v.Title)
 			}

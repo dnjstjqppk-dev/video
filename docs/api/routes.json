@@ -45,12 +45,12 @@
     "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
   },
   {
-    "method": "GET",
+    "method": "PATCH",
     "path": "/v1/admin/policies/",
     "auth": "Role(super_admin, platform_admin (+support read on GET))"
   },
   {
-    "method": "PATCH",
+    "method": "GET",
     "path": "/v1/admin/policies/",
     "auth": "Role(super_admin, platform_admin (+support read on GET))"
   },
@@ -82,47 +82,47 @@
   {
     "method": "GET",
     "path": "/v1/ads/admin/creatives",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(super_admin, platform_admin)"
   },
   {
     "method": "POST",
     "path": "/v1/ads/admin/creatives/{id}/approve",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(super_admin, platform_admin)"
   },
   {
     "method": "POST",
     "path": "/v1/ads/admin/creatives/{id}/reject",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(super_admin, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/ads/admin/diagnostics",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(super_admin, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/ads/advertiser/reports",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/ads/campaigns",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
     "path": "/v1/ads/campaigns",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/ads/campaigns/{id}",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "PATCH",
     "path": "/v1/ads/campaigns/{id}/status",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
@@ -137,62 +137,32 @@
   {
     "method": "POST",
     "path": "/v1/ads/preview",
-    "auth": "Public"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/ads/reports",
-    "auth": "Public HOLE: guard required (P0)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/reports",
-    "auth": "Public HOLE: guard required (P0)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/admin/creatives",
-    "auth": "Public HOLE: guard required (P0)"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/advertiser/admin/creatives/{id}/approve",
-    "auth": "Public HOLE: guard required (P0)"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/advertiser/admin/creatives/{id}/reject",
-    "auth": "Public HOLE: guard required (P0)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/admin/diagnostics",
-    "auth": "Public HOLE: guard required (P0)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/advertiser/reports",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/advertiser/campaigns",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
     "path": "/v1/advertiser/campaigns",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/advertiser/campaigns/{id}",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "PATCH",
     "path": "/v1/advertiser/campaigns/{id}/status",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
@@ -207,12 +177,12 @@
   {
     "method": "POST",
     "path": "/v1/advertiser/preview",
-    "auth": "Public"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/advertiser/reports",
-    "auth": "Public HOLE: guard required (P0)"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
@@ -230,12 +200,12 @@
     "auth": "Auth"
   },
   {
-    "method": "DELETE",
+    "method": "POST",
     "path": "/v1/channels/{id}/subscribe",
     "auth": "Auth"
   },
   {
-    "method": "POST",
+    "method": "DELETE",
     "path": "/v1/channels/{id}/subscribe",
     "auth": "Auth"
   },
@@ -365,14 +335,14 @@
     "auth": "Auth"
   },
   {
-    "method": "POST",
-    "path": "/v1/partners/campaigns",
-    "auth": "Auth"
-  },
-  {
     "method": "GET",
     "path": "/v1/partners/campaigns",
-    "auth": "Auth"
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/partners/campaigns",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "GET",
@@ -465,14 +435,14 @@
     "auth": "Auth"
   },
   {
-    "method": "PATCH",
-    "path": "/v1/playlists/{id}",
-    "auth": "Auth"
-  },
-  {
     "method": "GET",
     "path": "/v1/playlists/{id}",
     "auth": "Public"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/playlists/{id}",
+    "auth": "Auth"
   },
   {
     "method": "POST",
@@ -575,19 +545,14 @@
     "auth": "Auth"
   },
   {
+    "method": "GET",
+    "path": "/v1/videos/{id}/comments",
+    "auth": "Public"
+  },
+  {
     "method": "POST",
     "path": "/v1/videos/{id}/comments",
     "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/videos/{id}/comments",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/videos/{id}",
-    "auth": "Public"
   },
   {
     "method": "PATCH",
@@ -598,6 +563,11 @@
     "method": "DELETE",
     "path": "/v1/videos/{id}",
     "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}",
+    "auth": "Public"
   },
   {
     "method": "GET",
@@ -630,12 +600,12 @@
     "auth": "Public"
   },
   {
-    "method": "GET",
+    "method": "PATCH",
     "path": "/v1/me",
     "auth": "Auth"
   },
   {
-    "method": "PATCH",
+    "method": "GET",
     "path": "/v1/me",
     "auth": "Auth"
   },

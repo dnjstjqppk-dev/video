@@ -55,18 +55,19 @@
 
 The controls in §1–§4 are the **target posture**. Code audit found these gaps (P0 unless noted):
 
-1. **Playback tokens are unsigned** (`"pb_token_" + videoID`, no HMAC/expiry/path binding) and `GET /v1/videos/{id}/playback`
-   skips visibility/entitlement/geo checks (`services/api/internal/videos/handler.go`). §2 not yet implemented.
-2. **Payment confirmation fail-open**: `ConfirmPayment` marks `succeeded` when the Toss secret is unset
-   (`services/api/internal/payments/handler.go`). Must refuse instead.
+1. **Playback tokens are unsigned** — **FIXED 2026-11-17**: HMAC-SHA256 signed `v1.*` tokens (1h, video-bound) with
+   private/members-only entitlement checks (`videos/playback_token.go`, `videos/visibility.go`). Geo/age checks remain open.
+2. **Payment confirmation fail-open** — **FIXED 2026-11-17**: `ConfirmPayment` refuses unconfigured/unknown providers
+   and verifies Toss DONE + Stripe paid sessions server-side (`payments/handler.go`, `payments/stripe.go`).
 3. **Current deployment runs dev tokens** (`GVP_ENV=test`, `GVP_ALLOW_DEV_TOKENS=true`); production OIDC tenant not provisioned.
 4. **Admin MFA / step-up re-auth missing**: role gates do not verify `amr: ["mfa"]`; `admin.brand.com` MFA claim unenforced.
 5. **AES-128 key release / Widevine / FairPlay**: no key-release endpoint or DRM packaging in code.
 6. **PII at-rest encryption** (AES-256-GCM payout accounts) and log-redaction coverage: UNVERIFIED in code — needs proof test.
 7. Rate limiting is single-instance in-memory (no Valkey); multi-replica enforcement pending.
-8. **Ad surface unauthenticated (P0, route audit 2026-11-16):** every route under `/v1/ads/*` and `/v1/advertiser/*`
-   (campaign CRUD, reports, creative approve/reject, diagnostics) is public; creation auto-activates (`active` +
-   `approved`) with no advertiser scoping. See `docs/api/ROUTE_CENSUS.md` ads/advertiser groups.
-9. **Search leaks non-public videos (P0):** `/v1/search` has no visibility filter (private/unlisted returned).
+8. **Ad surface unauthenticated** — **FIXED 2026-11-17:** role gates + advertiser scoping on campaign/report/preview routes,
+   admin-only review with audit logs, DRAFT→review state machine, duplicate mount removed (137 routes, 0 holes).
+   See `docs/api/ROUTE_CENSUS.md` ads/advertiser groups.
+9. **Search leaks non-public videos** — **FIXED 2026-11-17:** `/v1/search` and suggestions exclude private/unlisted and gate
+   members-only by entitlement (`videos.SearchVisible`).
 
 Full list: [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) §4–§5.

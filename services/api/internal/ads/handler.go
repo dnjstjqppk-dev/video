@@ -29,25 +29,99 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	// Public / Client Ad Runtime endpoints
 	r.Post("/decision", h.MakeAdDecision)
 	r.Post("/events", h.RecordAdEvent)
-	r.Post("/preview", h.PreviewAdDecision)
 
-	// Campaign Management
-	r.Get("/campaigns", h.ListCampaigns)
-	r.Post("/campaigns", h.CreateCampaign)
-	r.Get("/campaigns/{id}", h.GetCampaign)
-	r.Patch("/campaigns/{id}/status", h.UpdateCampaignStatus)
+	// Advertiser Portal endpoints (P0-8: authenticated advertiser roles only)
+	r.Group(func(pr chi.Router) {
+		pr.Use(auth.RequireRole("advertiser", "partner_manager", "platform_admin"))
+		pr.Post("/preview", h.PreviewAdDecision)
+		pr.Get("/campaigns", h.ListCampaigns)
+		pr.Post("/campaigns", h.CreateCampaign)
+		pr.Get("/campaigns/{id}", h.GetCampaign)
+		pr.Patch("/campaigns/{id}/status", h.UpdateCampaignStatus)
+		pr.Get("/advertiser/reports", h.GetAdvertiserReports)
+		pr.Get("/reports", h.GetAdvertiserReports)
+	})
 
-	// Advertiser Portal endpoints
-	r.Get("/advertiser/reports", h.GetAdvertiserReports)
-	r.Get("/reports", h.GetAdvertiserReports)
-
-	// Admin Governance & Diagnostic endpoints
-	r.Get("/admin/diagnostics", h.GetDeliveryDiagnostics)
-	r.Get("/admin/creatives", h.ListCreatives)
-	r.Post("/admin/creatives/{id}/approve", h.ApproveCreative)
-	r.Post("/admin/creatives/{id}/reject", h.RejectCreative)
+	// Admin Governance & Diagnostic endpoints (P0-8: platform admins only)
+	r.Group(func(ar chi.Router) {
+		ar.Use(auth.RequireRole("super_admin", "platform_admin"))
+		ar.Get("/admin/diagnostics", h.GetDeliveryDiagnostics)
+		ar.Get("/admin/creatives", h.ListCreatives)
+		ar.Post("/admin/creatives/{id}/approve", h.ApproveCreative)
+		ar.Post("/admin/creatives/{id}/reject", h.RejectCreative)
+	})
 
 	return r
+}
+
+// AdvertiserRoutes serves the /v1/advertiser mount: the advertiser-portal
+// surface without the admin governance paths (P0-8 duplicate-mount fix).
+func (h *Handler) AdvertiserRoutes(auth *identity.AuthMiddleware) http.Handler {
+	r := chi.NewRouter()
+
+	// Public / Client Ad Runtime endpoints
+	r.Post("/decision", h.MakeAdDecision)
+	r.Post("/events", h.RecordAdEvent)
+
+	// Advertiser Portal endpoints (authenticated advertiser roles only)
+	r.Group(func(pr chi.Router) {
+		pr.Use(auth.RequireRole("advertiser", "partner_manager", "platform_admin"))
+		pr.Post("/preview", h.PreviewAdDecision)
+		pr.Get("/campaigns", h.ListCampaigns)
+		pr.Post("/campaigns", h.CreateCampaign)
+		pr.Get("/campaigns/{id}", h.GetCampaign)
+		pr.Patch("/campaigns/{id}/status", h.UpdateCampaignStatus)
+		pr.Get("/reports", h.GetAdvertiserReports)
+	})
+
+	return r
+}
+
+func isPlatformAdmin(user *store.User) bool {
+	return user != nil && (user.Role == "super_admin" || user.Role == "platform_admin")
+}
+
+// campaignVisible enforces advertiser tenant isolation: advertisers see only
+// their own campaigns, platform admins see everything.
+func campaignVisible(camp *store.AdCampaign, user *store.User) bool {
+	if user == nil || camp == nil {
+		return false
+	}
+	return isPlatformAdmin(user) || camp.AdvertiserID == user.ID
+}
+
+// adStatusTransitions is the ARTICLE 7.1 review state machine.
+var adStatusTransitions = map[string][]string{
+	"draft":          {"pending_review", "archived"},
+	"pending_review": {"approved", "rejected", "draft"},
+	"approved":       {"active", "scheduled", "paused"},
+	"scheduled":      {"active", "paused", "expired"},
+	"active":         {"paused", "completed", "exhausted", "suspended"},
+	"paused":         {"active", "completed", "archived"},
+	"rejected":       {"draft", "archived"},
+	"suspended":      {"active", "archived"},
+	"completed":      {"archived"},
+	"exhausted":      {"archived"},
+	"expired":        {"archived"},
+	"archived":       {},
+}
+
+// advertiserTargets are the statuses a non-admin advertiser may set directly.
+var advertiserTargets = map[string]bool{
+	"pending_review": true,
+	"paused":         true,
+	"active":         true,
+	"draft":          true,
+	"archived":       true,
+}
+
+func transitionAllowed(from, to string) bool {
+	for _, next := range adStatusTransitions[from] {
+		if next == to {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------------
@@ -288,6 +362,11 @@ func (h *Handler) RecordAdEvent(w http.ResponseWriter, r *http.Request) {
 // -----------------------------------------------------------------------------
 
 func (h *Handler) PreviewAdDecision(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	var req struct {
 		CampaignID string `json:"campaign_id"`
 		SlotID     string `json:"slot_id"`
@@ -297,10 +376,16 @@ func (h *Handler) PreviewAdDecision(w http.ResponseWriter, r *http.Request) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	// Tenant isolation: preview only creatives of visible campaigns.
+	visible := func(c *store.AdCreative) bool {
+		camp, ok := h.Store.Campaigns[c.CampaignID]
+		return ok && campaignVisible(camp, user)
+	}
+
 	var creative *store.AdCreative
 	if req.CampaignID != "" {
 		for _, c := range h.Store.AdCreatives {
-			if c.CampaignID == req.CampaignID {
+			if c.CampaignID == req.CampaignID && visible(c) {
 				creative = c
 				break
 			}
@@ -308,8 +393,10 @@ func (h *Handler) PreviewAdDecision(w http.ResponseWriter, r *http.Request) {
 	}
 	if creative == nil {
 		for _, c := range h.Store.AdCreatives {
-			creative = c
-			break
+			if visible(c) {
+				creative = c
+				break
+			}
 		}
 	}
 
@@ -406,17 +493,29 @@ func (h *Handler) GetDeliveryDiagnostics(w http.ResponseWriter, r *http.Request)
 // -----------------------------------------------------------------------------
 
 func (h *Handler) ListCampaigns(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	var list []*store.AdCampaign
+	list := make([]*store.AdCampaign, 0)
 	for _, c := range h.Store.Campaigns {
-		list = append(list, c)
+		if campaignVisible(c, user) {
+			list = append(list, c)
+		}
 	}
 	identity.WriteJSON(w, http.StatusOK, list)
 }
 
 func (h *Handler) GetCampaign(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -424,6 +523,10 @@ func (h *Handler) GetCampaign(w http.ResponseWriter, r *http.Request) {
 	camp, ok := h.Store.Campaigns[id]
 	if !ok {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Campaign not found")
+		return
+	}
+	if !campaignVisible(camp, user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot access another advertiser's campaign")
 		return
 	}
 	identity.WriteJSON(w, http.StatusOK, camp)
@@ -448,6 +551,11 @@ func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid campaign data")
 		return
 	}
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -455,16 +563,12 @@ func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	campID := "camp-" + uuid.NewString()
 
-	advertiserID := "44444444-4444-4444-4444-444444444444"
-	if user := identity.GetUserFromContext(r.Context()); user != nil {
-		advertiserID = user.ID
-	}
 	campaign := &store.AdCampaign{
 		ID:               campID,
-		AdvertiserID:     advertiserID,
+		AdvertiserID:     user.ID,
 		Name:             payload.Name,
 		Format:           payload.Format,
-		Status:           "active", // Activated upon creation in demo/testing
+		Status:           "draft", // ARTICLE 7.1: review state machine, never auto-active
 		TotalBudgetCents: payload.TotalBudgetCents,
 		DailyBudgetCents: payload.DailyBudgetCents,
 		CpmBidCents:      payload.CpmBidCents,
@@ -490,7 +594,7 @@ func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 			DestinationURL:    payload.DestinationURL,
 			DurationSeconds:   15,
 			SkipOffsetSeconds: 5,
-			ReviewStatus:      "approved",
+			ReviewStatus:      "pending",
 			CreatedAt:         now,
 		}
 		h.Store.AdCreatives[creativeID] = creative
@@ -502,9 +606,14 @@ func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateCampaignStatus(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	var payload struct {
-		Status string `json:"status"` // active, paused, archived
+		Status string `json:"status"` // ARTICLE 7.1 state machine
 	}
 	_ = json.NewDecoder(r.Body).Decode(&payload)
 
@@ -516,20 +625,57 @@ func (h *Handler) UpdateCampaignStatus(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Campaign not found")
 		return
 	}
-	camp.Status = payload.Status
+	if !campaignVisible(camp, user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot modify another advertiser's campaign")
+		return
+	}
+	target := strings.ToLower(strings.TrimSpace(payload.Status))
+	if target == "" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Status is required")
+		return
+	}
+	if target == camp.Status {
+		identity.WriteJSON(w, http.StatusOK, camp)
+		return
+	}
+	if _, known := adStatusTransitions[target]; !known {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Unknown campaign status")
+		return
+	}
+	if !transitionAllowed(camp.Status, target) {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_TRANSITION", "Status transition not allowed from "+camp.Status)
+		return
+	}
+	if !isPlatformAdmin(user) && !advertiserTargets[target] {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only platform admins may set status "+target)
+		return
+	}
+	camp.Status = target
 	identity.WriteJSON(w, http.StatusOK, camp)
 }
 
 func (h *Handler) GetAdvertiserReports(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	totalImpressions := int64(0)
 	totalClicks := int64(0)
 	totalSpend := int64(0)
-	var campaignSummaries []map[string]interface{}
+	activeCount := 0
+	campaignSummaries := make([]map[string]interface{}, 0)
 
 	for _, camp := range h.Store.Campaigns {
+		if !campaignVisible(camp, user) {
+			continue
+		}
+		if camp.Status == "active" {
+			activeCount++
+		}
 		totalImpressions += camp.Impressions
 		totalClicks += camp.Clicks
 		totalSpend += camp.SpentCents
@@ -562,7 +708,7 @@ func (h *Handler) GetAdvertiserReports(w http.ResponseWriter, r *http.Request) {
 			"total_impressions": totalImpressions,
 			"total_clicks":      totalClicks,
 			"overall_ctr_pct":   overallCtr,
-			"active_campaigns":  len(h.Store.Campaigns),
+			"active_campaigns":  activeCount,
 		},
 		"campaigns": campaignSummaries,
 	})
@@ -584,6 +730,7 @@ func (h *Handler) ListCreatives(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ApproveCreative(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -594,11 +741,24 @@ func (h *Handler) ApproveCreative(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.ReviewStatus = "approved"
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   actorID(user),
+		"action":    "APPROVE_AD_CREATIVE",
+		"target":    id,
+		"ip":        r.RemoteAddr,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
 	identity.WriteJSON(w, http.StatusOK, c)
 }
 
 func (h *Handler) RejectCreative(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
+	var payload struct {
+		Reason string `json:"reason"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&payload)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -608,5 +768,21 @@ func (h *Handler) RejectCreative(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.ReviewStatus = "rejected"
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   actorID(user),
+		"action":    "REJECT_AD_CREATIVE",
+		"target":    id,
+		"reason":    payload.Reason,
+		"ip":        r.RemoteAddr,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
 	identity.WriteJSON(w, http.StatusOK, c)
+}
+
+func actorID(user *store.User) string {
+	if user == nil {
+		return "unknown"
+	}
+	return user.ID
 }

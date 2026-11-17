@@ -46,6 +46,13 @@ func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Video not found")
 		return
 	}
+	// P0-4: private videos are hidden from non-owners; members-only metadata
+	// stays public while playback itself is gated.
+	user := identity.GetUserFromContext(r.Context())
+	if ClassifyViewAccess(user, video, h.Store.Channels) == ViewHide {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Video not found")
+		return
+	}
 
 	identity.WriteJSON(w, http.StatusOK, video)
 }
@@ -58,21 +65,39 @@ func (h *Handler) GetPlayback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// P0-4: enforce visibility/entitlement before issuing any playback grant.
+	user := identity.GetUserFromContext(r.Context())
+	switch ClassifyViewAccess(user, video, h.Store.Channels) {
+	case ViewHide:
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Video not found")
+		return
+	case ViewDeny:
+		identity.WriteError(w, r, http.StatusForbidden, "UPGRADE_REQUIRED", "Membership is required to play this video")
+		return
+	}
+
+	token, err := SignPlaybackToken(video.ID, PlaybackTokenTTL)
+	if err != nil {
+		identity.WriteError(w, r, http.StatusInternalServerError, "UNAVAILABLE", "Playback is temporarily unavailable")
+		return
+	}
+
 	// Increment view count
 	video.ViewCount++
 
 	playback := map[string]interface{}{
-		"video_id":        video.ID,
-		"title":           video.Title,
-		"hls_master_url":  video.HlsMasterURL,
-		"duration":        video.DurationSeconds,
-		"sources":         video.Sources,
-		"chapters":        video.Chapters,
-		"captions":        video.Captions,
-		"playback_token":  "pb_token_" + video.ID,
-		"ad_break_points": []int{180, 420}, // Ad cues in seconds
-		"is_members_only": video.Visibility == "members_only",
-		"has_access":      true,
+		"video_id":         video.ID,
+		"title":            video.Title,
+		"hls_master_url":   video.HlsMasterURL,
+		"duration":         video.DurationSeconds,
+		"sources":          video.Sources,
+		"chapters":         video.Chapters,
+		"captions":         video.Captions,
+		"playback_token":   token,
+		"token_expires_in": int64(PlaybackTokenTTL.Seconds()),
+		"ad_break_points":  []int{180, 420}, // Ad cues in seconds
+		"is_members_only":  video.Visibility == "members_only",
+		"has_access":       true,
 	}
 
 	identity.WriteJSON(w, http.StatusOK, playback)

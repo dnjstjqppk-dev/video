@@ -4,6 +4,7 @@
 - **브랜드:** StreamVerse (법인: Booking Network Co., Ltd. / Master Directive `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001`)
 - **판정:** 상용 불가 (COMMERCIAL NO-GO) — 아키텍처 테스트베드 + 프로토타입 단계. `docs/audits/COMMERCIAL_REMEDIATION_AUDIT.md`의 NO-GO 판정을 유지한다.
 - **분류 기준:** `IMPLEMENTED / PARTIAL / MOCK / BROKEN / MISSING / UNVERIFIED` (Master Directive ARTICLE 1)
+- **2026-11-17 remediated:** P0-3 결제 fail-closed, P0-8 광고 인증·테넌트 격리, P0-4 재생 서명·가시성 (조회수 중복 제거·지역/연령 검사는 잔여). 상세 §4.4/§4.5/§4.6의 `FIXED 2026-11-17` 표기 및 §6 참조.
 
 ---
 
@@ -75,8 +76,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### 4.4 재생·시청 — PARTIAL
 
-- `GET /v1/videos/{id}/playback`: IMPLEMENTED이나 `pb_token_<id>` **무서명 토큰**, 가시성/회원권/지역 검사가 없고 `has_access` 상시 true (`videos/handler.go`) → **P0**.
-- 조회수 증가가 재생 API와 분석 이벤트(`valid_view`)에서 **중복 가산**되고 중복 제거 없음 → P1.
+- `GET /v1/videos/{id}/playback`: **FIXED 2026-11-17** — HMAC-SHA256 서명 토큰(`v1.<b64id>.<exp>.<sig>`, 1h, 영상 바인딩) 발급 + private(비소유 404)·members_only(미자격 403) 검사 (`videos/playback_token.go`, `videos/visibility.go`). 지역/연령 검사는 정책 데이터 부재로 잔여.
+- 조회수 증가가 재생 API와 분석 이벤트(`valid_view`)에서 **중복 가산**되고 중복 제거 없음 → P1 (P0-4 잔여, P1-14에서 처리).
 - HLS 서명·AES-128 키 발급·Widevine/FairPlay: MISSING (문서만 존재).
 
 ### 4.5 광고 (최상위 P0 비즈니스 요구) — PARTIAL
@@ -88,16 +89,15 @@ browser -> console workers (web/studio/partners/admin, /api)
 - **MISSING:** 시청 페이지 프리롤/미드롤 연동 (watch 페이지에 광고 호출 전무), 소재 파일의 실제 스토리지 업로드·검수 파이프라인,
   예약형 강제 배정 검증 모드, 노출 조건 정의(플레이어 수신≠노출) 강제, 빈도 제한 집행 확인, E2E(등록→심사→송출→집계) 실증.
 - 노출 이벤트가 마운트 시점에 무조건 발사되어 유효 노출 정의 미달 소지: P1.
-- **P0 인증 구멍 (2026-11-16 라우트 감사):** `/v1/ads/*`와 `/v1/advertiser/*` 마운트 전체가 무인증이라
-  캠페인 생성·상태 변경·리포트·소재 승인/거절을 누구나 호출할 수 있다 (`ads/handler.go`에 가드 전무).
-  생성 시 상태 `active` + 소재 `approved` 자동 부여, 광고주 스코프 없음(전 캠페인 열람), 동일 핸들러 중복 마운트.
+- **P0 인증 구멍: FIXED 2026-11-17** — `/v1/ads/*`·`/v1/advertiser/*` 캠페인/리포트/미리보기는 광고주 역할 게이트 + 광고주 스코프 격리, `/v1/ads/admin/*`는 플랫폼 관리자 게이트.
+  생성 시 `draft` + 소재 `pending` (ARTICLE 7.1 상태머신 강제), 승인/거절 감사 로그 기록, `/advertiser` 전용 라우터로 중복 마운트 해소(143→137라우트).
   상세: [ROUTE_CENSUS.md](api/ROUTE_CENSUS.md) ads/advertiser 그룹.
 
 ### 4.6 결제·정산 — PARTIAL + P0 FAIL-OPEN 1건
 
 - Stripe Checkout Sessions 실 API + Toss 승인 실 API + 웹훅 HMAC 검증 + 멱등키 + 복식부기 원장: IMPLEMENTED (`payments/*`).
-- **P0 FAIL-OPEN:** Toss 시크릿 미설정 시 검증을 건너뛰고 `succeeded`로 확정한다 (`payments/handler.go` `ConfirmPayment`).
-  시크릿 없으면 결제를 거부하는 fail-closed로 즉시 수정해야 한다.
+- **P0 FAIL-OPEN: FIXED 2026-11-17** — `ConfirmPayment`가 미구성 프로바이더(503)·미지정 프로바이더(400)·금액 불일치(409)를 거부하고,
+  Toss(DONE + 금액 일치 확인)와 Stripe(Checkout Session `paid` + 금액/통화/트랜잭션 바인딩 확인)를 서버에서 실검증한다 (`payments/handler.go`, `payments/stripe.go`).
 - 환불·차지백·분쟁·정산 배치 실행·실지급(Bank/PG payout): MISSING 또는 UNVERIFIED.
 - KRW `amount_cents` 혼용 여부: UNVERIFIED (통화 최소단위 정책 점검 필요).
 
@@ -119,7 +119,7 @@ browser -> console workers (web/studio/partners/admin, /api)
 - `POST /v1/events/analytics`: 수락 + 인메모리 조회수++ 만 수행. `event_id` 중복 제거·NATS 발행·ClickHouse 적재 없음 (`events/handler.go`).
 - Go API와 워커 6종에 NATS/Valkey/ClickHouse/OpenSearch 클라이언트 의존성이 **전무** (`go.mod` 전수 확인) — compose의 해당 서비스는 미접속 장식물이다.
 - 추천/검색: 인메모리 필터·페이지네이션만. 랭킹·OpenSearch 색인·Valkey 캐시·자동완성 실랭킹 없음.
-- **P0 개인정보 유출:** 검색이 가시성 필터 없이 private/unlisted 영상까지 반환한다 (`recommendations/handler.go` `Search`).
+- **P0 개인정보 유출: FIXED 2026-11-17** — 검색·자동완성이 private/unlisted을 제외하고 members_only는 유자격자에게만 반환한다 (`recommendations/handler.go` + `videos.SearchVisible`).
 - 피드백 API는 저장 없이 `"recorded"` 가짜 성공, 검색어 제안은 빈 결과에 하드코딩 제안 반환: P1.
 - 관리자 대시보드 API에 하드코딩 지표(`activeUsersToday: 1240`, `totalAdRevenueKrw: 18450000`) 혼재: P1.
 - `comments`·`copyright`·`moderation`·`settlements` 패키지의 `Routes()`는 마운트되지 않은 데드 코드 (main.go가 메서드 직접 배선): P2 정리 대상.
@@ -152,13 +152,13 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 1. **이중 스키마 해소 + 영속 저장 완성** (ARTICLE 2.2): `InitSchema` 간이 DDL 삭제, 마이그레이션 75테이블을 기준으로 Repository/Service/Tx 계층 구현, 전 도메인 PG 연결, 부팅 시 읽기, 재시작 내구성 검증.
 2. **진짜 트랜스코딩** (ARTICLE 2.3): ffprobe 실측 → 디스패치에 메타 전달 → 워커에서 ffmpeg 실실행(HLS ladder·썸네일·자막·챕터) → R2 업로드 → 실패 시 FAILED + 재시도/DLQ. `REQUIRE_PROBED_SOURCE=true`를 기본으로.
-3. **결제 fail-open 제거** (ARTICLE 2.4): Toss/Stripe 시크릿 없으면 `ConfirmPayment` 거부. 환불·웹훅 재조정·원장 정합 테스트 추가.
-4. **재생·검색 권한 검사** (ARTICLE 16): HMAC 서명 playback 토큰(1h, 경로 바인딩) + 가시성/회원권/지역/연령 검사 + 유효 조회수 정의·중계복 제거 + 검색 가시성 필터(private/unlisted 제외).
+3. **결제 fail-open 제거** (ARTICLE 2.4): ~~Toss/Stripe 시크릿 없으면 `ConfirmPayment` 거부~~ **DONE 2026-11-17** (목 테스트 8건). 환불·웹훅 재조정·원장 정합 테스트는 P1-17 잔여.
+4. **재생·검색 권한 검사** (ARTICLE 16): ~~HMAC 서명 playback 토큰(1h, 경로 바인딩) + 가시성/회원권 검사 + 검색 가시성 필터~~ **DONE 2026-11-17** (목 테스트 9건). 지역/연령 검사·유효 조회수 정의·중계복 제거는 잔여 (P1-14).
 5. **광고 E2E 실증** (ARTICLE 7): 소재 실업로드 → 심사 → 승인 → 인벤토리 → 결정 → **시청 프리롤 렌더링** → 유효 노출 집계 → 광고주 대시보드 전 구간 테스트 통과.
 6. **운영 인증 전환**: ZITADEL 실테넌트 발급 + 4콘솔/모바일 클라이언트 등록 + `GVP_ENV=production`, 개발 토큰 완전 차단 검증.
 7. **관리자 MFA + 민감 작업 재인증 + 감사 무결성** (ARTICLE 2.1/9).
-8. **광고 서피스 인증·테넌트 격리** (ARTICLE 2.1/7): `/v1/ads`·`/v1/advertiser` 마운트에 인증/역할/광고주 스코프 강제,
-   생성 시 자동 승인 제거(DRAFT→심사 상태머신), 중복 마운트 해소, 승인/거절 감사 로그.
+8. **광고 서피스 인증·테넌트 격리** (ARTICLE 2.1/7): ~~`/v1/ads`·`/v1/advertiser` 마운트에 인증/역할/광고주 스코프 강제,
+   생성 시 자동 승인 제거(DRAFT→심사 상태머신), 중복 마운트 해소, 승인/거절 감사 로그~~ **DONE 2026-11-17** (목 테스트 6건 + E2E 상태머신).
 
 ### P1 — 상용 핵심
 
@@ -199,3 +199,5 @@ browser -> console workers (web/studio/partners/admin, /api)
 - `docs/operations/RUNBOOK_AND_DR.md`: 현행 호스팅 주의문 추가.
 - `docs/operations/OIDC_SETUP.md`: 현 배포의 개발 토큰 상태 주의문 추가.
 - 감사 보고서 2종은 역사 기록이므로 수정하지 않았다.
+- **2026-11-17 P0-3/P0-8/P0-4 수정분:** `docs/api/ROUTE_CENSUS.md` + `routes.json` + `openapi/gvp-v1.yaml`을 chi 실측 137라우트로 재생성(HOLE 0건).
+  증거: Go 25pkg + 워커 6 + 통합 1 그린, 계약/OWASP 9/9, Playwright 4/4(로컬 18086), 신규 목 테스트 23건(결제 8·광고 6·재생/검색 9).

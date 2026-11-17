@@ -2,7 +2,7 @@
 """Generate the API route census and synchronize the OpenAPI specification.
 
 Inputs (all committed, reviewable):
-  1. ROUTES below: chi.Walk dump of services/api (2026-11-16, 143 routes).
+  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 137 routes).
      Refresh: temporarily add a chi.Walk test in services/api/cmd/server,
      run `go test ./cmd/server/ -run TestZZDumpRoutes -v`, paste, delete.
   2. tests/openapi/gvp-v1.yaml: 23 hand-detailed paths + components.
@@ -27,7 +27,7 @@ ROUTES_JSON = ROOT / "docs" / "api" / "routes.json"
 OPENAPI = ROOT / "openapi" / "gvp-v1.yaml"
 
 # ---------------------------------------------------------------------------
-# 1. Verified route dump (chi.Walk, 2026-11-16). `/*/` is chi's mount artifact
+# 1. Verified route dump (chi.Walk, 2026-11-17). `/*/` is chi's mount artifact
 #    for the users router mounted at "/": the real paths are `/v1/me...`.
 # ---------------------------------------------------------------------------
 ROUTES_RAW = """
@@ -40,8 +40,8 @@ GET /v1/admin/finance/settlements
 GET /v1/admin/finance/summary
 GET /v1/admin/moderation
 POST /v1/admin/moderation/{id}/resolve
-GET /v1/admin/policies/
 PATCH /v1/admin/policies/
+GET /v1/admin/policies/
 PATCH /v1/admin/policies/flags/{key}
 GET /v1/admin/audit-logs
 GET /v1/admin/dashboard
@@ -60,12 +60,6 @@ POST /v1/ads/decision
 POST /v1/ads/events
 POST /v1/ads/preview
 GET /v1/ads/reports
-GET /v1/advertiser/reports
-GET /v1/advertiser/admin/creatives
-POST /v1/advertiser/admin/creatives/{id}/approve
-POST /v1/advertiser/admin/creatives/{id}/reject
-GET /v1/advertiser/admin/diagnostics
-GET /v1/advertiser/advertiser/reports
 GET /v1/advertiser/campaigns
 POST /v1/advertiser/campaigns
 GET /v1/advertiser/campaigns/{id}
@@ -77,8 +71,8 @@ GET /v1/advertiser/reports
 POST /v1/channels/
 GET /v1/channels/{id}
 PATCH /v1/channels/{id}
-DELETE /v1/channels/{id}/subscribe
 POST /v1/channels/{id}/subscribe
+DELETE /v1/channels/{id}/subscribe
 GET /v1/channels/{id}/videos
 DELETE /v1/comments/{id}
 POST /v1/comments/{id}/heart
@@ -104,8 +98,8 @@ POST /v1/live-streams/{id}/superchat
 GET /v1/live-streams/{id}/superchats
 GET /v1/live-streams/{id}/ws
 POST /v1/moderation/reports
-POST /v1/partners/campaigns
 GET /v1/partners/campaigns
+POST /v1/partners/campaigns
 GET /v1/partners/rights/claims
 POST /v1/partners/rights/claims
 POST /v1/partners/rights/claims/{id}/dispute
@@ -124,8 +118,8 @@ POST /v1/payments/confirm
 GET /v1/payments/transactions
 POST /v1/payments/webhooks/{provider}
 POST /v1/playlists/
-PATCH /v1/playlists/{id}
 GET /v1/playlists/{id}
+PATCH /v1/playlists/{id}
 POST /v1/playlists/{id}/items
 GET /v1/search
 GET /v1/search/suggestions
@@ -146,19 +140,19 @@ PUT /v1/uploads/{id}/chunks/{partNumber}
 POST /v1/uploads/{id}/complete
 POST /v1/uploads/{id}/parts
 GET /v1/uploads/{id}/status
-POST /v1/videos/{id}/comments
 GET /v1/videos/{id}/comments
-GET /v1/videos/{id}
+POST /v1/videos/{id}/comments
 PATCH /v1/videos/{id}
 DELETE /v1/videos/{id}
+GET /v1/videos/{id}
 GET /v1/videos/{id}/captions
 POST /v1/videos/{id}/captions
 DELETE /v1/videos/{id}/captions/{capId}
 POST /v1/videos/{id}/like
 DELETE /v1/videos/{id}/like
 GET /v1/videos/{id}/playback
-GET /v1/*/me
 PATCH /v1/*/me
+GET /v1/*/me
 GET /v1/*/me/blocked-users
 POST /v1/*/me/blocked-users
 DELETE /v1/*/me/blocked-users/{targetId}
@@ -176,11 +170,11 @@ POST /v1/*/me/sessions/{id}/revoke
 GET /v1/*/me/strikes
 """
 
-# Routes that intentionally serve unauthenticated traffic (audited 2026-11-16).
+# Routes that intentionally serve unauthenticated traffic (audited 2026-11-17).
 PUBLIC = {
     ("GET", "/healthz"), ("GET", "/ready"), ("GET", "/metrics"),
-    ("POST", "/v1/ads/decision"), ("POST", "/v1/ads/events"), ("POST", "/v1/ads/preview"),
-    ("POST", "/v1/advertiser/decision"), ("POST", "/v1/advertiser/events"), ("POST", "/v1/advertiser/preview"),
+    ("POST", "/v1/ads/decision"), ("POST", "/v1/ads/events"),
+    ("POST", "/v1/advertiser/decision"), ("POST", "/v1/advertiser/events"),
     ("POST", "/v1/events/analytics"),
     ("GET", "/v1/feed/home"), ("GET", "/v1/feed/shorts"),
     ("GET", "/v1/feed/subscriptions"), ("POST", "/v1/feed/feedback"),
@@ -195,8 +189,17 @@ PUBLIC = {
     ("POST", "/v1/payments/webhooks/{provider}"),
 }
 
-# (method, path-prefix) -> role guard, in match order (audited 2026-11-16).
+# (method, path-prefix) -> role guard, in match order (audited 2026-11-17).
 ROLE_RULES = [
+    ("/v1/ads/admin", "super_admin, platform_admin"),
+    ("/v1/ads/campaigns", "advertiser, partner_manager, platform_admin"),
+    ("/v1/ads/preview", "advertiser, partner_manager, platform_admin"),
+    ("/v1/ads/reports", "advertiser, partner_manager, platform_admin"),
+    ("/v1/ads/advertiser/reports", "advertiser, partner_manager, platform_admin"),
+    ("/v1/advertiser/campaigns", "advertiser, partner_manager, platform_admin"),
+    ("/v1/advertiser/preview", "advertiser, partner_manager, platform_admin"),
+    ("/v1/advertiser/reports", "advertiser, partner_manager, platform_admin"),
+    ("/v1/partners/campaigns", "advertiser, partner_manager, platform_admin"),
     ("/v1/admin/users", "super_admin, platform_admin (+support read on GET /users)"),
     ("/v1/admin/moderation", "super_admin, platform_admin, moderator, support_agent"),
     ("/v1/admin/finance", "super_admin, platform_admin, finance_admin"),
@@ -208,16 +211,8 @@ ROLE_RULES = [
 ]
 
 # Known auth holes: public but must be guarded (P0 backlog, IMPLEMENTATION_STATUS).
-HOLES = {
-    "/v1/ads/campaigns", "/v1/ads/campaigns/{id}", "/v1/ads/campaigns/{id}/status",
-    "/v1/ads/reports", "/v1/ads/advertiser/reports",
-    "/v1/ads/admin/creatives", "/v1/ads/admin/creatives/{id}/approve",
-    "/v1/ads/admin/creatives/{id}/reject", "/v1/ads/admin/diagnostics",
-    "/v1/advertiser/campaigns", "/v1/advertiser/campaigns/{id}", "/v1/advertiser/campaigns/{id}/status",
-    "/v1/advertiser/reports", "/v1/advertiser/advertiser/reports",
-    "/v1/advertiser/admin/creatives", "/v1/advertiser/admin/creatives/{id}/approve",
-    "/v1/advertiser/admin/creatives/{id}/reject", "/v1/advertiser/admin/diagnostics",
-}
+# P0-8 closed the ads/advertiser holes on 2026-11-17; the set stays for future audits.
+HOLES = set()
 
 GROUP_ORDER = ["ops", "me", "channels", "videos", "comments", "uploads", "feed",
                "search", "live", "studio", "partners", "ads", "advertiser",
@@ -319,7 +314,7 @@ def write_census_md(rows):
         by_group.setdefault(r["group"], []).append(r)
     out = ["# API Route Census (generated, chi.Walk verified)",
            "",
-           "Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-16, "
+           "Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, "
            f"{len(rows)} registrations). Generator: `python docs/generate_route_census.py` — do not hand-edit.",
            "",
            "Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·",

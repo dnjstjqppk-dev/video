@@ -335,21 +335,6 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /admin/policies/:
-    get:
-      tags: [admin]
-      summary: "Get admin policies"
-      operationId: GetAdminPolicies
-      x-census: {generated: true, detail: pending}
-      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
     patch:
       tags: [admin]
       summary: "Update admin policies"
@@ -362,6 +347,21 @@ paths:
           application/json:
             schema:
               type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [admin]
+      summary: "Get admin policies"
+      operationId: GetAdminPolicies
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin (+support read on GET))"
       responses:
         '200':
           description: Success
@@ -481,10 +481,14 @@ paths:
       summary: "Get ads admin creatives"
       operationId: GetAdsAdminCreatives
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(super_admin, platform_admin)"
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/admin/creatives/{id}/approve:
@@ -493,7 +497,7 @@ paths:
       summary: "Create ads admin creatives approve"
       operationId: CreateAdsAdminCreativesByIdApprove
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(super_admin, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -509,6 +513,10 @@ paths:
       responses:
         '201':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/admin/creatives/{id}/reject:
@@ -517,7 +525,7 @@ paths:
       summary: "Create ads admin creatives reject"
       operationId: CreateAdsAdminCreativesByIdReject
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(super_admin, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -533,6 +541,10 @@ paths:
       responses:
         '201':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/admin/diagnostics:
@@ -541,10 +553,14 @@ paths:
       summary: "Get ads admin diagnostics"
       operationId: GetAdsAdminDiagnostics
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(super_admin, platform_admin)"
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/advertiser/reports:
@@ -553,10 +569,14 @@ paths:
       summary: "Get ads advertiser reports"
       operationId: GetAdsAdvertiserReports
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/campaigns:
@@ -565,10 +585,14 @@ paths:
       summary: "Get ads campaigns"
       operationId: GetAdsCampaigns
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -576,7 +600,7 @@ paths:
       summary: "Create ads campaigns"
       operationId: CreateAdsCampaigns
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       requestBody:
         required: true
         content:
@@ -586,13 +610,17 @@ paths:
       responses:
         '201':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /ads/campaigns/{id}:
     get:
       tags: [ads]
       summary: "Get ads campaigns"
       operationId: GetAdsCampaignsById
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -602,6 +630,10 @@ paths:
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/campaigns/{id}/status:
@@ -610,7 +642,7 @@ paths:
       summary: "Update ads campaigns status"
       operationId: UpdateAdsCampaignsByIdStatus
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -626,6 +658,10 @@ paths:
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /ads/decision:
@@ -666,7 +702,7 @@ paths:
       summary: "Create ads preview"
       operationId: CreateAdsPreview
       x-census: {generated: true, detail: pending}
-      x-auth: "Public"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       requestBody:
         required: true
         content:
@@ -676,112 +712,24 @@ paths:
       responses:
         '201':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /ads/reports:
     get:
       tags: [ads]
       summary: "Get ads reports"
       operationId: GetAdsReports
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       responses:
         '200':
           description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /advertiser/reports:
-    get:
-      tags: [advertiser]
-      summary: "Get advertiser reports"
-      operationId: GetAdvertiserReports
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /advertiser/admin/creatives:
-    get:
-      tags: [advertiser]
-      summary: "Get advertiser admin creatives"
-      operationId: GetAdvertiserAdminCreatives
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /advertiser/admin/creatives/{id}/approve:
-    post:
-      tags: [advertiser]
-      summary: "Create advertiser admin creatives approve"
-      operationId: CreateAdvertiserAdminCreativesByIdApprove
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /advertiser/admin/creatives/{id}/reject:
-    post:
-      tags: [advertiser]
-      summary: "Create advertiser admin creatives reject"
-      operationId: CreateAdvertiserAdminCreativesByIdReject
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /advertiser/admin/diagnostics:
-    get:
-      tags: [advertiser]
-      summary: "Get advertiser admin diagnostics"
-      operationId: GetAdvertiserAdminDiagnostics
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /advertiser/advertiser/reports:
-    get:
-      tags: [advertiser]
-      summary: "Get advertiser advertiser reports"
-      operationId: GetAdvertiserAdvertiserReports
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
-      responses:
-        '200':
-          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /advertiser/campaigns:
@@ -790,10 +738,14 @@ paths:
       summary: "Get advertiser campaigns"
       operationId: GetAdvertiserCampaigns
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -801,7 +753,7 @@ paths:
       summary: "Create advertiser campaigns"
       operationId: CreateAdvertiserCampaigns
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       requestBody:
         required: true
         content:
@@ -811,13 +763,17 @@ paths:
       responses:
         '201':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /advertiser/campaigns/{id}:
     get:
       tags: [advertiser]
       summary: "Get advertiser campaigns"
       operationId: GetAdvertiserCampaignsById
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -827,6 +783,10 @@ paths:
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /advertiser/campaigns/{id}/status:
@@ -835,7 +795,7 @@ paths:
       summary: "Update advertiser campaigns status"
       operationId: UpdateAdvertiserCampaignsByIdStatus
       x-census: {generated: true, detail: pending}
-      x-auth: "Public HOLE: guard required (P0)"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -851,6 +811,10 @@ paths:
       responses:
         '200':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /advertiser/decision:
@@ -891,7 +855,7 @@ paths:
       summary: "Create advertiser preview"
       operationId: CreateAdvertiserPreview
       x-census: {generated: true, detail: pending}
-      x-auth: "Public"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       requestBody:
         required: true
         content:
@@ -901,6 +865,26 @@ paths:
       responses:
         '201':
           description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /advertiser/reports:
+    get:
+      tags: [advertiser]
+      summary: "Get advertiser reports"
+      operationId: GetAdvertiserReports
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /channels/:
     post:
       tags: [channels]
@@ -920,25 +904,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /channels/{id}/subscribe:
-    delete:
-      tags: [channels]
-      summary: "Delete channels subscribe"
-      operationId: DeleteChannelsByIdSubscribe
-      x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
     post:
       tags: [channels]
       summary: "Create channels subscribe"
@@ -959,6 +924,25 @@ paths:
               type: object
       responses:
         '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [channels]
+      summary: "Delete channels subscribe"
+      operationId: DeleteChannelsByIdSubscribe
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -1416,12 +1400,27 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
   /partners/campaigns:
+    get:
+      tags: [partners]
+      summary: "Get partners campaigns"
+      operationId: GetPartnersCampaigns
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [partners]
       summary: "Create partners campaigns"
       operationId: CreatePartnersCampaigns
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Role(advertiser, partner_manager, platform_admin)"
       requestBody:
         required: true
         content:
@@ -1433,19 +1432,8 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
-    get:
-      tags: [partners]
-      summary: "Get partners campaigns"
-      operationId: GetPartnersCampaigns
-      x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
-      responses:
-        '200':
-          description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /partners/rights/claims:
     get:
       tags: [partners]
@@ -1742,6 +1730,23 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /playlists/{id}:
+    get:
+      tags: [playlists]
+      summary: "Get playlists"
+      operationId: GetPlaylistsById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [playlists]
       summary: "Update playlists"
@@ -1765,23 +1770,6 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    get:
-      tags: [playlists]
-      summary: "Get playlists"
-      operationId: GetPlaylistsById
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
         '404':
           $ref: '#/components/responses/NotFound'
   /playlists/{id}/items:
@@ -1940,6 +1928,23 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   /videos/{id}/comments:
+    get:
+      tags: [videos]
+      summary: "Get videos comments"
+      operationId: GetVideosByIdComments
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [videos]
       summary: "Create videos comments"
@@ -1965,41 +1970,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-    get:
-      tags: [videos]
-      summary: "Get videos comments"
-      operationId: GetVideosByIdComments
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
   /videos/{id}:
-    get:
-      tags: [videos]
-      summary: "Get videos"
-      operationId: GetVideosById
-      x-census: {generated: true, detail: pending}
-      x-auth: "Public"
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '404':
-          $ref: '#/components/responses/NotFound'
     patch:
       tags: [videos]
       summary: "Update videos"
@@ -2042,6 +2013,23 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [videos]
+      summary: "Get videos"
+      operationId: GetVideosById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Public"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
         '404':
           $ref: '#/components/responses/NotFound'
   /videos/{id}/captions/{capId}:

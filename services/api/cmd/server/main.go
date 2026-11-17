@@ -185,8 +185,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 
 		// Ad Server, Decision Engine & Diagnostics (ARTICLE 6 & 7)
 		v1.Mount("/ads", adsH.Routes(authMiddleware))
-		v1.Mount("/advertiser", adsH.Routes(authMiddleware))
-		v1.Get("/advertiser/reports", adsH.GetAdvertiserReports)
+		v1.Mount("/advertiser", adsH.AdvertiserRoutes(authMiddleware))
 
 		// Studio
 		v1.Mount("/studio", studioH.Routes(authMiddleware))
@@ -195,8 +194,8 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 
 		// Partners
 		v1.Mount("/partners", partnerH.Routes(authMiddleware))
-		v1.With(authMiddleware.RequireAuth).Get("/partners/campaigns", adsH.ListCampaigns)
-		v1.With(authMiddleware.RequireAuth).Post("/partners/campaigns", adsH.CreateCampaign)
+		v1.With(authMiddleware.RequireRole("advertiser", "partner_manager", "platform_admin")).Get("/partners/campaigns", adsH.ListCampaigns)
+		v1.With(authMiddleware.RequireRole("advertiser", "partner_manager", "platform_admin")).Post("/partners/campaigns", adsH.CreateCampaign)
 		v1.With(authMiddleware.RequireAuth).Get("/partners/settlements", settleH.GetSettlements)
 		v1.With(authMiddleware.RequireAuth).Get("/partners/settlements/earnings-summary", settleH.GetEarnings)
 		v1.With(authMiddleware.RequireAuth).Post("/partners/settlements/payout", settleH.RequestPayout)

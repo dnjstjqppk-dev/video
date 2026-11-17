@@ -1,6 +1,6 @@
 # API Route Census (generated, chi.Walk verified)
 
-Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-16, 143 registrations). Generator: `python docs/generate_route_census.py` — do not hand-edit.
+Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 137 registrations). Generator: `python docs/generate_route_census.py` — do not hand-edit.
 
 Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·
 **HOLE** is public but must be guarded (P0). `/v1/*/` in chi output is the users-router mount artifact
@@ -18,8 +18,8 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/me` | Auth | chi renders `/v1/*/me` |
 | `PATCH` | `/v1/me` | Auth | chi renders `/v1/*/me` |
+| `GET` | `/v1/me` | Auth | chi renders `/v1/*/me` |
 | `GET` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
 | `POST` | `/v1/me/blocked-users` | Auth | chi renders `/v1/*/me/blocked-users` |
 | `DELETE` | `/v1/me/blocked-users/{targetId}` | Auth | chi renders `/v1/*/me/blocked-users/{targetId}` |
@@ -43,19 +43,19 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/channels/` | Auth | trailing-slash route |
 | `GET` | `/v1/channels/{id}` | Public |  |
 | `PATCH` | `/v1/channels/{id}` | Auth |  |
-| `DELETE` | `/v1/channels/{id}/subscribe` | Auth |  |
 | `POST` | `/v1/channels/{id}/subscribe` | Auth |  |
+| `DELETE` | `/v1/channels/{id}/subscribe` | Auth |  |
 | `GET` | `/v1/channels/{id}/videos` | Public |  |
 
 ## videos (11)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/v1/videos/{id}/comments` | Auth |  |
 | `GET` | `/v1/videos/{id}/comments` | Public |  |
-| `GET` | `/v1/videos/{id}` | Public |  |
+| `POST` | `/v1/videos/{id}/comments` | Auth |  |
 | `PATCH` | `/v1/videos/{id}` | Auth |  |
 | `DELETE` | `/v1/videos/{id}` | Auth |  |
+| `GET` | `/v1/videos/{id}` | Public |  |
 | `GET` | `/v1/videos/{id}/captions` | Auth |  |
 | `POST` | `/v1/videos/{id}/captions` | Auth |  |
 | `DELETE` | `/v1/videos/{id}/captions/{capId}` | Auth |  |
@@ -135,8 +135,8 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/v1/partners/campaigns` | Auth |  |
-| `GET` | `/v1/partners/campaigns` | Auth |  |
+| `GET` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `POST` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/partners/rights/claims` | Auth |  |
 | `POST` | `/v1/partners/rights/claims` | Auth |  |
 | `POST` | `/v1/partners/rights/claims/{id}/dispute` | Auth |  |
@@ -155,38 +155,32 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/ads/admin/creatives` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `POST` | `/v1/ads/admin/creatives/{id}/approve` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `POST` | `/v1/ads/admin/creatives/{id}/reject` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/ads/admin/diagnostics` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/ads/advertiser/reports` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/ads/campaigns` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `POST` | `/v1/ads/campaigns` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/ads/campaigns/{id}` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `PATCH` | `/v1/ads/campaigns/{id}/status` | Public HOLE: guard required (P0) | P0: no auth guard |
+| `GET` | `/v1/ads/admin/creatives` | Role(super_admin, platform_admin) |  |
+| `POST` | `/v1/ads/admin/creatives/{id}/approve` | Role(super_admin, platform_admin) |  |
+| `POST` | `/v1/ads/admin/creatives/{id}/reject` | Role(super_admin, platform_admin) |  |
+| `GET` | `/v1/ads/admin/diagnostics` | Role(super_admin, platform_admin) |  |
+| `GET` | `/v1/ads/advertiser/reports` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `POST` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/ads/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
+| `PATCH` | `/v1/ads/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/ads/decision` | Public |  |
 | `POST` | `/v1/ads/events` | Public |  |
-| `POST` | `/v1/ads/preview` | Public |  |
-| `GET` | `/v1/ads/reports` | Public HOLE: guard required (P0) | P0: no auth guard |
+| `POST` | `/v1/ads/preview` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/ads/reports` | Role(advertiser, partner_manager, platform_admin) |  |
 
-## advertiser (14)
+## advertiser (8)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/advertiser/reports` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/advertiser/admin/creatives` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `POST` | `/v1/advertiser/admin/creatives/{id}/approve` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `POST` | `/v1/advertiser/admin/creatives/{id}/reject` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/advertiser/admin/diagnostics` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/advertiser/advertiser/reports` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/advertiser/campaigns` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `POST` | `/v1/advertiser/campaigns` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `GET` | `/v1/advertiser/campaigns/{id}` | Public HOLE: guard required (P0) | P0: no auth guard |
-| `PATCH` | `/v1/advertiser/campaigns/{id}/status` | Public HOLE: guard required (P0) | P0: no auth guard |
+| `GET` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `POST` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/advertiser/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
+| `PATCH` | `/v1/advertiser/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/advertiser/decision` | Public |  |
 | `POST` | `/v1/advertiser/events` | Public |  |
-| `POST` | `/v1/advertiser/preview` | Public |  |
-| `GET` | `/v1/advertiser/reports` | Public HOLE: guard required (P0) | DUPLICATE registration (mount + explicit); P0: no auth guard |
+| `POST` | `/v1/advertiser/preview` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/advertiser/reports` | Role(advertiser, partner_manager, platform_admin) |  |
 
 ## admin (13)
 
@@ -198,8 +192,8 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/admin/finance/summary` | Role(super_admin, platform_admin, finance_admin) |  |
 | `GET` | `/v1/admin/moderation` | Role(super_admin, platform_admin, moderator, support_agent) |  |
 | `POST` | `/v1/admin/moderation/{id}/resolve` | Role(super_admin, platform_admin, moderator, support_agent) |  |
-| `GET` | `/v1/admin/policies/` | Role(super_admin, platform_admin (+support read on GET)) | trailing-slash route |
 | `PATCH` | `/v1/admin/policies/` | Role(super_admin, platform_admin (+support read on GET)) | trailing-slash route |
+| `GET` | `/v1/admin/policies/` | Role(super_admin, platform_admin (+support read on GET)) | trailing-slash route |
 | `PATCH` | `/v1/admin/policies/flags/{key}` | Role(super_admin, platform_admin (+support read on GET)) |  |
 | `GET` | `/v1/admin/audit-logs` | Role(super_admin, platform_admin, finance_admin, moderator, support_agent) |  |
 | `GET` | `/v1/admin/dashboard` | Role(super_admin, platform_admin, finance_admin, moderator, support_agent) |  |
@@ -220,8 +214,8 @@ for real paths `/v1/me...`.
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/v1/playlists/` | Auth | trailing-slash route |
-| `PATCH` | `/v1/playlists/{id}` | Auth |  |
 | `GET` | `/v1/playlists/{id}` | Public |  |
+| `PATCH` | `/v1/playlists/{id}` | Auth |  |
 | `POST` | `/v1/playlists/{id}/items` | Auth |  |
 
 ## subscriptions (3)
