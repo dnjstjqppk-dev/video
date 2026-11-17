@@ -6,14 +6,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"globalvideoplatform/services/api/internal/admin"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
 func newAdminTestServer() *httptest.Server {
+	srv, _ := newAdminTestServerWithStore()
+	return srv
+}
+
+func newAdminTestServerWithStore() (*httptest.Server, *store.MemoryStore) {
 	memStore := store.NewMemoryStore()
 	auth := &identity.AuthMiddleware{Store: memStore, AllowDevTokens: true}
 	handler := admin.NewHandler(memStore)
@@ -22,7 +29,20 @@ func newAdminTestServer() *httptest.Server {
 	r.Use(auth.Authenticate)
 	r.Mount("/admin", handler.Routes(auth))
 
-	return httptest.NewServer(r)
+	return httptest.NewServer(r), memStore
+}
+
+// enrollTestMFA enables TOTP for the seed super-admin and returns a fresh code.
+func enrollTestMFA(t *testing.T, s *store.MemoryStore) string {
+	t.Helper()
+	user := s.Users["11111111-1111-1111-1111-111111111111"]
+	user.MFAEnabled = true
+	user.TOTPSecret = "JBSWY3DPEHPK3PXP"
+	code, err := security.ComputeTOTP(user.TOTPSecret, time.Now())
+	if err != nil {
+		t.Fatalf("compute totp: %v", err)
+	}
+	return code
 }
 
 func adminReq(method, path, token string, body interface{}) (*http.Request, *httptest.ResponseRecorder) {
@@ -91,11 +111,18 @@ func TestListUsers_SuperAdminCanAccess(t *testing.T) {
 }
 
 func TestUpdateUserStatus_SuperAdminCanUpdate(t *testing.T) {
-	srv := newAdminTestServer()
+	srv, s := newAdminTestServerWithStore()
 	defer srv.Close()
 
 	userID := "22222222-2222-2222-2222-222222222222"
 	req, rec := adminReq(http.MethodPatch, "/admin/users/"+userID+"/status", "admin-token", map[string]string{"status": "suspended", "reason": "Policy violation"})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusPreconditionFailed {
+		t.Fatalf("expected 412 without MFA step-up, got %d", rec.Code)
+	}
+
+	code := enrollTestMFA(t, s)
+	req, rec = adminReq(http.MethodPatch, "/admin/users/"+userID+"/status", "admin-token", map[string]string{"status": "suspended", "reason": "Policy violation", "totpCode": code})
 	srv.Config.Handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {

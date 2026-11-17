@@ -11,8 +11,21 @@ import (
 	"testing"
 	"time"
 
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
+
+func enrollE2EAdminMFA(t *testing.T, memStore *store.MemoryStore) string {
+	t.Helper()
+	admin := memStore.Users["11111111-1111-1111-1111-111111111111"]
+	admin.MFAEnabled = true
+	admin.TOTPSecret = "JBSWY3DPEHPK3PXP"
+	code, err := security.ComputeTOTP(admin.TOTPSecret, time.Now())
+	if err != nil {
+		t.Fatalf("compute totp: %v", err)
+	}
+	return code
+}
 
 func TestAPIHealthzAndFeeds(t *testing.T) {
 	t.Setenv("GVP_ENV", "test")
@@ -475,10 +488,12 @@ func TestE2EAdLifecycleAndDeliveryLoop(t *testing.T) {
 		t.Fatalf("expected 200 for review submit, got %d: %s", submitRec.Code, submitRec.Body.String())
 	}
 
-	// 2. Creative Governance & Approval (ARTICLE 7.2 Step 5, P0-8: admin only)
+	// 2. Creative Governance & Approval (ARTICLE 7.2 Step 5, P0-8: admin only, P0-7: MFA step-up)
 	creativeID := createdCamp.Creatives[0]
-	apprReq := httptest.NewRequest(http.MethodPost, "/v1/ads/admin/creatives/"+creativeID+"/approve", nil)
+	stepUpCode := enrollE2EAdminMFA(t, memStore)
+	apprReq := httptest.NewRequest(http.MethodPost, "/v1/ads/admin/creatives/"+creativeID+"/approve", bytes.NewReader([]byte(`{"totpCode":"`+stepUpCode+`"}`)))
 	apprReq.Header.Set("Authorization", "Bearer admin-token")
+	apprReq.Header.Set("Content-Type", "application/json")
 	apprRec := httptest.NewRecorder()
 	router.ServeHTTP(apprRec, apprReq)
 	if apprRec.Code != http.StatusOK {

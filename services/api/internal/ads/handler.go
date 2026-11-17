@@ -732,6 +732,14 @@ func (h *Handler) ListCreatives(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ApproveCreative(w http.ResponseWriter, r *http.Request) {
 	user := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
+	var payload struct {
+		TOTPCode string `json:"totpCode"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&payload)
+	// P0-7: creative approvals require MFA step-up.
+	if !identity.RequireStepUp(w, r, user, payload.TOTPCode) {
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -756,9 +764,14 @@ func (h *Handler) RejectCreative(w http.ResponseWriter, r *http.Request) {
 	user := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
 	var payload struct {
-		Reason string `json:"reason"`
+		Reason   string `json:"reason"`
+		TOTPCode string `json:"totpCode"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&payload)
+	// P0-7: creative rejections require MFA step-up.
+	if !identity.RequireStepUp(w, r, user, payload.TOTPCode) {
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 

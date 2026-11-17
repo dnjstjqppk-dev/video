@@ -6,15 +6,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
 func TestModerationQueueAndResolve(t *testing.T) {
 	s := store.NewMemoryStore()
 	h := NewHandler(s)
-	auth := identity.NewAuthMiddleware(s)
+	auth := &identity.AuthMiddleware{Store: s, AllowDevTokens: true}
 	router := h.Routes(auth)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -24,13 +27,26 @@ func TestModerationQueueAndResolve(t *testing.T) {
 		t.Fatalf("expected 200 OK from moderation queue, got %d", rec.Code)
 	}
 
+	// P0-7: resolve requires an authenticated MFA step-up.
+	admin := s.Users["11111111-1111-1111-1111-111111111111"]
+	admin.MFAEnabled = true
+	admin.TOTPSecret = stepUpSecret
+	code, err := security.ComputeTOTP(stepUpSecret, time.Now())
+	if err != nil {
+		t.Fatalf("compute totp: %v", err)
+	}
 	resolveBody, _ := json.Marshal(map[string]string{
-		"action": "approve",
-		"notes":  "Verified safe content",
+		"action":   "approve",
+		"notes":    "Verified safe content",
+		"totpCode": code,
 	})
 	req2 := httptest.NewRequest(http.MethodPost, "/mod-case-1/resolve", bytes.NewReader(resolveBody))
+	req2.Header.Set("Authorization", "Bearer admin-token")
 	rec2 := httptest.NewRecorder()
-	router.ServeHTTP(rec2, req2)
+	authed := chi.NewRouter()
+	authed.Use(auth.Authenticate)
+	authed.Mount("/", router)
+	authed.ServeHTTP(rec2, req2)
 	if rec2.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK resolving moderation case, got %d", rec2.Code)
 	}

@@ -77,6 +77,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
+	actor := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
 	user, ok := h.Store.Users[id]
 	if !ok {
@@ -85,19 +86,29 @@ func (h *Handler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Status string `json:"status"` // active, suspended, banned
-		Reason string `json:"reason"`
+		Status   string `json:"status"` // active, suspended, banned
+		Reason   string `json:"reason"`
+		TOTPCode string `json:"totpCode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid payload")
 		return
 	}
 
+	// P0-7: account sanctions require MFA step-up.
+	if !identity.RequireStepUp(w, r, actor, payload.TOTPCode) {
+		return
+	}
+
 	user.IsActive = (payload.Status == "active")
 
 	// Audit log
+	actorID := "unknown"
+	if actor != nil {
+		actorID = actor.ID
+	}
 	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
-		"actorId":   "admin",
+		"actorId":   actorID,
 		"action":    "USER_STATUS_UPDATE",
 		"target":    id,
 		"reason":    payload.Reason,

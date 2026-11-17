@@ -65,9 +65,15 @@ func (h *Handler) UpdatePolicyConfig(w http.ResponseWriter, r *http.Request) {
 		MaxUploadSizeGB        *int64 `json:"max_upload_size_gb"`
 		MaxVideoDurationHours  *int   `json:"max_video_duration_hours"`
 		CreatorRevenueSharePct *int   `json:"creator_revenue_share_pct"`
+		TOTPCode               string `json:"totpCode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid policy payload")
+		return
+	}
+
+	// P0-7: platform policy changes require MFA step-up.
+	if !identity.RequireStepUp(w, r, user, payload.TOTPCode) {
 		return
 	}
 
@@ -118,10 +124,16 @@ func (h *Handler) UpdateFlag(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Enabled *bool `json:"enabled"`
+		Enabled  *bool  `json:"enabled"`
+		TOTPCode string `json:"totpCode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.Enabled == nil {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "enabled is required")
+		return
+	}
+
+	// P0-7: kill-switch toggles require MFA step-up.
+	if !identity.RequireStepUp(w, r, user, payload.TOTPCode) {
 		return
 	}
 

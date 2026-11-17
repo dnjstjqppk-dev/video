@@ -7,9 +7,52 @@
  *  - Surface 4 (Admin Console): User Status Sanction -> Trust & Safety Moderation Queue Resolution -> Immutable Audit Log Verification
  *  - Surface 5 (Security & Isolation): Unauthenticated Redirect, BOLA/IDOR Cross-Channel Mutation Block, Non-Admin Console Access Block
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
+import { createHmac } from 'node:crypto';
 
 const API_BASE_URL = process.env.GVP_API_URL || 'http://localhost:8080/v1';
+
+function base32Decode(input: string): Buffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const clean = input.toUpperCase().replace(/=+$/, '');
+  let bits = '';
+  for (const ch of clean) {
+    const val = alphabet.indexOf(ch);
+    if (val < 0) throw new Error('invalid base32 secret');
+    bits += val.toString(2).padStart(5, '0');
+  }
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+// RFC 6238 TOTP (SHA1, 30s period) mirroring services/api/internal/security/totp.go.
+function computeTotp(secret: string, atMs = Date.now()): string {
+  const key = base32Decode(secret);
+  const counter = Math.floor(atMs / 1000 / 30);
+  const buf = Buffer.alloc(8);
+  buf.writeBigUInt64BE(BigInt(counter));
+  const hmac = createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return String(code).padStart(6, '0');
+}
+
+// Enrolls TOTP for the given session through the real MFA endpoints.
+async function enrollMfa(request: APIRequestContext, headers: Record<string, string>): Promise<string> {
+  const setupRes = await request.post(`${API_BASE_URL}/me/mfa/setup`, { headers });
+  expect(setupRes.status()).toBe(200);
+  const setup = await setupRes.json();
+  expect(typeof setup.secret).toBe('string');
+  const verifyRes = await request.post(`${API_BASE_URL}/me/mfa/verify`, {
+    headers,
+    data: { code: computeTotp(setup.secret as string) },
+  });
+  expect(verifyRes.status()).toBe(200);
+  return setup.secret as string;
+}
 
 test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suite', () => {
   test('1. User Surface: Home Feed -> Watch HLS Manifest -> Subscribe -> Like -> Comment -> Shorts Feed', async ({ request }) => {
@@ -179,18 +222,24 @@ test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suit
     const forbiddenBody = await forbiddenRes.json();
     expect(forbiddenBody.error.code).toBe('FORBIDDEN_RESOURCE');
 
-    // 4.2 Super Admin sanctions user status
+    // 4.2 Super Admin enrolls MFA, then sanctions user status with step-up (P0-7)
     const adminHeaders = { Authorization: 'Bearer admin-token' };
-    const sanctionRes = await request.patch(`${API_BASE_URL}/admin/users/22222222-2222-2222-2222-222222222222/status`, {
+    const noMfaRes = await request.patch(`${API_BASE_URL}/admin/users/22222222-2222-2222-2222-222222222222/status`, {
       headers: adminHeaders,
       data: { status: 'active', reason: 'Periodic compliance verification passed' },
     });
+    expect(noMfaRes.status()).toBe(412);
+    const adminTotpSecret = await enrollMfa(request, adminHeaders);
+    const sanctionRes = await request.patch(`${API_BASE_URL}/admin/users/22222222-2222-2222-2222-222222222222/status`, {
+      headers: adminHeaders,
+      data: { status: 'active', reason: 'Periodic compliance verification passed', totpCode: computeTotp(adminTotpSecret) },
+    });
     expect(sanctionRes.status()).toBe(200);
 
-    // 4.3 Super Admin resolves Trust & Safety moderation case
+    // 4.3 Super Admin resolves Trust & Safety moderation case with step-up
     const modRes = await request.post(`${API_BASE_URL}/admin/moderation/mod-case-1/resolve`, {
       headers: adminHeaders,
-      data: { action: 'approve', notes: 'Fair use educational commentary verified' },
+      data: { action: 'approve', notes: 'Fair use educational commentary verified', totpCode: computeTotp(adminTotpSecret) },
     });
     expect(modRes.status()).toBe(200);
 

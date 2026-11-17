@@ -49,6 +49,7 @@ func (h *Handler) ListQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ResolveCase(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
 	mCase, ok := h.Store.Moderation[id]
 	if !ok {
@@ -57,15 +58,44 @@ func (h *Handler) ResolveCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Action string `json:"action"` // approve, reject, remove
-		Notes  string `json:"notes"`
+		Action   string `json:"action"` // approve, reject, remove
+		Notes    string `json:"notes"`
+		TOTPCode string `json:"totpCode"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&payload)
+
+	// P0-7: sensitive Trust & Safety decisions require MFA step-up.
+	if !identity.RequireStepUp(w, r, user, payload.TOTPCode) {
+		return
+	}
+	switch payload.Action {
+	case "approve", "reject", "remove":
+	default:
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "action must be approve, reject, or remove")
+		return
+	}
 
 	mCase.Status = "resolved"
 	mCase.ActionTaken = payload.Action
 
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   actorID(user),
+		"action":    "RESOLVE_MODERATION_CASE",
+		"target":    id,
+		"reason":    security.SanitizeUserText(payload.Notes, 500),
+		"ip":        r.RemoteAddr,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+
 	identity.WriteJSON(w, http.StatusOK, mCase)
+}
+
+func actorID(user *store.User) string {
+	if user == nil {
+		return "unknown"
+	}
+	return user.ID
 }
 
 // ReportContent files a user report against a video, comment, or channel.

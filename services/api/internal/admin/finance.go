@@ -72,12 +72,7 @@ func (h *Handler) ApproveBatch(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid request body")
 		return
 	}
-	if !user.MFAEnabled || user.TOTPSecret == "" {
-		identity.WriteError(w, r, http.StatusPreconditionFailed, "MFA_REQUIRED", "Enroll TOTP via /v1/me/mfa/setup before approving batches")
-		return
-	}
-	if !security.ValidateTOTP(user.TOTPSecret, payload.TOTPCode) {
-		identity.WriteError(w, r, http.StatusUnauthorized, "INVALID_TOTP", "Step-up code is invalid or expired")
+	if !identity.RequireStepUp(w, r, user, payload.TOTPCode) {
 		return
 	}
 	var debitTotal, creditTotal int64

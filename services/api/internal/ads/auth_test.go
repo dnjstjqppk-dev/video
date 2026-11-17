@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -224,6 +226,17 @@ func TestCreativeReviewAdminOnlyWithAudit(t *testing.T) {
 
 	before := len(s.AuditLogs)
 	rec = doAds(t, router, http.MethodPost, "/admin/creatives/"+creativeID+"/approve", "admin-token", nil)
+	if rec.Code != http.StatusPreconditionFailed {
+		t.Fatalf("expected 412 without MFA step-up, got %d", rec.Code)
+	}
+	admin := s.Users["11111111-1111-1111-1111-111111111111"]
+	admin.MFAEnabled = true
+	admin.TOTPSecret = "JBSWY3DPEHPK3PXP"
+	code, err := security.ComputeTOTP(admin.TOTPSecret, time.Now())
+	if err != nil {
+		t.Fatalf("compute totp: %v", err)
+	}
+	rec = doAds(t, router, http.MethodPost, "/admin/creatives/"+creativeID+"/approve", "admin-token", map[string]string{"totpCode": code})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for admin approval, got %d: %s", rec.Code, rec.Body.String())
 	}

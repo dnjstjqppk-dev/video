@@ -6,11 +6,25 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"globalvideoplatform/services/api/internal/identity"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
+
+func enrollPoliciesMFA(t *testing.T, s *store.MemoryStore) string {
+	t.Helper()
+	admin := s.Users["11111111-1111-1111-1111-111111111111"]
+	admin.MFAEnabled = true
+	admin.TOTPSecret = "JBSWY3DPEHPK3PXP"
+	code, err := security.ComputeTOTP(admin.TOTPSecret, time.Now())
+	if err != nil {
+		t.Fatalf("compute totp: %v", err)
+	}
+	return code
+}
 
 func newPoliciesTestServer() (*httptest.Server, *store.MemoryStore) {
 	memStore := store.NewMemoryStore()
@@ -71,9 +85,19 @@ func TestPoliciesLifecycle(t *testing.T) {
 		t.Fatalf("expected 403 for creator policies read, got %d", rec.Code)
 	}
 
-	// 3. Admin updates config with validation
+	// 3. Admin updates config with validation (P0-7: MFA step-up required)
 	req, rec = policiesReq(http.MethodPatch, "/policies", "admin-token", map[string]interface{}{
 		"max_upload_size_gb": 64,
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusPreconditionFailed {
+		t.Fatalf("expected 412 without MFA step-up, got %d", rec.Code)
+	}
+	code := enrollPoliciesMFA(t, memStore)
+
+	req, rec = policiesReq(http.MethodPatch, "/policies", "admin-token", map[string]interface{}{
+		"max_upload_size_gb": 64,
+		"totpCode":           code,
 	})
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -82,6 +106,7 @@ func TestPoliciesLifecycle(t *testing.T) {
 
 	req, rec = policiesReq(http.MethodPatch, "/policies", "admin-token", map[string]interface{}{
 		"creator_revenue_share_pct": 150,
+		"totpCode":                  code,
 	})
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
@@ -90,7 +115,8 @@ func TestPoliciesLifecycle(t *testing.T) {
 
 	// 4. Admin toggles a kill-switch off and on
 	req, rec = policiesReq(http.MethodPatch, "/policies/flags/"+FlagUploadIngest, "admin-token", map[string]interface{}{
-		"enabled": false,
+		"enabled":  false,
+		"totpCode": code,
 	})
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -101,7 +127,8 @@ func TestPoliciesLifecycle(t *testing.T) {
 	}
 
 	req, rec = policiesReq(http.MethodPatch, "/policies/flags/"+FlagUploadIngest, "admin-token", map[string]interface{}{
-		"enabled": true,
+		"enabled":  true,
+		"totpCode": code,
 	})
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -110,7 +137,8 @@ func TestPoliciesLifecycle(t *testing.T) {
 
 	// 5. Unknown flag key 404s
 	req, rec = policiesReq(http.MethodPatch, "/policies/flags/NOPE", "admin-token", map[string]interface{}{
-		"enabled": true,
+		"enabled":  true,
+		"totpCode": code,
 	})
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {
