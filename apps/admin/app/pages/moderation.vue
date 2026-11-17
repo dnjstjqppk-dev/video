@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ModerationCase } from '@gvp/shared-types'
 import { ModerationStatus } from '@gvp/shared-types'
+import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = useAdminApi()
 
@@ -8,48 +9,28 @@ useSeoMeta({
   title: 'Trust & Safety Moderation Queue'
 })
 
-const fallbackQueue: ModerationCase[] = [
-  {
-    id: 'mod_882',
-    targetType: 'video',
-    targetId: 'vid_suspect_reupload_99',
-    reporterUserId: 'usr_rights_starlight',
-    reason: 'Unlicensed full-length theatrical broadcast & misleading metadata',
-    policyCategory: 'COPYRIGHT_AND_DECEPTIVE_CONTENT',
-    status: ModerationStatus.PENDING,
-    createdAt: '2026-10-24T05:10:00Z'
-  },
-  {
-    id: 'mod_883',
-    targetType: 'comment',
-    targetId: 'cmt_phishing_441',
-    reporterUserId: 'usr_demo_01',
-    reason: 'Malicious phishing link disguised as giveaway in comments',
-    policyCategory: 'SPAM_SCAM_PHISHING',
-    status: ModerationStatus.PENDING,
-    createdAt: '2026-10-24T06:40:00Z'
-  }
-]
-
-const { data: queueData } = await useAsyncData('admin-moderation-queue', async () => {
-  try {
-    const res = await api.getAdminModerationQueue()
-    return res.length ? res : fallbackQueue
-  } catch {
-    return fallbackQueue
-  }
+const { data: queueData, pending: queuePending, error: queueError } = await useAsyncData('admin-moderation-queue', async () => {
+  return await api.getAdminModerationQueue()
 })
 
-const cases = ref<ModerationCase[]>(queueData.value || fallbackQueue)
-const reviewerNotes = ref('Verified violation. Original R2 object snapshot preserved in Legal Hold bucket.')
+const cases = computed(() => queueData.value || [])
+const reviewerNotes = ref('')
+const reviewerTotp = ref('')
+const resolveError = ref<string | null>(null)
 
-async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 'delete') {
-  item.status = action === 'approve' ? ModerationStatus.APPROVED : ModerationStatus.REJECTED
-  item.actionTaken = `${action.toUpperCase()} (Legal Evidence Hash Preserved)`
+async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 'remove') {
+  resolveError.value = null
+  if (reviewerTotp.value.trim().length !== 6) {
+    resolveError.value = '6자리 TOTP 코드를 입력하세요.'
+    return
+  }
   try {
-    await api.resolveModerationCase(item.id, action, reviewerNotes.value)
-  } catch {
-    // Updated locally
+    const updated = await api.resolveModerationCase(item.id, action, reviewerNotes.value, reviewerTotp.value.trim())
+    item.status = updated.status as ModerationStatus
+    item.actionTaken = updated.actionTaken
+    reviewerTotp.value = ''
+  } catch (e: unknown) {
+    resolveError.value = e instanceof Error ? e.message : '조치에 실패했습니다.'
   }
 }
 </script>
@@ -65,7 +46,19 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
       </p>
     </div>
 
-    <div class="space-y-4">
+    <div v-if="queuePending" class="space-y-4">
+      <div v-for="i in 3" :key="i" class="h-32 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+    </div>
+    <div v-else-if="queueError" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">심의 큐를 불러오지 못했습니다.</p>
+    </div>
+    <GvpEmptyState
+      v-else-if="cases.length === 0"
+      title="심의 대기 건이 없습니다"
+      description="새 신고가 접수되면 여기에 표시됩니다."
+    />
+
+    <div v-else class="space-y-4">
       <div
         v-for="item in cases"
         :key="item.id"
@@ -99,12 +92,26 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
           <strong class="font-semibold text-slate-900">Report Reason:</strong> {{ item.reason }}
         </p>
 
+        <p v-if="resolveError" class="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+          {{ resolveError }}
+        </p>
+
         <div class="mt-4 flex flex-wrap items-center gap-2.5">
           <input
             v-model="reviewerNotes"
             type="text"
             aria-label="Reviewer notes"
+            placeholder="Reviewer notes (recorded in audit log)"
             class="h-9 min-w-[240px] flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-900 focus:border-slate-900 focus:bg-white outline-none transition-colors"
+          />
+          <input
+            v-model="reviewerTotp"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            aria-label="Step-up TOTP code"
+            placeholder="TOTP"
+            class="h-9 w-24 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-900 focus:border-slate-900 focus:bg-white outline-none transition-colors"
           />
 
           <button
@@ -124,7 +131,7 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
           <button
             type="button"
             class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-            @click="resolveCase(item, 'delete')"
+            @click="resolveCase(item, 'remove')"
           >
             Takedown &amp; Preserve Evidence Snapshot
           </button>

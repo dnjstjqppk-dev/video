@@ -10,23 +10,10 @@ useSeoMeta({
   title: 'Partner Organization Overview'
 })
 
-const { data: overview } = await useAsyncData('partner-overview', async () => {
-  try {
-    const res = await api.getPartnerOverview()
-    activeOrg.value = { ...res.organization }
-    return res
-  } catch {
-    return {
-      organization: {
-        id: 'org_partner_01',
-        name: 'Apex Global Media / Horizon MCN / Starlight Rights',
-        type: 'advertiser_and_mcn'
-      },
-      campaignCount: 14,
-      activeChannelsCount: 42,
-      pendingSettlementAmount: 148500000
-    }
-  }
+const { data: overview, pending: overviewPending, error: overviewError } = await useAsyncData('partner-overview', async () => {
+  const res = await api.getPartnerOverview()
+  activeOrg.value = { ...res.organization }
+  return res
 })
 </script>
 
@@ -44,29 +31,28 @@ const { data: overview } = await useAsyncData('partner-overview', async () => {
     </div>
 
     <!-- KPI Grid -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div v-if="overviewPending" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div v-for="i in 3" :key="i" class="h-28 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+    </div>
+    <div v-else-if="overviewError || !overview" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">조직 개요를 불러오지 못했습니다.</p>
+    </div>
+    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div class="rounded-lg border border-slate-200 bg-white p-5">
         <p class="text-xs font-medium uppercase tracking-wider text-slate-500">Active Ad Campaigns</p>
-        <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{{ overview?.campaignCount || 14 }}</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{{ overview?.campaignCount ?? 0 }}</p>
         <p class="mt-1 text-xs text-slate-500">Pre-roll, Mid-roll &amp; Shorts Feed</p>
       </div>
 
       <div class="rounded-lg border border-slate-200 bg-white p-5">
         <p class="text-xs font-medium uppercase tracking-wider text-slate-500">Managed MCN Channels</p>
-        <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{{ overview?.activeChannelsCount || 42 }}</p>
-        <p class="mt-1 text-xs text-slate-600 tabular-nums">12.4M combined subscribers</p>
-      </div>
-
-      <div class="rounded-lg border border-slate-200 bg-white p-5">
-        <p class="text-xs font-medium uppercase tracking-wider text-slate-500">Active Reference Fingerprints</p>
-        <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">1,284 assets</p>
-        <p class="mt-1 text-xs text-slate-600 tabular-nums">19 active Content ID matches</p>
+        <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{{ overview?.activeChannelsCount ?? 0 }}</p>
       </div>
 
       <div class="rounded-lg border border-slate-200 bg-white p-5">
         <p class="text-xs font-medium uppercase tracking-wider text-slate-500">Pending Double-Entry Settlement</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
-          ₩{{ (overview?.pendingSettlementAmount || 148500000).toLocaleString() }}
+          ₩{{ (overview?.pendingSettlementAmount ?? 0).toLocaleString() }}
         </p>
         <p class="mt-1 text-xs text-slate-500 tabular-nums">Next clearing: 15th of month</p>
       </div>

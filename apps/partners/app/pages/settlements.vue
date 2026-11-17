@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Payout } from '@gvp/shared-types'
-import { PayoutStatus } from '@gvp/shared-types'
+import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = usePartnerApi()
 
@@ -8,45 +8,8 @@ useSeoMeta({
   title: 'Partner Double-Entry Settlement Statements & Invoices'
 })
 
-const fallbackSettlements: Payout[] = [
-  {
-    id: 'stl_2026_09_mcn',
-    channelId: 'org_mcn_sandbox',
-    organizationId: 'org_mcn_sandbox',
-    amount: 142000000,
-    currency: 'KRW',
-    status: PayoutStatus.PAID,
-    periodStart: '2026-09-01',
-    periodEnd: '2026-09-30',
-    taxWithheld: 14200000,
-    netAmount: 127800000,
-    approvedBy: 'usr_finance_admin_01',
-    paidAt: '2026-10-15T09:00:00Z',
-    createdAt: '2026-10-02T00:00:00Z'
-  },
-  {
-    id: 'stl_2026_10_mcn',
-    channelId: 'org_mcn_sandbox',
-    organizationId: 'org_mcn_sandbox',
-    amount: 148500000,
-    currency: 'KRW',
-    status: PayoutStatus.APPROVED,
-    periodStart: '2026-10-01',
-    periodEnd: '2026-10-31',
-    taxWithheld: 14850000,
-    netAmount: 133650000,
-    approvedBy: 'usr_finance_admin_01',
-    createdAt: '2026-10-24T00:00:00Z'
-  }
-]
-
-const { data: settlements } = await useAsyncData('partner-settlements', async () => {
-  try {
-    const res = await api.getPartnerSettlements()
-    return res.length ? res : fallbackSettlements
-  } catch {
-    return fallbackSettlements
-  }
+const { data: settlements, pending: settlementsPending, error: settlementsError } = await useAsyncData('partner-settlements', async () => {
+  return await api.getPartnerSettlements()
 })
 
 function downloadInvoice(statement: Payout) {
@@ -79,7 +42,19 @@ function downloadInvoice(statement: Payout) {
       </p>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div v-if="settlementsPending" class="rounded-lg border border-slate-200 bg-white p-8">
+      <div class="h-6 animate-pulse rounded-md bg-slate-100" />
+    </div>
+    <div v-else-if="settlementsError" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">정산 명세서를 불러오지 못했습니다.</p>
+    </div>
+    <GvpEmptyState
+      v-else-if="(settlements || []).length === 0"
+      title="정산 명세가 없습니다"
+      description="정산 주기가 도래하면 여기에 표시됩니다."
+    />
+
+    <div v-else class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
       <table class="w-full text-left">
         <thead>
           <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -93,7 +68,7 @@ function downloadInvoice(statement: Payout) {
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          <tr v-for="stl in (settlements || fallbackSettlements)" :key="stl.id" class="hover:bg-slate-50">
+          <tr v-for="stl in (settlements || [])" :key="stl.id" class="hover:bg-slate-50">
             <td class="py-3 px-4 font-mono text-sm font-medium text-slate-900 border-b border-slate-100 tabular-nums">{{ stl.id }}</td>
             <td class="py-3 px-4 text-sm text-slate-600 border-b border-slate-100 tabular-nums">{{ stl.periodStart }} ~ {{ stl.periodEnd }}</td>
             <td class="py-3 px-4 font-mono text-sm text-slate-900 border-b border-slate-100 tabular-nums">₩{{ stl.amount.toLocaleString() }}</td>

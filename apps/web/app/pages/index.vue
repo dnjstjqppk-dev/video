@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import GvpBanner from '@gvp/ui/src/components/GvpBanner.vue'
 import type { Video } from '@gvp/shared-types'
-import { VideoProcessingStatus, VideoType, VideoVisibility } from '@gvp/shared-types'
 import { useAppStore } from '~/stores/app'
 
 const appStore = useAppStore()
@@ -31,166 +29,11 @@ const selectedCategory = ref('all')
 const activeMenuVideoId = ref<string | null>(null)
 const feedbackToast = ref<string | null>(null)
 
-const fallbackVideos: Video[] = [
-  {
-    id: 'vid_arch_2026',
-    channelId: 'ch_tech_kr',
-    channel: {
-      id: 'ch_tech_kr',
-      ownerId: 'usr_1',
-      handle: '@gvptech',
-      name: 'GVP Tech Engineering',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&q=80',
-      subscriberCount: 284000,
-      videoCount: 142,
-      isVerified: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z'
-    },
-    title: 'Building a 10M Concurrent Viewer Global Video Platform with Go 1.24, Nuxt 4 & ClickHouse',
-    description: 'Deep-dive into HLS ABR transcoding, NATS JetStream event pipelines, and OpenSearch hybrid ranking.',
-    videoType: VideoType.STANDARD,
-    durationSeconds: 1845,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
-    visibility: VideoVisibility.PUBLIC,
-    status: VideoProcessingStatus.READY,
-    viewCount: 412900,
-    likeCount: 32400,
-    dislikeCount: 120,
-    commentCount: 1842,
-    tags: ['golang', 'nuxt4', 'system-design'],
-    category: 'tech',
-    isAgeRestricted: false,
-    sources: [],
-    chapters: [],
-    captions: [],
-    publishedAt: '2026-10-20T09:00:00Z',
-    createdAt: '2026-10-20T08:00:00Z',
-    updatedAt: '2026-10-20T09:00:00Z'
-  },
-  {
-    id: 'vid_seoul_4k',
-    channelId: 'ch_seoul_4k',
-    channel: {
-      id: 'ch_seoul_4k',
-      ownerId: 'usr_2',
-      handle: '@seoul4k',
-      name: 'Seoul 4K Cinema',
-      avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&q=80',
-      subscriberCount: 890000,
-      videoCount: 310,
-      isVerified: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z'
-    },
-    title: '[4K 60fps HDR] Cyberpunk Rainy Night Walk in Gangnam & Hongdae, Seoul 2026',
-    description: 'Binaural 3D audio night walk in Seoul captured in 2160p HDR10.',
-    videoType: VideoType.STANDARD,
-    durationSeconds: 3620,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=800&q=80',
-    visibility: VideoVisibility.PUBLIC,
-    status: VideoProcessingStatus.READY,
-    viewCount: 1294000,
-    likeCount: 95100,
-    dislikeCount: 310,
-    commentCount: 4510,
-    tags: ['seoul', '4k', 'hdr'],
-    category: 'cinema',
-    isAgeRestricted: false,
-    sources: [],
-    chapters: [],
-    captions: [],
-    publishedAt: '2026-10-18T14:00:00Z',
-    createdAt: '2026-10-18T12:00:00Z',
-    updatedAt: '2026-10-18T14:00:00Z'
-  },
-  {
-    id: 'vid_esports_finals',
-    channelId: 'ch_esports_global',
-    channel: {
-      id: 'ch_esports_global',
-      ownerId: 'usr_3',
-      handle: '@esports',
-      name: 'Global Esports Arena',
-      avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=120&q=80',
-      subscriberCount: 2450000,
-      videoCount: 980,
-      isVerified: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z'
-    },
-    title: 'T1 vs Gen.G — Grand Finals Game 5 Full Highlights (Korean & English Dual Cast)',
-    description: 'Unforgettable final teamfight at Baron pit in 1440p 60fps.',
-    videoType: VideoType.STANDARD,
-    durationSeconds: 1490,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
-    visibility: VideoVisibility.PUBLIC,
-    status: VideoProcessingStatus.READY,
-    viewCount: 3480000,
-    likeCount: 215000,
-    dislikeCount: 1900,
-    commentCount: 19400,
-    tags: ['esports', 'gaming', 'finals'],
-    category: 'gaming',
-    isAgeRestricted: false,
-    sources: [],
-    chapters: [],
-    captions: [],
-    publishedAt: '2026-10-22T18:30:00Z',
-    createdAt: '2026-10-22T17:00:00Z',
-    updatedAt: '2026-10-22T18:30:00Z'
-  },
-  {
-    id: 'vid_ai_agents',
-    channelId: 'ch_tech_kr',
-    channel: {
-      id: 'ch_tech_kr',
-      ownerId: 'usr_1',
-      handle: '@gvptech',
-      name: 'GVP Tech Engineering',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&q=80',
-      subscriberCount: 284000,
-      videoCount: 142,
-      isVerified: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z'
-    },
-    title: 'Multimodal Video Indexing with Audio-Visual Fingerprints & Vector Embeddings',
-    description: 'How our Rights Owner Copyright Engine detects modified clips in under 150ms.',
-    videoType: VideoType.STANDARD,
-    durationSeconds: 1120,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80',
-    visibility: VideoVisibility.PUBLIC,
-    status: VideoProcessingStatus.READY,
-    viewCount: 189400,
-    likeCount: 16200,
-    dislikeCount: 80,
-    commentCount: 740,
-    tags: ['ai', 'copyright', 'embeddings'],
-    category: 'ai',
-    isAgeRestricted: false,
-    sources: [],
-    chapters: [],
-    captions: [],
-    publishedAt: '2026-10-23T11:00:00Z',
-    createdAt: '2026-10-23T10:00:00Z',
-    updatedAt: '2026-10-23T11:00:00Z'
-  }
-]
-
-const isShowingFallback = ref(false)
-
 const { data: feedData, pending, error, refresh } = await useAsyncData(
   () => `home-feed-${selectedCategory.value}`,
   async () => {
-    try {
-      const res = await api.getHomeFeed(1, 24, selectedCategory.value)
-      isShowingFallback.value = !res.items?.length
-      return res.items?.length ? res.items : fallbackVideos
-    } catch {
-      isShowingFallback.value = true
-      return fallbackVideos
-    }
+    const res = await api.getHomeFeed(1, 24, selectedCategory.value)
+    return res.items || []
   },
   { watch: [selectedCategory] }
 )
@@ -236,7 +79,7 @@ onMounted(() => {
 })
 
 const visibleVideos = computed(() => {
-  const list = feedData.value || fallbackVideos
+  const list = feedData.value || []
   return list.filter(v => {
     if (appStore.hiddenVideoIds.has(v.id)) return false
     if (appStore.blockedChannelIds.has(v.channelId)) return false
@@ -247,55 +90,27 @@ const visibleVideos = computed(() => {
   })
 })
 
-const shortsShelf = [
-  {
-    id: 'short_01',
-    title: '60초 만에 이해하는 HLS ABR 화질 자동 전환 원리',
-    views: '1.4M',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&q=80'
-  },
-  {
-    id: 'short_02',
-    title: '성수동 웨이팅 1시간 화덕피자 오픈런',
-    views: '890K',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&q=80'
-  },
-  {
-    id: 'short_03',
-    title: 'Unreal Engine 5.5 실시간 레이트레이싱 데모',
-    views: '2.1M',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=80'
-  },
-  {
-    id: 'short_04',
-    title: '서울 한강 드론 라이트쇼 하이라이트',
-    views: '3.2M',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&q=80'
-  },
-  {
-    id: 'short_05',
-    title: 'Go 1.24 vs Rust 비디오 세그먼트 파서 벤치마크',
-    views: '640K',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500&q=80'
+const { data: shortsData } = await useAsyncData('home-shorts', async () => {
+  try {
+    const res = await api.getShortsFeed(1, 10)
+    return res.items || []
+  } catch {
+    return []
   }
-]
+})
 
-const liveStreamsShelf = [
-  {
-    id: 'live_main_01',
-    title: '[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A',
-    channelName: 'GVP Tech Engineering',
-    viewers: 14820,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80'
-  },
-  {
-    id: 'live_lofi_247',
-    title: '[24/7 LIVE] Cyberpunk Seoul Lo-Fi Synthwave Radio for Coding & Focus',
-    channelName: 'Seoul 4K Cinema',
-    viewers: 6390,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80'
+const shortsShelf = computed(() => shortsData.value || [])
+
+const { data: liveData } = await useAsyncData('home-live', async () => {
+  try {
+    const res = await api.listLiveStreams(1, 4)
+    return res.items || []
+  } catch {
+    return []
   }
-]
+})
+
+const liveStreamsShelf = computed(() => liveData.value || [])
 
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -357,10 +172,6 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
       </button>
     </div>
 
-    <GvpBanner v-if="isShowingFallback && !pending" tone="warning" dismissible class="mb-4">
-      피드를 불러오지 못해 캐시된 추천 영상을 보여주고 있습니다. <button type="button" class="font-bold underline" @click="refresh()">다시 시도</button>
-    </GvpBanner>
-
     <!-- Toast Notification for Feed Feedback -->
     <div
       v-if="feedbackToast"
@@ -385,7 +196,7 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
         <div class="flex items-center gap-4">
           <img
             v-if="feedAd.creative.mediaUrl"
-            :src="feedAd.creative.mediaUrl"
+            :src="api.resolveUrl(feedAd.creative.mediaUrl)"
             :alt="feedAd.creative.title"
             class="h-16 w-16 shrink-0 rounded-lg border border-slate-200 object-cover"
           />
@@ -592,7 +403,7 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
         </NuxtLink>
       </div>
 
-      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div v-if="liveStreamsShelf.length" class="grid grid-cols-1 gap-5 md:grid-cols-2">
         <NuxtLink
           v-for="stream in liveStreamsShelf"
           :key="stream.id"
@@ -602,12 +413,11 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
           <div class="relative aspect-video w-full shrink-0 overflow-hidden bg-slate-100 sm:w-64">
             <img :src="stream.thumbnailUrl" :alt="stream.title" class="h-full w-full object-cover" />
             <span class="absolute left-2.5 top-2.5 rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold uppercase text-red-700 tabular-nums">
-              LIVE · {{ stream.viewers.toLocaleString() }} watching
+              LIVE · {{ stream.viewerCount.toLocaleString() }} watching
             </span>
           </div>
           <div class="flex flex-col justify-center p-4">
             <h3 class="font-bold leading-snug text-slate-900 group-hover:text-blue-600">{{ stream.title }}</h3>
-            <p class="mt-1.5 text-xs text-slate-600">{{ stream.channelName }}</p>
             <span class="mt-3 inline-flex w-fit items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
               <svg class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -633,11 +443,11 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
         </NuxtLink>
       </div>
 
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+      <div v-if="shortsShelf.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         <NuxtLink
           v-for="shortItem in shortsShelf"
           :key="shortItem.id"
-          to="/shorts"
+          :to="`/watch/${shortItem.id}`"
           class="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:bg-slate-50"
         >
           <div class="relative aspect-[9/16] w-full overflow-hidden bg-slate-100">
@@ -650,10 +460,13 @@ async function handleFeedFeedback(video: Video, action: 'not_interested' | 'dont
           </div>
           <div class="border-t border-slate-200 bg-white p-3">
             <p class="line-clamp-2 text-xs font-semibold leading-snug text-slate-900 group-hover:text-blue-600">{{ shortItem.title }}</p>
-            <p class="mt-1 text-[11px] text-slate-500 tabular-nums">{{ shortItem.views }} views</p>
+            <p class="mt-1 text-[11px] text-slate-500 tabular-nums">{{ formatViews(shortItem.viewCount) }}</p>
           </div>
         </NuxtLink>
       </div>
+      <p v-else class="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+        {{ appStore.locale === 'ko' ? '표시할 쇼츠가 없습니다.' : 'No Shorts to show yet.' }}
+      </p>
     </section>
   </div>
 </template>

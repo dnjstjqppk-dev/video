@@ -25,6 +25,63 @@ func newLiveTestServer() (*httptest.Server, *store.MemoryStore) {
 	return srv, memStore
 }
 
+func TestListStreamsOnlyLive(t *testing.T) {
+	srv, memStore := newLiveTestServer()
+	defer srv.Close()
+
+	memStore.LiveStreams["live_a"] = &store.LiveStream{ID: "live_a", ChannelID: "ch1", Title: "A", Status: "live"}
+	memStore.LiveStreams["live_b"] = &store.LiveStream{ID: "live_b", ChannelID: "ch1", Title: "B", Status: "ended"}
+
+	req, rec := liveReq(http.MethodGet, "/live-streams/", "", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var body struct {
+		Items []store.LiveStream `json:"items"`
+		Total int                `json:"total"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	for _, s := range body.Items {
+		if s.Status != "live" {
+			t.Fatalf("non-live stream listed: %+v", s)
+		}
+		if s.StreamKey != "" || s.RtmpsIngestURL != "" || s.SrtIngestURL != "" {
+			t.Fatalf("public listing must not leak ingest credentials: %+v", s)
+		}
+	}
+	found := false
+	for _, s := range body.Items {
+		if s.ID == "live_a" {
+			found = true
+		}
+	}
+	if !found || body.Total < 1 {
+		t.Fatalf("expected live_a in list, got %+v", body)
+	}
+
+	// Public single fetch hides keys; the channel owner sees them.
+	anonReq, anonRec := liveReq(http.MethodGet, "/live-streams/live_main_01", "", nil)
+	srv.Config.Handler.ServeHTTP(anonRec, anonReq)
+	if anonRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 public get, got %d", anonRec.Code)
+	}
+	var anon store.LiveStream
+	_ = json.Unmarshal(anonRec.Body.Bytes(), &anon)
+	if anon.StreamKey != "" {
+		t.Fatal("anonymous get must not leak the stream key")
+	}
+	ownerReq, ownerRec := liveReq(http.MethodGet, "/live-streams/live_main_01", "creator-token", nil)
+	srv.Config.Handler.ServeHTTP(ownerRec, ownerReq)
+	var owner store.LiveStream
+	_ = json.Unmarshal(ownerRec.Body.Bytes(), &owner)
+	if ownerRec.Code != http.StatusOK || owner.StreamKey == "" {
+		t.Fatalf("owner get must include the stream key, got %d %+v", ownerRec.Code, owner)
+	}
+}
+
 func liveReq(method, path, token string, body interface{}) (*http.Request, *httptest.ResponseRecorder) {
 	var bodyBytes []byte
 	if body != nil {

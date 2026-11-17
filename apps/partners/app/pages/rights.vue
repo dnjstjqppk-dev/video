@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CopyrightClaim } from '@gvp/shared-types'
 import { CopyrightClaimAction, CopyrightClaimStatus } from '@gvp/shared-types'
+import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = usePartnerApi()
 
@@ -8,71 +9,26 @@ useSeoMeta({
   title: 'Rights Owner Console — SHA-256 Fingerprints & Content ID Claims'
 })
 
-const newAssetTitle = ref('CJ ENM Original OST — Cyberpunk Seoul Theme (Master Audio)')
-const newAssetSha256 = ref('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
-const defaultTerritoryPolicy = ref<CopyrightClaimAction>(CopyrightClaimAction.MONETIZE)
-const assetRegisteredToast = ref(false)
+const claimError = ref<string | null>(null)
 
-const fallbackClaims: CopyrightClaim[] = [
-  {
-    id: 'clm_901',
-    assetId: 'ast_ost_seoul_01',
-    claimedVideoId: 'vid_seoul_4k',
-    rightsOwnerId: 'org_rights_starlight',
-    ownerName: 'Starlight Music & Media Rights Corp. (Demo)',
-    claimAction: CopyrightClaimAction.MONETIZE,
-    status: CopyrightClaimStatus.ACTIVE,
-    matchStartSeconds: 410,
-    matchEndSeconds: 445,
-    matchConfidence: 98.7,
-    createdAt: '2026-10-19T12:00:00Z',
-    updatedAt: '2026-10-19T12:00:00Z'
-  },
-  {
-    id: 'clm_902',
-    assetId: 'ast_movie_clip_88',
-    claimedVideoId: 'vid_reupload_suspect_77',
-    rightsOwnerId: 'org_rights_starlight',
-    ownerName: 'Starlight Music & Media Rights Corp. (Demo)',
-    claimAction: CopyrightClaimAction.BLOCK,
-    status: CopyrightClaimStatus.DISPUTED,
-    matchStartSeconds: 0,
-    matchEndSeconds: 310,
-    matchConfidence: 99.4,
-    disputeReason: 'Fair use commentary and architectural critique under 30 seconds.',
-    disputedAt: '2026-10-23T08:30:00Z',
-    createdAt: '2026-10-22T15:00:00Z',
-    updatedAt: '2026-10-23T08:30:00Z'
-  }
-]
-
-const { data: claimsData } = await useAsyncData('partner-claims', async () => {
-  try {
-    const res = await api.getPartnerClaims()
-    return res.length ? res : fallbackClaims
-  } catch {
-    return fallbackClaims
-  }
+const { data: claimsData, pending: claimsPending, error: claimsError } = await useAsyncData('partner-claims', async () => {
+  return await api.getPartnerClaims()
 })
 
-const claims = ref<CopyrightClaim[]>(claimsData.value || fallbackClaims)
-
-function registerReferenceAsset() {
-  assetRegisteredToast.value = true
-  setTimeout(() => (assetRegisteredToast.value = false), 3500)
-}
+const claims = computed(() => claimsData.value || [])
 
 async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAction) {
-  claim.claimAction = action
-  claim.status = CopyrightClaimStatus.RESOLVED
+  claimError.value = null
   try {
-    await api.createCopyrightClaim({
+    const updated = await api.createCopyrightClaim({
       videoId: claim.claimedVideoId,
       assetId: claim.assetId,
       action
     })
-  } catch {
-    // State updated locally
+    claim.claimAction = updated.claimAction
+    claim.status = updated.status
+  } catch (e: unknown) {
+    claimError.value = e instanceof Error ? e.message : '클레임 처리에 실패했습니다.'
   }
 }
 </script>
@@ -87,57 +43,31 @@ async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAc
     </div>
 
     <!-- Register Reference Fingerprint Asset -->
-    <form class="rounded-lg border border-slate-200 bg-white p-6" @submit.prevent="registerReferenceAsset">
-      <h2 class="text-sm font-semibold text-slate-900">신규 원본 레퍼런스 자산 및 핑거프린트 등록</h2>
-      <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div>
-          <label class="text-xs font-medium text-slate-700">Reference Asset Title</label>
-          <input
-            v-model="newAssetTitle"
-            type="text"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
-          />
-        </div>
-        <div>
-          <label class="text-xs font-medium text-slate-700">SHA-256 &amp; Chromaprint Hash</label>
-          <input
-            v-model="newAssetSha256"
-            type="text"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 font-mono text-xs text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
-          />
-        </div>
-        <div>
-          <label class="text-xs font-medium text-slate-700">Default Global Territory Match Policy</label>
-          <select
-            v-model="defaultTerritoryPolicy"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
-          >
-            <option :value="CopyrightClaimAction.MONETIZE">Monetize (Route Ad Revenue to Rights Owner)</option>
-            <option :value="CopyrightClaimAction.TRACK">Track Only (Collect View Telemetry)</option>
-            <option :value="CopyrightClaimAction.BLOCK">Block Worldwide Playback</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-        <span v-if="assetRegisteredToast" class="text-xs font-medium text-emerald-700">
-          Reference fingerprint indexed in real-time upload verification engine.
-        </span>
-        <span v-else class="text-xs text-slate-500">Automatically scans all new R2 uploads during VALIDATING stage.</span>
-        <button
-          type="submit"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
-        >
-          Register Reference Asset
-        </button>
-      </div>
-    </form>
+    <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+      <h2 class="text-sm font-semibold text-slate-600">원본 레퍼런스 자산 등록 연동 준비 중</h2>
+      <p class="mt-1 text-xs text-slate-500">핑거프린트 등록 API 연결 후 제공됩니다.</p>
+    </div>
 
     <!-- Suspected Infringement Matches & Creator Counter-Disputes -->
     <div class="rounded-lg border border-slate-200 bg-white p-6">
       <h2 class="text-sm font-semibold text-slate-900">Content ID 매칭 목록 및 크리에이터 이의 신청 처리</h2>
 
-      <div class="mt-4 space-y-4">
+      <p v-if="claimError" class="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+        {{ claimError }}
+      </p>
+      <div v-if="claimsPending" class="mt-4 space-y-3">
+        <div v-for="i in 2" :key="i" class="h-20 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+      </div>
+      <div v-else-if="claimsError" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-6 text-center" role="alert">
+        <p class="text-xs font-semibold text-red-700">클레임 목록을 불러오지 못했습니다.</p>
+      </div>
+      <GvpEmptyState
+        v-else-if="claims.length === 0"
+        title="진행 중인 클레임이 없습니다"
+        description="새 매칭이 접수되면 여기에 표시됩니다."
+      />
+
+      <div v-else class="mt-4 space-y-4">
         <div
           v-for="claim in claims"
           :key="claim.id"

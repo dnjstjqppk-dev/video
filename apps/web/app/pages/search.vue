@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Video } from '@gvp/shared-types'
-import { VideoProcessingStatus, VideoType, VideoVisibility } from '@gvp/shared-types'
 import { useAppStore } from '~/stores/app'
 
 const route = useRoute()
@@ -25,99 +24,20 @@ const typoCorrection = computed(() => {
   return null
 })
 
-const fallbackResults: Video[] = [
-  {
-    id: 'vid_arch_2026',
-    channelId: 'ch_tech_kr',
-    channel: {
-      id: 'ch_tech_kr',
-      ownerId: 'usr_1',
-      handle: '@gvptech',
-      name: 'GVP Tech Engineering',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80',
-      subscriberCount: 284000,
-      videoCount: 142,
-      isVerified: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z'
-    },
-    title: 'Building a 10M Concurrent Viewer Global Video Platform with Go 1.24, Nuxt 4 & ClickHouse',
-    description: 'Full OpenSearch Nori Korean analyzer + BM25 ranking + vector similarity hybrid search walkthrough.',
-    videoType: VideoType.STANDARD,
-    durationSeconds: 1845,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
-    visibility: VideoVisibility.PUBLIC,
-    status: VideoProcessingStatus.READY,
-    viewCount: 412900,
-    likeCount: 32400,
-    dislikeCount: 120,
-    commentCount: 1842,
-    tags: ['golang', 'nuxt4', 'opensearch'],
-    category: 'tech',
-    isAgeRestricted: false,
-    sources: [],
-    chapters: [],
-    captions: [],
-    publishedAt: '2026-10-20T09:00:00Z',
-    createdAt: '2026-10-20T08:00:00Z',
-    updatedAt: '2026-10-20T09:00:00Z'
-  },
-  {
-    id: 'vid_seoul_4k',
-    channelId: 'ch_seoul_4k',
-    channel: {
-      id: 'ch_seoul_4k',
-      ownerId: 'usr_2',
-      handle: '@seoul4k',
-      name: 'Seoul 4K Cinema',
-      avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&q=80',
-      subscriberCount: 890000,
-      videoCount: 310,
-      isVerified: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z'
-    },
-    title: '[4K 60fps HDR] Cyberpunk Rainy Night Walk in Gangnam & Hongdae, Seoul 2026',
-    description: 'Ultra-crisp 2160p HDR video encoded via distributed FFmpeg transcoding fleet.',
-    videoType: VideoType.STANDARD,
-    durationSeconds: 3620,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=800&q=80',
-    visibility: VideoVisibility.PUBLIC,
-    status: VideoProcessingStatus.READY,
-    viewCount: 1294000,
-    likeCount: 95100,
-    dislikeCount: 310,
-    commentCount: 4510,
-    tags: ['seoul', '4k', 'hdr'],
-    category: 'cinema',
-    isAgeRestricted: false,
-    sources: [],
-    chapters: [],
-    captions: [],
-    publishedAt: '2026-10-18T14:00:00Z',
-    createdAt: '2026-10-18T12:00:00Z',
-    updatedAt: '2026-10-18T14:00:00Z'
-  }
-]
-
-const { data: searchData } = await useAsyncData(
+const { data: searchData, pending: searchPending, error: searchError } = await useAsyncData(
   () => `search-${query.value}-${selectedType.value}-${selectedSort.value}`,
   async () => {
-    try {
-      const res = await api.search(query.value, {
-        type: selectedType.value === 'all' ? undefined : selectedType.value,
-        sort: selectedSort.value
-      })
-      return res.videos?.length ? res.videos : fallbackResults
-    } catch {
-      return fallbackResults
-    }
+    const res = await api.search(query.value, {
+      type: selectedType.value === 'all' ? undefined : selectedType.value,
+      sort: selectedSort.value
+    })
+    return res.videos || []
   },
   { watch: [query, selectedType, selectedSort] }
 )
 
 const results = computed(() => {
-  const list = [...(searchData.value || fallbackResults)]
+  const list = [...(searchData.value || [])]
   if (selectedSort.value === 'views') {
     list.sort((a, b) => b.viewCount - a.viewCount)
   } else if (selectedSort.value === 'date') {
@@ -186,8 +106,22 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
       Showing OpenSearch results for <strong class="font-semibold text-slate-900">"{{ query }}"</strong> (Korean Nori + English stemmer active)
     </p>
 
+    <div v-if="searchPending" class="mt-5 space-y-4">
+      <div v-for="i in 3" :key="i" class="h-32 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+    </div>
+    <div v-else-if="searchError" class="mt-5 rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">
+        {{ appStore.locale === 'ko' ? '검색 중 오류가 발생했습니다.' : 'Search failed. Please retry.' }}
+      </p>
+    </div>
+    <div v-else-if="results.length === 0" class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-12 text-center">
+      <p class="text-sm font-semibold text-slate-600">
+        {{ appStore.locale === 'ko' ? `"${query}"에 대한 결과가 없습니다.` : `No results for "${query}".` }}
+      </p>
+    </div>
+
     <!-- Results List -->
-    <div class="mt-5 space-y-4">
+    <div v-else class="mt-5 space-y-4">
       <article
         v-for="video in results"
         :key="video.id"

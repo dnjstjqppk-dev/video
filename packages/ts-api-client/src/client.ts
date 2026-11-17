@@ -397,9 +397,25 @@ export class ApiClient {
     return mapLiveStream(raw);
   }
 
+  async listLiveStreams(page = 1, limit = 20): Promise<{ items: LiveStream[]; total: number }> {
+    const raw = await this.request<{ items?: unknown[]; total?: number }>(`/v1/live-streams/?page=${page}&limit=${limit}`);
+    return { items: (raw.items || []).map(mapLiveStream), total: raw.total || 0 };
+  }
+
   async startLiveStream(id: string): Promise<LiveStream> {
     const raw = await this.request<unknown>(`/v1/live-streams/${id}/start`, { method: 'POST' });
     return mapLiveStream(raw);
+  }
+
+  async getActiveLivePoll(id: string): Promise<{ question: string; options: Array<{ text: string; votes: number }>; totalVotes: number } | null> {
+    const raw = await this.request<unknown>(`/v1/live-streams/${id}/polls/active`);
+    if (!raw || typeof raw !== 'object' || !('question' in (raw as Record<string, unknown>))) return null;
+    const r = raw as { question?: unknown; options?: Array<{ text?: unknown; votes?: unknown }>; totalVotes?: unknown };
+    return {
+      question: String(r.question || ''),
+      options: (r.options || []).map(o => ({ text: String(o.text || ''), votes: Number(o.votes || 0) })),
+      totalVotes: Number(r.totalVotes || 0),
+    };
   }
 
   async stopLiveStream(id: string): Promise<LiveStream> {
@@ -638,10 +654,10 @@ export class ApiClient {
     return { items: (raw.items || []).map(mapUser), total: raw.total || 0 };
   }
 
-  async updateAdminUserStatus(userId: string, status: 'active' | 'suspended' | 'banned', reason: string): Promise<User> {
+  async updateAdminUserStatus(userId: string, status: 'active' | 'suspended' | 'banned', reason: string, totpCode?: string): Promise<User> {
     const raw = await this.request<unknown>(`/v1/admin/users/${userId}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, reason }),
+      body: JSON.stringify({ status, reason, totpCode }),
     });
     return mapUser(raw);
   }
@@ -659,10 +675,10 @@ export class ApiClient {
     return (raw || []).map(mapModerationCase);
   }
 
-  async resolveModerationCase(caseId: string, action: 'approve' | 'reject' | 'delete', notes: string): Promise<ModerationCase> {
+  async resolveModerationCase(caseId: string, action: 'approve' | 'reject' | 'remove', notes: string, totpCode?: string): Promise<ModerationCase> {
     const raw = await this.request<unknown>(`/v1/admin/moderation/${caseId}/resolve`, {
       method: 'POST',
-      body: JSON.stringify({ action, notes }),
+      body: JSON.stringify({ action, notes, totpCode }),
     });
     return mapModerationCase(raw);
   }

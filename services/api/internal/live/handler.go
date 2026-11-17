@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -28,6 +29,7 @@ func NewHandler(s *store.MemoryStore) *Handler {
 func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r := chi.NewRouter()
 
+	r.Get("/", h.ListStreams)
 	r.Get("/{id}", h.GetStream)
 	r.Get("/{id}/health", h.GetStreamHealth)
 	r.Get("/{id}/superchats", h.GetSuperChats)
@@ -90,6 +92,47 @@ func (h *Handler) CreateStream(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusCreated, stream)
 }
 
+// sanitizeStream removes ingest credentials from a stream copy. Only the
+// channel owner (or a platform admin) may see keys and ingest URLs.
+func sanitizeStream(s *store.LiveStream) *store.LiveStream {
+	clean := *s
+	clean.StreamKey = ""
+	clean.RtmpsIngestURL = ""
+	clean.SrtIngestURL = ""
+	return &clean
+}
+
+func (h *Handler) ownsStream(user *store.User, stream *store.LiveStream) bool {
+	if user == nil {
+		return false
+	}
+	if user.Role == "super_admin" || user.Role == "platform_admin" {
+		return true
+	}
+	channel, ok := h.Store.Channels[stream.ChannelID]
+	return ok && channel != nil && channel.OwnerID == user.ID
+}
+
+// ListStreams returns currently live broadcasts (P1-11 honest live shelf).
+// The public listing never carries ingest credentials.
+func (h *Handler) ListStreams(w http.ResponseWriter, r *http.Request) {
+	page, limit := identity.ParsePagination(r, 20)
+	onlyLive := r.URL.Query().Get("status")
+	var list []*store.LiveStream
+	for _, s := range h.Store.LiveStreams {
+		if onlyLive != "" && s.Status != onlyLive {
+			continue
+		}
+		if onlyLive == "" && s.Status != "live" {
+			continue
+		}
+		list = append(list, sanitizeStream(s))
+	}
+	sort.SliceStable(list, func(i, j int) bool { return list[i].ID < list[j].ID })
+	window, total := identity.PaginateSlice(list, page, limit)
+	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
+}
+
 func (h *Handler) GetStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	stream, ok := h.Store.LiveStreams[id]
@@ -97,7 +140,11 @@ func (h *Handler) GetStream(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Live stream not found")
 		return
 	}
-	identity.WriteJSON(w, http.StatusOK, stream)
+	if h.ownsStream(identity.GetUserFromContext(r.Context()), stream) {
+		identity.WriteJSON(w, http.StatusOK, stream)
+		return
+	}
+	identity.WriteJSON(w, http.StatusOK, sanitizeStream(stream))
 }
 
 func (h *Handler) HandleWebSocketChat(w http.ResponseWriter, r *http.Request) {

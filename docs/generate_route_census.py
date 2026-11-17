@@ -2,10 +2,10 @@
 """Generate the API route census and synchronize the OpenAPI specification.
 
 Inputs (all committed, reviewable):
-  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 140 routes).
+  1. ROUTES below: chi.Walk dump of services/api (2026-11-17, 141 routes).
      Refresh: temporarily add a chi.Walk test in services/api/cmd/server,
      run `go test ./cmd/server/ -run TestZZDumpRoutes -v`, paste, delete.
-  2. tests/openapi/gvp-v1.yaml: 23 hand-detailed paths + components.
+  2. tests/openapi/gvp-v1.yaml: 36 hand-detailed paths + components.
      These are preserved verbatim as the detailed core of the spec.
 
 Outputs (deterministic, do not hand-edit):
@@ -52,8 +52,8 @@ POST /v1/ads/admin/creatives/{id}/approve
 POST /v1/ads/admin/creatives/{id}/reject
 GET /v1/ads/admin/diagnostics
 GET /v1/ads/advertiser/reports
-GET /v1/ads/campaigns
 POST /v1/ads/campaigns
+GET /v1/ads/campaigns
 GET /v1/ads/campaigns/{id}
 POST /v1/ads/campaigns/{id}/creatives
 PATCH /v1/ads/campaigns/{id}/status
@@ -62,8 +62,8 @@ POST /v1/ads/decision
 POST /v1/ads/events
 POST /v1/ads/preview
 GET /v1/ads/reports
-GET /v1/advertiser/campaigns
 POST /v1/advertiser/campaigns
+GET /v1/advertiser/campaigns
 GET /v1/advertiser/campaigns/{id}
 POST /v1/advertiser/campaigns/{id}/creatives
 PATCH /v1/advertiser/campaigns/{id}/status
@@ -72,8 +72,8 @@ POST /v1/advertiser/events
 POST /v1/advertiser/preview
 GET /v1/advertiser/reports
 POST /v1/channels/
-GET /v1/channels/{id}
 PATCH /v1/channels/{id}
+GET /v1/channels/{id}
 POST /v1/channels/{id}/subscribe
 DELETE /v1/channels/{id}/subscribe
 GET /v1/channels/{id}/videos
@@ -86,6 +86,7 @@ POST /v1/feed/feedback
 GET /v1/feed/home
 GET /v1/feed/shorts
 GET /v1/feed/subscriptions
+GET /v1/live-streams/
 POST /v1/live-streams/
 GET /v1/live-streams/{id}
 GET /v1/live-streams/{id}/chat
@@ -101,8 +102,8 @@ POST /v1/live-streams/{id}/superchat
 GET /v1/live-streams/{id}/superchats
 GET /v1/live-streams/{id}/ws
 POST /v1/moderation/reports
-GET /v1/partners/campaigns
 POST /v1/partners/campaigns
+GET /v1/partners/campaigns
 GET /v1/partners/rights/claims
 POST /v1/partners/rights/claims
 POST /v1/partners/rights/claims/{id}/dispute
@@ -136,8 +137,8 @@ GET /v1/studio/videos
 POST /v1/studio/videos/{id}/edit-jobs
 GET /v1/studio/videos/{id}/edit-jobs/{jobId}
 GET /v1/subscriptions/
-POST /v1/subscriptions/{channelId}
 DELETE /v1/subscriptions/{channelId}
+POST /v1/subscriptions/{channelId}
 POST /v1/uploads/
 PUT /v1/uploads/{id}/chunks/{partNumber}
 POST /v1/uploads/{id}/complete
@@ -148,11 +149,11 @@ GET /v1/videos/{id}/comments
 GET /v1/videos/{id}
 PATCH /v1/videos/{id}
 DELETE /v1/videos/{id}
-GET /v1/videos/{id}/captions
 POST /v1/videos/{id}/captions
+GET /v1/videos/{id}/captions
 DELETE /v1/videos/{id}/captions/{capId}
-POST /v1/videos/{id}/like
 DELETE /v1/videos/{id}/like
+POST /v1/videos/{id}/like
 GET /v1/videos/{id}/playback
 GET /v1/*/me
 PATCH /v1/*/me
@@ -179,6 +180,7 @@ PUBLIC = {
     ("POST", "/v1/ads/decision"), ("POST", "/v1/ads/events"),
     ("GET", "/v1/ads/creatives/{id}/asset"),
     ("POST", "/v1/advertiser/decision"), ("POST", "/v1/advertiser/events"),
+    ("GET", "/v1/live-streams/"),
     ("POST", "/v1/events/analytics"),
     ("GET", "/v1/feed/home"), ("GET", "/v1/feed/shorts"),
     ("GET", "/v1/feed/subscriptions"), ("POST", "/v1/feed/feedback"),

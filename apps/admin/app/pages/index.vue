@@ -5,37 +5,18 @@ useSeoMeta({
   title: 'Platform Operations Dashboard — Infrastructure & Global Metrics'
 })
 
-const { data: adminDash } = await useAsyncData('admin-dashboard', async () => {
-  try {
-    return await api.getAdminDashboard()
-  } catch {
-    return {
-      metrics: {
-        totalUsers: 4829100,
-        activeUsersToday: 1294000,
-        totalVideos: 942100,
-        liveStreamsActive: 1420,
-        totalAdRevenueKrw: 4820000000,
-        systemHealth: 'HEALTHY'
-      },
-      recentAuditLogs: [
-        { id: 'aud_01', action: 'APPROVE_SETTLEMENT_BATCH_2026_09', actor: 'usr_finance_admin_01', timestamp: '2026-10-24T07:45:00Z' },
-        { id: 'aud_02', action: 'RESOLVE_MODERATION_CASE_MOD_882', actor: 'usr_trust_safety_04', timestamp: '2026-10-24T07:32:00Z' },
-        { id: 'aud_03', action: 'UPDATE_POLICY_VERSION_v4.2', actor: 'usr_super_admin_01', timestamp: '2026-10-24T06:15:00Z' }
-      ]
-    }
-  }
+const { data: adminDash, pending: dashPending, error: dashError } = await useAsyncData('admin-dashboard', async () => {
+  return await api.getAdminDashboard()
 })
 
-const infraNodes = [
-  { service: 'Go 1.24 Core API Gateway', status: 'HEALTHY', latency: '4.2ms p95', detail: '24 pods · Zero 5xx errors' },
-  { service: 'PostgreSQL 18 Primary + Read Replicas', status: 'HEALTHY', latency: '1.8ms p95', detail: 'Double-entry ledger & RBAC store' },
-  { service: 'Valkey 8 Cache & Rate-Limiter Cluster', status: 'HEALTHY', latency: '0.4ms p95', detail: 'Hit ratio 98.7%' },
-  { service: 'NATS JetStream Event Bus', status: 'HEALTHY', latency: '0.9ms p95', detail: 'Transcode queue depth: 18 jobs' },
-  { service: 'OpenSearch 2.x (Korean Nori + Vector)', status: 'HEALTHY', latency: '11.4ms p95', detail: 'Green cluster · 12 shards' },
-  { service: 'ClickHouse 24 OLAP Telemetry Store', status: 'HEALTHY', latency: '18.2ms p95', detail: 'Ingesting 85,000 events/sec' },
-  { service: 'Cloudflare R2 + Global CDN Edge', status: 'HEALTHY', latency: '14.0ms TTFB', detail: 'Zero egress fee object storage' }
-]
+const { data: modQueue } = await useAsyncData('admin-index-modcount', async () => {
+  try {
+    return await api.getAdminModerationQueue()
+  } catch {
+    return []
+  }
+})
+const openModCount = computed(() => (modQueue.value || []).length)
 </script>
 
 <template>
@@ -50,7 +31,13 @@ const infraNodes = [
     </div>
 
     <!-- Top KPI Grid -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div v-if="dashPending" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div v-for="i in 5" :key="i" class="h-24 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+    </div>
+    <div v-else-if="dashError || !adminDash" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">운영 지표를 불러오지 못했습니다.</p>
+    </div>
+    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <div class="rounded-lg border border-slate-200 bg-white p-4">
         <p class="text-xs font-medium text-slate-500">Total Registered Users</p>
         <p class="mt-1.5 text-xl font-bold text-slate-900 tabular-nums">
@@ -70,63 +57,24 @@ const infraNodes = [
         </p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4">
-        <p class="text-xs font-medium text-slate-500">Transcoding Queue Depth</p>
-        <p class="mt-1.5 text-xl font-bold text-amber-700 tabular-nums">18 jobs</p>
-      </div>
-      <div class="rounded-lg border border-slate-200 bg-white p-4">
         <p class="text-xs font-medium text-slate-500">Gross Ad + Sub Revenue</p>
         <p class="mt-1.5 text-xl font-bold text-emerald-700 tabular-nums">
-          ₩{{ ((adminDash?.metrics.totalAdRevenueKrw || 4820000000) / 100000000).toFixed(1) }}억
+          ₩{{ ((adminDash?.metrics.totalAdRevenueKrw ?? 0) / 100000000).toFixed(1) }}억
         </p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4">
         <p class="text-xs font-medium text-slate-500">Open Moderation Reports</p>
-        <p class="mt-1.5 text-xl font-bold text-amber-700 tabular-nums">12 cases</p>
+        <p class="mt-1.5 text-xl font-bold text-amber-700 tabular-nums">{{ openModCount }} cases</p>
       </div>
     </div>
 
     <!-- Infrastructure Health Matrix & Audit Logs -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white lg:col-span-2">
-        <div class="border-b border-slate-200 bg-slate-50 px-5 py-3.5">
-          <h2 class="text-sm font-semibold text-slate-900">
-            핵심 인프라 클러스터 상태 (Core Infrastructure Health)
-          </h2>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <th class="py-2.5 px-4">Service Cluster</th>
-                <th class="py-2.5 px-4">Operational Detail</th>
-                <th class="py-2.5 px-4 text-right">Latency</th>
-                <th class="py-2.5 px-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr
-                v-for="node in infraNodes"
-                :key="node.service"
-                class="hover:bg-slate-50 transition-colors"
-              >
-                <td class="py-3 px-4 text-sm font-semibold text-slate-900 tabular-nums">
-                  {{ node.service }}
-                </td>
-                <td class="py-3 px-4 text-sm text-slate-600 tabular-nums">
-                  {{ node.detail }}
-                </td>
-                <td class="py-3 px-4 text-right font-mono text-sm text-slate-900 tabular-nums">
-                  {{ node.latency }}
-                </td>
-                <td class="py-3 px-4 text-right text-sm text-slate-900 tabular-nums">
-                  <span class="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                    {{ node.status }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center lg:col-span-2">
+        <h2 class="text-sm font-semibold text-slate-600">
+          핵심 인프라 클러스터 상태 (Core Infrastructure Health)
+        </h2>
+        <p class="mt-1 text-xs text-slate-500">관측 스택(Prometheus/Grafana) 연동 준비 중입니다.</p>
       </div>
 
       <!-- Recent Immutable Audit Logs -->
@@ -136,7 +84,10 @@ const infraNodes = [
             실시간 관리자 감사 로그 (Immutable Audit Trail)
           </h2>
         </div>
-        <div class="divide-y divide-slate-100">
+        <p v-if="(adminDash?.recentAuditLogs || []).length === 0" class="p-5 text-center text-xs text-slate-500">
+          기록된 감사 로그가 없습니다.
+        </p>
+        <div v-else class="divide-y divide-slate-100">
           <div
             v-for="log in adminDash?.recentAuditLogs"
             :key="log.id"

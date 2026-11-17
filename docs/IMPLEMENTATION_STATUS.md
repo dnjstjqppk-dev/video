@@ -132,7 +132,7 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### 4.10 프론트 공통 결함
 
-- **BROKEN:** `apps/studio/app/pages/upload.vue`, `apps/admin/app/pages/ads.vue`, `apps/web/app/pages/watch/[id].vue`에 **깨진 UTF-8 바이트**(한글 모지바케) 존재. P1로 정상 UTF-8 재작성 필요.
+- ~~**BROKEN:** 모지바케 3파일~~ **정정 2026-11-17:** 3파일 모두 유효 UTF-8·정상 한글로 오탐 확정. 조치 불요.
 - **STALE:** `apps/*/nuxt.config.ts`의 콘솔 상호 링크가 구 서브도메인(`dnjstjqppk`)을 가리키고 실배포(`dnjstjq0824`)와 불일치.
 - 시드 폴백: 홈/시청/분석/Shorts·라이브 선반이 API 실패 시 가짜 수치와 함께 렌더링된다. Empty State 정책(지시 ARTICLE 0.5) 위반 소지 → P1.
 - `cloudflare-deploy.yml`은 4개 콘솔만 배포하고 `apps/api-proxy`를 배포하지 않는다 → MISSING (수동 배포 절차 필요).
@@ -145,8 +145,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 ### 4.12 테스트·CI/CD — PARTIAL
 
 - Go 단위/통합, 계약 6종, OWASP 4종, API 레벨 E2E 4종, k6 스펙, Flutter 테스트: 존재. **브라우저 실렌더링 E2E·실결제·실송출 검증은 없음.**
-- OpenAPI 스펙은 chi.Walk 실측 143라우트 기준으로 동기화됐다 (121 경로, 상세 23 + 인벤토리 98,
-  `docs/generate_route_census.py`, 계약 게이트 테스트 포함). 엔드포인트별 상세 스키마는 P1 잔여.
+- OpenAPI 스펙은 chi.Walk 실측 140라우트 기준으로 동기화됐다 (119 경로, 상세 36 + 인벤토리 83,
+  `docs/generate_route_census.py`, 계약 게이트 테스트 포함). P0 변경 라우트의 상세 스키마는 P1-8에서 추가 완료.
 - ERD 9종도 실측 마이그레이션 기준으로 재생성됐다 (`docs/generate_erd.py`). P1-8/P1-9의 문서 동기화분은 본 회차 완료.
 - GitHub CI/CD 그린 이력 있음(11-07, d1ce1f6). 최신 `5d2c347`의 파이프라인 결과는 UNVERIFIED.
 - 원격은 GitHub인데 지시는 GitLab 우선(ARTICLE 0.12/19) → GitLab 파이프라인 실가동 UNVERIFIED.
@@ -169,10 +169,12 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### P1 — 상용 핵심
 
-8. OpenAPI 전 라우트 동기화 + 계약 테스트 확대 (ARTICLE 11).
-9. ERD·inventory·schema.sql을 실제 마이그레이션 기준으로 재생성.
-10. 모지바케 3파일 UTF-8 복구 + 전수 바이트 검사.
-11. 시드 폴백의 Empty State 전환 (데이터 없음은 빈 화면, 오류는 오류로).
+8. OpenAPI 전 라우트 동기화 + 계약 테스트 확대 (ARTICLE 11): **DONE 2026-11-17** — 36 상세 경로(YAML 파싱 검증) + 센서스 정합 게이트 유지.
+9. ERD·inventory·schema.sql을 실제 마이그레이션 기준으로 재생성: **DONE 2026-11-17** — 생성기 + 실DB 646컬럼 대조 무차이.
+10. 모지바케 3파일 UTF-8 복구 + 전수 바이트 검사: **DONE 2026-11-17 (오기 정정)** — 지목 3파일 + advertiser.vue 모두 유효 UTF-8·정상 한글 확인,
+   전수 스캔 422파일 중 텍스트 깨짐 0건(커밋된 .exe 8건만 제외). 기존 "깨진 바이트" 기재는 콘솔 렌더링 오탐. (참고: .exe 바이너리의 Git 커밋은 별도 정리 대상.)
+11. 시드 폴백의 Empty State 전환 (데이터 없음은 빈 화면, 오류는 오류로): **DONE 2026-11-17** — 4콘솔 17파일의 시드 렌더·가짜 성공을 빈/오류 상태로 전환,
+    쇼츠·라이브·Shorts·채널 목록은 실 API 연동, 관리자 변경 UI에 TOTP 재인증 입력 추가. `GET /v1/live-streams/` 신설(141라우트) + 스트림키 공개 응답 차단.
 12. 크로스 콘솔 URL 현행화 + api-proxy 배포 자동화 + `/api 1042` 재검증.
 13. NATS JetStream 실연동 (미디어잡·분석 이벤트·아웃박스 릴레이) 또는 범위 축소 결정.
 14. 조회수/분석 중복 제거 + ClickHouse 싱크 또는 PG 롤업 확정.

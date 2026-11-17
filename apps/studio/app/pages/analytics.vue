@@ -7,58 +7,32 @@ useSeoMeta({
   title: 'Creator Analytics — Views, Retention, CTR & Revenue'
 })
 
-const fallbackSeries = [
-  { date: '10/01', views: 54000, watchHours: 4100, ctr: 8.4, revenueKrw: 620000 },
-  { date: '10/05', views: 68200, watchHours: 5300, ctr: 9.1, revenueKrw: 780000 },
-  { date: '10/10', views: 81400, watchHours: 6400, ctr: 9.8, revenueKrw: 940000 },
-  { date: '10/15', views: 75900, watchHours: 5900, ctr: 8.9, revenueKrw: 870000 },
-  { date: '10/20', views: 112500, watchHours: 9200, ctr: 11.2, revenueKrw: 1340000 },
-  { date: '10/24', views: 129800, watchHours: 10800, ctr: 11.7, revenueKrw: 1580000 }
-]
-
-const { data: analyticsData } = await useAsyncData(
+const { data: analyticsData, error: analyticsError } = await useAsyncData(
   () => `studio-analytics-${selectedRange.value}`,
   async () => {
-    try {
-      return await api.getStudioAnalytics(selectedRange.value)
-    } catch {
-      return null
-    }
+    return await api.getStudioAnalytics(selectedRange.value)
   },
   { watch: [selectedRange] }
 )
 
-const trafficSources = [
-  { source: 'Home Feed Personalized Recommendation', share: 46.2 },
-  { source: 'OpenSearch Hybrid Search (Korean/English)', share: 24.8 },
-  { source: 'Up Next / Suggested Videos', share: 18.5 },
-  { source: 'External & Direct Links', share: 10.5 }
-]
-
-const demographics = [
-  { group: 'South Korea (KR)', share: 52.0 },
-  { group: 'United States (US)', share: 23.4 },
-  { group: 'Japan (JP)', share: 11.2 },
-  { group: 'Germany / EU', share: 8.1 },
-  { group: 'Other Global Regions', share: 5.3 }
-]
+const seriesPoints = computed(() => {
+  const views = analyticsData.value?.viewsTimeSeries || []
+  const watch = analyticsData.value?.watchTimeTimeSeries || []
+  const revenue = analyticsData.value?.revenueTimeSeries || []
+  return views.map((pt, i) => ({
+    date: pt.date,
+    views: pt.value,
+    watchHours: watch[i]?.value || 0,
+    revenueKrw: revenue[i]?.value || 0
+  }))
+})
 
 function exportCsvReport() {
-  const header = 'Date,Views,WatchHours,CTR_Percent,EstimatedRevenue_KRW\n'
-  let rows = ''
-  if (analyticsData.value?.viewsTimeSeries?.length) {
-    rows = analyticsData.value.viewsTimeSeries
-      .map((pt, i) => {
-        const watch = analyticsData.value?.watchTimeTimeSeries?.[i]?.value || 0
-        const rev = analyticsData.value?.revenueTimeSeries?.[i]?.value || 0
-        return `${pt.date},${pt.value},${watch},8.5,${rev}`
-      })
-      .join('\n')
-  } else {
-    rows = fallbackSeries
-      .map(r => `${r.date},${r.views},${r.watchHours},${r.ctr},${r.revenueKrw}`)
-      .join('\n')
-  }
+  const header = 'Date,Views,WatchHours,EstimatedRevenue_KRW\n'
+  const rows = seriesPoints.value
+    .map(r => `${r.date},${r.views},${r.watchHours},${r.revenueKrw}`)
+    .join('\n')
+  if (!rows) return
   const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -79,7 +53,7 @@ onMounted(async () => {
       legend: { data: ['Views', 'Watch Hours'], textStyle: { color: '#475569' } },
       xAxis: {
         type: 'category',
-        data: fallbackSeries.map(d => d.date),
+        data: seriesPoints.value.map(d => d.date),
         axisLabel: { color: '#64748B' }
       },
       yAxis: {
@@ -92,14 +66,14 @@ onMounted(async () => {
           name: 'Views',
           type: 'line',
           smooth: true,
-          data: fallbackSeries.map(d => d.views),
+          data: seriesPoints.value.map(d => d.views),
           itemStyle: { color: '#0F172A' }
         },
         {
           name: 'Watch Hours',
           type: 'line',
           smooth: true,
-          data: fallbackSeries.map(d => d.watchHours),
+          data: seriesPoints.value.map(d => d.watchHours),
           itemStyle: { color: '#2563EB' }
         }
       ]
@@ -116,7 +90,7 @@ onMounted(async () => {
       <div>
         <h1 class="text-xl font-semibold tracking-tight text-slate-900">심층 채널 분석 (ClickHouse Analytics &amp; Retention)</h1>
         <p class="mt-1 text-xs text-slate-500">
-          Powered by ClickHouse OLAP rollups · Real-time CTR, audience retention curve, traffic sources &amp; CSV export
+          일별 조회수 · 시청 시간 · 정산 수익 추이 및 CSV 내보내기
         </p>
       </div>
 
@@ -148,61 +122,21 @@ onMounted(async () => {
     <div class="rounded-lg border border-slate-200 bg-white p-5">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <h2 class="text-sm font-semibold text-slate-900">조회수 및 시청 시간 추이 (Views &amp; Watch Time Time-Series)</h2>
-        <span class="text-xs font-medium text-emerald-600 tabular-nums">Impressions CTR: 10.4% · Avg View Duration: 14m 22s</span>
+        <span class="text-xs font-medium text-slate-500 tabular-nums">{{ selectedRange }} · 일별 집계</span>
       </div>
-      <div ref="chartCanvasRef" class="mt-4 h-72 w-full" />
+      <div v-if="analyticsError" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+        <p class="text-sm font-semibold text-red-700">분석 데이터를 불러오지 못했습니다.</p>
+      </div>
+      <div v-else-if="seriesPoints.length === 0" class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-12 text-center">
+        <p class="text-sm font-semibold text-slate-600">아직 집계된 시청 기록이 없습니다.</p>
+      </div>
+      <div v-else ref="chartCanvasRef" class="mt-4 h-72 w-full" />
     </div>
 
-    <!-- Audience Retention Curve + Traffic Sources + Demographics -->
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <!-- Retention Curve -->
-      <div class="rounded-lg border border-slate-200 bg-white p-5">
-        <h3 class="text-sm font-semibold text-slate-900">시청 지속률 곡선 (Audience Retention Curve)</h3>
-        <p class="mt-1 text-xs text-slate-500 tabular-nums">64.2% of viewers still watching at the 15:00 mark</p>
-        <div class="mt-4 space-y-3 text-xs">
-          <div v-for="(pt, idx) in [{ t: '00:00 Intro', pct: 100 }, { t: '03:30 R2 Upload', pct: 84 }, { t: '09:15 FFmpeg ABR', pct: 72 }, { t: '15:00 ClickHouse', pct: 64 }, { t: '25:00 Outro', pct: 51 }]" :key="idx">
-            <div class="flex justify-between text-slate-700 tabular-nums">
-              <span>{{ pt.t }}</span>
-              <span class="font-mono font-semibold text-slate-900">{{ pt.pct }}%</span>
-            </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-md bg-slate-100">
-              <div class="h-full bg-slate-900" :style="{ width: `${pt.pct}%` }" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Traffic Sources -->
-      <div class="rounded-lg border border-slate-200 bg-white p-5">
-        <h3 class="text-sm font-semibold text-slate-900">트래픽 소스 (Traffic Sources)</h3>
-        <div class="mt-4 space-y-3 text-xs">
-          <div v-for="src in trafficSources" :key="src.source">
-            <div class="flex justify-between text-slate-700">
-              <span>{{ src.source }}</span>
-              <span class="font-semibold text-slate-900 tabular-nums">{{ src.share }}%</span>
-            </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-md bg-slate-100">
-              <div class="h-full bg-slate-700" :style="{ width: `${src.share}%` }" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Geography & Demographics -->
-      <div class="rounded-lg border border-slate-200 bg-white p-5">
-        <h3 class="text-sm font-semibold text-slate-900">국가 및 연령 분포 (Geography &amp; Demographics)</h3>
-        <div class="mt-4 space-y-3 text-xs">
-          <div v-for="geo in demographics" :key="geo.group">
-            <div class="flex justify-between text-slate-700">
-              <span>{{ geo.group }}</span>
-              <span class="font-semibold text-slate-900 tabular-nums">{{ geo.share }}%</span>
-            </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-md bg-slate-100">
-              <div class="h-full bg-emerald-600" :style="{ width: `${geo.share}%` }" />
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Detailed breakdowns land with the telemetry warehouse connection -->
+    <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+      <p class="text-sm font-semibold text-slate-600">시청 지속률 · 트래픽 소스 · 지역 분포 연동 준비 중</p>
+      <p class="mt-1 text-xs text-slate-500">일별 조회수·시청 시간·수익 추이는 위 차트에서 확인할 수 있습니다.</p>
     </div>
   </div>
 </template>

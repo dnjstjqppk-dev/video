@@ -5,10 +5,11 @@ import { useAppStore } from '~/stores/app'
 const route = useRoute()
 const streamId = computed(() => String(route.params.id || 'live_main_01'))
 const appStore = useAppStore()
+const api = useApi()
 const config = useRuntimeConfig()
 
 useSeoMeta({
-  title: () => `[LIVE] 2026 Global Architecture Summit (${streamId.value})`,
+  title: () => `[LIVE] ${streamId.value} — StreamVerse`,
   description: 'Watch live in ultra-low latency HLS with real-time WebSocket chat and SuperChat support.'
 })
 
@@ -28,33 +29,25 @@ interface LivePoll {
   userVotedIndex: number | null
 }
 
-const activePoll = ref<LivePoll | null>({
-  question: '다음 주 라이브 세션에서 다룰 심화 주제를 투표해주세요!',
-  options: [
-    { text: 'WebTransport 저지연 라이브 패킷 분석', votes: 142 },
-    { text: 'PostgreSQL 18 파티셔닝 & 원장 최적화', votes: 89 },
-    { text: 'AV1 하드웨어 인코더 클러스터 구축', votes: 215 },
-  ],
-  totalVotes: 446,
-  userVotedIndex: null,
-})
+const activePoll = ref<LivePoll | null>(null)
+const pollError = ref<string | null>(null)
 
 async function voteInLivePoll(idx: number) {
   if (!activePoll.value || activePoll.value.userVotedIndex !== null) return
   const opt = activePoll.value.options[idx]
   if (!opt) return
-  activePoll.value.userVotedIndex = idx
-  opt.votes += 1
-  activePoll.value.totalVotes += 1
-
+  pollError.value = null
   try {
     const apiBase = config.public.apiBaseUrl || 'http://localhost:8080'
     await $fetch(`${apiBase}/v1/live-streams/${streamId.value}/polls/vote`, {
       method: 'POST',
       body: { option_index: idx },
     })
-  } catch {
-    // Retain optimistic UI state
+    activePoll.value.userVotedIndex = idx
+    opt.votes += 1
+    activePoll.value.totalVotes += 1
+  } catch (e: unknown) {
+    pollError.value = e instanceof Error ? e.message : '투표에 실패했습니다.'
   }
 }
 
@@ -66,40 +59,7 @@ function getSuperChatBadgeClass(amount: number) {
   return 'bg-blue-50 text-blue-700 border-blue-200'
 }
 
-const messages = ref<LiveChatMessage[]>([
-  {
-    id: 'msg_1',
-    streamId: streamId.value,
-    userId: 'usr_mod_1',
-    userDisplayName: 'GVP Moderator',
-    isModerator: true,
-    isCreator: false,
-    message: 'Welcome to the 2026 Global Architecture Summit! DVR rewind and 1080p60 ABR are active.',
-    timestamp: new Date().toISOString()
-  },
-  {
-    id: 'msg_2',
-    streamId: streamId.value,
-    userId: 'usr_vip_8',
-    userDisplayName: '최현우 (Hyunwoo Choi)',
-    isModerator: false,
-    isCreator: false,
-    message: 'SuperChat 응원합니다! Go 1.24 + Nuxt 4 조합 최고네요.',
-    donationAmount: 50000,
-    currency: 'KRW',
-    timestamp: new Date().toISOString()
-  },
-  {
-    id: 'msg_3',
-    streamId: streamId.value,
-    userId: 'usr_dev_22',
-    userDisplayName: 'Elena Rostova',
-    isModerator: false,
-    isCreator: false,
-    message: 'Zero buffering on 4K stream from Frankfurt edge POP!',
-    timestamp: new Date().toISOString()
-  }
-])
+const messages = ref<LiveChatMessage[]>([])
 
 let ws: WebSocket | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -234,8 +194,16 @@ function sendChatMessage() {
   superChatAmount.value = 0
 }
 
-onMounted(() => {
+onMounted(async () => {
   connectLiveChatSocket()
+  try {
+    const poll = await api.getActiveLivePoll(streamId.value)
+    if (poll) {
+      activePoll.value = { ...poll, userVotedIndex: null }
+    }
+  } catch {
+    // No active poll or unreachable; widget stays hidden
+  }
 })
 
 onBeforeUnmount(() => {

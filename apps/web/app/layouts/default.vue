@@ -14,31 +14,18 @@ const showUserMenu = ref(false)
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const fallbackSuggestions = [
-  '4K HDR 서울 야경 드론 (Seoul 4K Drone)',
-  'Go 1.24 Microservices Architecture',
-  'Nuxt 4 SSR Performance Optimization',
-  'K-Pop Live Concert 2026',
-  'Lo-Fi Coding Beats 24/7 Live'
-]
-
 function onSearchInput() {
   if (debounceTimer) clearTimeout(debounceTimer)
   const q = searchQuery.value.trim()
   if (!q) {
-    suggestions.value = fallbackSuggestions
+    suggestions.value = []
     return
   }
   debounceTimer = setTimeout(async () => {
     try {
-      const res = await api.getSearchSuggestions(q)
-      suggestions.value = res.length
-        ? res
-        : fallbackSuggestions.filter(item => item.toLowerCase().includes(q.toLowerCase()))
+      suggestions.value = await api.getSearchSuggestions(q)
     } catch {
-      suggestions.value = fallbackSuggestions.filter(item =>
-        item.toLowerCase().includes(q.toLowerCase())
-      )
+      suggestions.value = []
     }
   }, 180)
 }

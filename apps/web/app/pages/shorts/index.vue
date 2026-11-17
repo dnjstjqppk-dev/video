@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAppStore } from '~/stores/app'
+import type { Video } from '@gvp/shared-types'
 
 const appStore = useAppStore()
 const api = useApi()
@@ -32,50 +33,31 @@ interface ShortClip {
   decisionId?: string
 }
 
-const shortsList = ref<ShortClip[]>([
-  {
-    id: 'short_01',
-    channelId: 'ch_tech_kr',
-    channelHandle: '@gvptech',
-    channelAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80',
-    title: '60초 만에 이해하는 HLS ABR 화질 자동 전환 & R2 멀티파트 업로드 #golang #nuxt4 #streaming',
-    audioTitle: 'Original Sound — GVP Tech Engineering',
-    likes: 48200,
-    comments: 912,
-    posterUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=720&q=80',
-    videoUrl: 'https://media.gvp.media/hls/short_01/master.m3u8',
-    relatedVideoId: 'vid_arch_2026',
-    relatedVideoTitle: 'Building a 10M Concurrent Viewer Global Video Platform'
-  },
-  {
-    id: 'short_02',
-    channelId: 'ch_seoul_4k',
-    channelHandle: '@seoul4k',
-    channelAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&q=80',
-    title: '서울 한강 드론 라이트쇼 1000대 동시 비행 하이라이트 #seoul #drone #4k',
-    audioTitle: 'Cyberpunk Horizon — Synthwave Mix',
-    likes: 129400,
-    comments: 2410,
-    posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=720&q=80',
-    videoUrl: 'https://media.gvp.media/hls/short_02/master.m3u8',
-    relatedVideoId: 'vid_seoul_4k',
-    relatedVideoTitle: '[4K 60fps HDR] Cyberpunk Rainy Night Walk in Gangnam & Hongdae'
-  },
-  {
-    id: 'short_03',
-    channelId: 'ch_esports_global',
-    channelHandle: '@esports',
-    channelAvatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100&q=80',
-    title: '0.1초 반응속도 페이커 아지르 슈퍼토스 클러치 순간 #esports #t1 #gaming',
-    audioTitle: 'Arena Roar — Live Broadcast Audio',
-    likes: 312000,
-    comments: 5830,
-    posterUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=720&q=80',
-    videoUrl: 'https://media.gvp.media/hls/short_03/master.m3u8',
-    relatedVideoId: 'vid_esports_finals',
-    relatedVideoTitle: 'T1 vs Gen.G — Grand Finals Game 5 Full Highlights'
+function toClip(v: Video): ShortClip {
+  return {
+    id: v.id,
+    channelId: v.channelId,
+    channelHandle: v.channel?.handle || '@channel',
+    channelAvatar: v.channel?.avatarUrl || '',
+    title: v.title,
+    audioTitle: 'Original Sound',
+    likes: v.likeCount || 0,
+    comments: v.commentCount || 0,
+    posterUrl: v.thumbnailUrl || '',
+    videoUrl: v.hlsMasterUrl || ''
   }
-])
+}
+
+const { data: shortsFeed } = await useAsyncData('shorts-feed', async () => {
+  try {
+    const res = await api.getShortsFeed(1, 20)
+    return res.items || []
+  } catch {
+    return []
+  }
+})
+const shortsList = ref<ShortClip[]>((shortsFeed.value || []).map(toClip))
+const shortsError = ref<string | null>(null)
 
 onMounted(async () => {
   try {
@@ -93,10 +75,10 @@ onMounted(async () => {
         channelAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&q=80',
         title: `[Sponsored] ${adDecision.creative.title} — ${adDecision.creative.category}`,
         audioTitle: 'Promoted Sound — ' + adDecision.creative.advertiserName,
-        likes: 15400,
-        comments: 320,
-        posterUrl: adDecision.creative.mediaUrl,
-        videoUrl: adDecision.creative.mediaUrl,
+        likes: 0,
+        comments: 0,
+        posterUrl: api.resolveUrl(adDecision.creative.mediaUrl),
+        videoUrl: api.resolveUrl(adDecision.creative.mediaUrl),
         isSponsored: true,
         ctaText: adDecision.creative.callToAction || 'Learn More',
         destinationUrl: adDecision.creative.destinationUrl,
@@ -121,11 +103,32 @@ const showSoundModal = ref(false)
 const playbackProgress = ref(38) // current progress %
 const newShortComment = ref('')
 
-const shortComments = ref([
-  { id: '1', user: '@dev_minho', text: '오디오/비디오 프리로딩 덕분에 스와이프 딜레이가 0ms네요!', time: '2시간 전', likes: 42 },
-  { id: '2', user: '@cloud_architect', text: 'Separate Shorts view telemetry event firing cleanly.', time: '5시간 전', likes: 19 },
-  { id: '3', user: '@frontend_pro', text: '9:16 가상화 뷰포트랑 햅틱 스와이프 감각 완벽하네요.', time: '1일 전', likes: 7 }
-])
+interface DrawerComment { id: string; user: string; text: string; time: string; likes: number }
+
+const shortComments = ref<DrawerComment[]>([])
+const shortCommentsError = ref<string | null>(null)
+
+async function loadShortComments() {
+  const clip = currentShort.value
+  if (!clip || clip.isSponsored) {
+    shortComments.value = []
+    return
+  }
+  try {
+    const res = await api.getVideoComments(clip.id, 1, 20)
+    shortComments.value = (res.items || []).map(c => ({
+      id: c.id,
+      user: '@' + (c.author?.displayName || 'viewer'),
+      text: c.content,
+      time: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+      likes: c.likeCount || 0
+    }))
+  } catch {
+    shortComments.value = []
+  }
+}
+
+watch(activeIndex, () => { loadShortComments() })
 
 const currentShort = computed(() => shortsList.value[activeIndex.value] || shortsList.value[0])
 const nextShort = computed(() => shortsList.value[(activeIndex.value + 1) % shortsList.value.length])
@@ -149,20 +152,25 @@ function handleShare(clip: ShortClip) {
   }, 2500)
 }
 
-function addShortComment() {
+async function addShortComment() {
   const text = newShortComment.value.trim()
-  if (!text) return
-  shortComments.value.unshift({
-    id: `sc_${Date.now()}`,
-    user: `@${appStore.currentUser?.username || 'viewer'}`,
-    text,
-    time: '방금 전',
-    likes: 0
-  })
-  if (currentShort.value) {
-    currentShort.value.comments += 1
+  const clip = currentShort.value
+  if (!text || !clip || clip.isSponsored) return
+  shortCommentsError.value = null
+  try {
+    const created = await api.addComment(clip.id, text)
+    shortComments.value.unshift({
+      id: created.id,
+      user: '@' + (created.author?.displayName || appStore.currentUser?.username || 'viewer'),
+      text: created.content,
+      time: '방금 전',
+      likes: 0
+    })
+    clip.comments += 1
+    newShortComment.value = ''
+  } catch (e: unknown) {
+    shortCommentsError.value = e instanceof Error ? e.message : '댓글 작성에 실패했습니다.'
   }
-  newShortComment.value = ''
 }
 
 async function sendShortsTelemetry(clip: ShortClip | undefined) {
@@ -210,24 +218,39 @@ function goPrev() {
   sendShortsTelemetry(currentShort.value)
 }
 
-function toggleLike(clip: ShortClip) {
-  clip.liked = !clip.liked
-  if (clip.liked && clip.disliked) {
-    clip.disliked = false
+async function toggleLike(clip: ShortClip) {
+  if (clip.isSponsored) return
+  shortsError.value = null
+  const next = !clip.liked
+  try {
+    const res = next ? await api.likeVideo(clip.id) : await api.unlikeVideo(clip.id)
+    clip.liked = res.liked
+    clip.likes = res.likeCount
+    if (clip.liked) clip.disliked = false
+  } catch (e: unknown) {
+    shortsError.value = e instanceof Error ? e.message : '좋아요 처리에 실패했습니다.'
   }
-  clip.likes += clip.liked ? 1 : -1
 }
 
 function toggleDislike(clip: ShortClip) {
   clip.disliked = !clip.disliked
-  if (clip.disliked && clip.liked) {
-    clip.liked = false
-    clip.likes = Math.max(0, clip.likes - 1)
-  }
+  if (clip.disliked) clip.liked = false
 }
 
-function toggleSubscribe(clip: ShortClip) {
-  clip.subscribed = !clip.subscribed
+async function toggleSubscribe(clip: ShortClip) {
+  if (clip.isSponsored) return
+  shortsError.value = null
+  const next = !clip.subscribed
+  try {
+    if (next) {
+      await api.subscribeChannel(clip.channelId)
+    } else {
+      await api.unsubscribeChannel(clip.channelId)
+    }
+    clip.subscribed = next
+  } catch (e: unknown) {
+    shortsError.value = e instanceof Error ? e.message : '구독 처리에 실패했습니다.'
+  }
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -247,6 +270,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  loadShortComments()
   sendShortsTelemetry(currentShort.value)
   if (import.meta.client) {
     window.addEventListener('keydown', onKeydown)
@@ -302,6 +326,10 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <p v-if="shortsError" class="border-b border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-700" role="alert">
+          {{ shortsError }}
+        </p>
+
         <!-- Video Frame -->
         <div class="relative flex-1 overflow-hidden bg-slate-950">
           <img
@@ -324,11 +352,6 @@ onUnmounted(() => {
               </svg>
             </div>
           </div>
-        </div>
-
-        <!-- Scrubbing Progress Bar -->
-        <div class="h-1.5 w-full bg-slate-200">
-          <div class="h-full bg-blue-600" :style="{ width: `${playbackProgress}%` }" />
         </div>
 
         <!-- Bottom Metadata Panel (Clean White Surface) -->
@@ -506,8 +529,15 @@ onUnmounted(() => {
           </button>
         </div>
 
+        <p v-if="shortCommentsError" class="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+          {{ shortCommentsError }}
+        </p>
+
         <!-- Comments Feed -->
         <div class="mt-3 flex-1 space-y-3 overflow-y-auto pr-1 text-xs">
+          <p v-if="shortComments.length === 0" class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-xs text-slate-500">
+            {{ appStore.locale === 'ko' ? '아직 댓글이 없습니다.' : 'No comments yet.' }}
+          </p>
           <div
             v-for="cmt in shortComments"
             :key="cmt.id"
@@ -566,7 +596,6 @@ onUnmounted(() => {
             </svg>
           </div>
           <h4 class="mt-4 text-sm font-bold text-slate-900">{{ currentShort.audioTitle }}</h4>
-          <p class="mt-1 text-xs text-slate-500 tabular-nums">14.8K {{ appStore.locale === 'ko' ? '개의 Shorts에서 사용됨' : 'Shorts created' }}</p>
           <button
             type="button"
             class="mt-5 w-full rounded-md bg-slate-900 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"

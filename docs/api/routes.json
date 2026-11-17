@@ -105,12 +105,12 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/v1/ads/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/v1/ads/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
@@ -155,12 +155,12 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/v1/advertiser/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/v1/advertiser/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
@@ -205,14 +205,14 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/channels/{id}",
-    "auth": "Public"
-  },
-  {
     "method": "PATCH",
     "path": "/v1/channels/{id}",
     "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/channels/{id}",
+    "auth": "Public"
   },
   {
     "method": "POST",
@@ -272,6 +272,11 @@
   {
     "method": "GET",
     "path": "/v1/feed/subscriptions",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/",
     "auth": "Public"
   },
   {
@@ -350,12 +355,12 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/v1/partners/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/v1/partners/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
@@ -525,12 +530,12 @@
     "auth": "Auth"
   },
   {
-    "method": "POST",
+    "method": "DELETE",
     "path": "/v1/subscriptions/{channelId}",
     "auth": "Auth"
   },
   {
-    "method": "DELETE",
+    "method": "POST",
     "path": "/v1/subscriptions/{channelId}",
     "auth": "Auth"
   },
@@ -585,12 +590,12 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/v1/videos/{id}/captions",
     "auth": "Auth"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/v1/videos/{id}/captions",
     "auth": "Auth"
   },
@@ -600,12 +605,12 @@
     "auth": "Auth"
   },
   {
-    "method": "POST",
+    "method": "DELETE",
     "path": "/v1/videos/{id}/like",
     "auth": "Auth"
   },
   {
-    "method": "DELETE",
+    "method": "POST",
     "path": "/v1/videos/{id}/like",
     "auth": "Auth"
   },

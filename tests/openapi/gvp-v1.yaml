@@ -236,6 +236,213 @@ paths:
       responses:
         '200':
           description: Settlement overview
+  /payments/confirm:
+    post:
+      summary: Confirm a payment out-of-band with the provider (fail-closed)
+      operationId: confirmPayment
+      responses:
+        '200':
+          description: Payment confirmed and ledgered
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Amount or session mismatch (AMOUNT_MISMATCH, SESSION_MISMATCH)
+        '503':
+          description: Provider not configured (UNAVAILABLE)
+  /advertiser/campaigns:
+    get:
+      summary: List own campaigns (advertiser-scoped)
+      operationId: listAdvertiserCampaigns
+      responses:
+        '200':
+          description: Campaign list
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create a draft campaign (review state machine)
+      operationId: createAdvertiserCampaign
+      responses:
+        '201':
+          description: Draft campaign created (status=draft)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /advertiser/campaigns/{id}/status:
+    patch:
+      summary: Transition campaign status along the review state machine
+      operationId: updateCampaignStatus
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      responses:
+        '200':
+          description: Status transitioned
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /advertiser/campaigns/{id}/creatives:
+    post:
+      summary: Upload a creative asset for review (multipart)
+      operationId: uploadCreative
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                headline:
+                  type: string
+                destinationUrl:
+                  type: string
+                callToAction:
+                  type: string
+      responses:
+        '201':
+          description: Creative stored as pending review
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /ads/creatives/{id}/asset:
+    get:
+      summary: Stream a creative asset (approved are public)
+      operationId: getCreativeAsset
+      parameters:
+        - $ref: '#/components/parameters/CreativeId'
+      responses:
+        '200':
+          description: Creative bytes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /ads/decision:
+    post:
+      summary: Select an eligible campaign for an ad slot
+      operationId: makeAdDecision
+      responses:
+        '200':
+          description: Decision with creative or unfilled reason
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /ads/events:
+    post:
+      summary: Record a delivery event (decision-linked, idempotent)
+      operationId: recordAdEvent
+      responses:
+        '202':
+          description: Event accepted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /ads/preview:
+    post:
+      summary: Preview a creative (optional forced campaign, no billing)
+      operationId: previewAdDecision
+      responses:
+        '200':
+          description: Preview creative
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/users/{id}/status:
+    patch:
+      summary: Sanction a user (MFA step-up required)
+      operationId: updateUserStatus
+      responses:
+        '200':
+          description: Status updated and audited
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+  /admin/moderation/{id}/resolve:
+    post:
+      summary: Resolve a moderation case (MFA step-up required)
+      operationId: resolveModerationCase
+      responses:
+        '200':
+          description: Case resolved and audited
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+  /live-streams/:
+    get:
+      summary: List currently live broadcasts (no ingest credentials)
+      operationId: listLiveStreams
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Page of live broadcasts
+    post:
+      summary: Create a live broadcast (owner receives ingest credentials)
+      operationId: createLiveStream
+      responses:
+        '201':
+          description: Broadcast created (idle)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /search:
+    get:
+      summary: Search public videos and channels (visibility-filtered)
+      operationId: searchCatalog
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Ranked matches (private/unlisted excluded)
+  /me/mfa/setup:
+    post:
+      summary: Begin TOTP enrollment
+      operationId: setupMfa
+      responses:
+        '200':
+          description: Secret and backup codes issued
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/mfa/verify:
+    post:
+      summary: Verify a TOTP code and enable MFA
+      operationId: verifyMfa
+      responses:
+        '200':
+          description: MFA enabled
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     BearerAuth:
@@ -262,6 +469,18 @@ components:
       schema:
         type: integer
         default: 20
+    CampaignId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    CreativeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     ApiError:
       type: object
@@ -316,6 +535,18 @@ components:
             $ref: '#/components/schemas/ErrorEnvelope'
     NotFound:
       description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Authenticated but not permitted
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    PreconditionFailed:
+      description: MFA enrollment required before this sensitive action
       content:
         application/json:
           schema:

@@ -1,6 +1,6 @@
 # API Route Census (generated, chi.Walk verified)
 
-Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 140 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
+Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 141 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
 
 Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·
 **HOLE** is public but must be guarded (P0). `/v1/*/` in chi output is the users-router mount artifact
@@ -41,8 +41,8 @@ for real paths `/v1/me...`.
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/v1/channels/` | Auth | trailing-slash route |
-| `GET` | `/v1/channels/{id}` | Public |  |
 | `PATCH` | `/v1/channels/{id}` | Auth |  |
+| `GET` | `/v1/channels/{id}` | Public |  |
 | `POST` | `/v1/channels/{id}/subscribe` | Auth |  |
 | `DELETE` | `/v1/channels/{id}/subscribe` | Auth |  |
 | `GET` | `/v1/channels/{id}/videos` | Public |  |
@@ -56,11 +56,11 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/videos/{id}` | Public |  |
 | `PATCH` | `/v1/videos/{id}` | Auth |  |
 | `DELETE` | `/v1/videos/{id}` | Auth |  |
-| `GET` | `/v1/videos/{id}/captions` | Auth |  |
 | `POST` | `/v1/videos/{id}/captions` | Auth |  |
+| `GET` | `/v1/videos/{id}/captions` | Auth |  |
 | `DELETE` | `/v1/videos/{id}/captions/{capId}` | Auth |  |
-| `POST` | `/v1/videos/{id}/like` | Auth |  |
 | `DELETE` | `/v1/videos/{id}/like` | Auth |  |
+| `POST` | `/v1/videos/{id}/like` | Auth |  |
 | `GET` | `/v1/videos/{id}/playback` | Public |  |
 
 ## comments (4)
@@ -98,10 +98,11 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/search` | Public |  |
 | `GET` | `/v1/search/suggestions` | Public |  |
 
-## live (14)
+## live (15)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
+| `GET` | `/v1/live-streams/` | Public | trailing-slash route |
 | `POST` | `/v1/live-streams/` | Auth | trailing-slash route |
 | `GET` | `/v1/live-streams/{id}` | Public |  |
 | `GET` | `/v1/live-streams/{id}/chat` | Public |  |
@@ -135,8 +136,8 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/partners/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/partners/rights/claims` | Auth |  |
 | `POST` | `/v1/partners/rights/claims` | Auth |  |
 | `POST` | `/v1/partners/rights/claims/{id}/dispute` | Auth |  |
@@ -160,8 +161,8 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/ads/admin/creatives/{id}/reject` | Role(super_admin, platform_admin) |  |
 | `GET` | `/v1/ads/admin/diagnostics` | Role(super_admin, platform_admin) |  |
 | `GET` | `/v1/ads/advertiser/reports` | Role(advertiser, partner_manager, platform_admin) |  |
-| `GET` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/ads/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/ads/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/ads/campaigns/{id}/creatives` | Role(advertiser, partner_manager, platform_admin) |  |
 | `PATCH` | `/v1/ads/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
@@ -175,8 +176,8 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
+| `GET` | `/v1/advertiser/campaigns` | Role(advertiser, partner_manager, platform_admin) |  |
 | `GET` | `/v1/advertiser/campaigns/{id}` | Role(advertiser, partner_manager, platform_admin) |  |
 | `POST` | `/v1/advertiser/campaigns/{id}/creatives` | Role(advertiser, partner_manager, platform_admin) |  |
 | `PATCH` | `/v1/advertiser/campaigns/{id}/status` | Role(advertiser, partner_manager, platform_admin) |  |
@@ -226,8 +227,8 @@ for real paths `/v1/me...`.
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/subscriptions/` | Auth | trailing-slash route |
-| `POST` | `/v1/subscriptions/{channelId}` | Auth |  |
 | `DELETE` | `/v1/subscriptions/{channelId}` | Auth |  |
+| `POST` | `/v1/subscriptions/{channelId}` | Auth |  |
 
 ## moderation (1)
 

@@ -8,54 +8,18 @@ useSeoMeta({
   title: 'Creator Dashboard'
 })
 
-const { data: dashboard } = await useAsyncData('studio-dashboard', async () => {
+const { data: dashboard, pending: dashPending, error: dashError } = await useAsyncData('studio-dashboard', async () => {
+  return await api.getStudioDashboard()
+})
+
+const { data: claimsData } = await useAsyncData('studio-claims', async () => {
   try {
-    return await api.getStudioDashboard()
+    return await api.getStudioClaims()
   } catch {
-    return {
-      channel: {
-        id: 'ch_tech_kr',
-        ownerId: 'usr_1',
-        handle: '@gvptech',
-        name: 'GVP Tech Engineering',
-        subscriberCount: 284000,
-        videoCount: 142,
-        isVerified: true,
-        createdAt: '2024-01-01T00:00:00Z',
-        updatedAt: '2026-10-24T00:00:00Z'
-      },
-      analytics: {
-        views: 1942800,
-        watchTimeHours: 148520,
-        subscribers: 284000,
-        estimatedRevenue: 18450000
-      },
-      recentVideos: [
-        {
-          id: 'vid_arch_2026',
-          channelId: 'ch_tech_kr',
-          title: 'Building a 10M Concurrent Viewer Global Video Platform with Go 1.24, Nuxt 4 & ClickHouse',
-          viewCount: 412900,
-          likeCount: 32400,
-          commentCount: 1842,
-          status: VideoProcessingStatus.READY,
-          publishedAt: '2026-10-20T09:00:00Z'
-        },
-        {
-          id: 'vid_ai_agents',
-          channelId: 'ch_tech_kr',
-          title: 'Multimodal Video Indexing with Audio-Visual Fingerprints & Vector Embeddings',
-          viewCount: 189400,
-          likeCount: 16200,
-          commentCount: 740,
-          status: VideoProcessingStatus.READY,
-          publishedAt: '2026-10-23T11:00:00Z'
-        }
-      ],
-      recentComments: []
-    }
+    return []
   }
 })
+const activeClaims = computed(() => (claimsData.value || []).filter(c => c.status !== 'resolved'))
 
 function formatRevenue(krw: number): string {
   if (currency.value === 'KRW') {
@@ -97,14 +61,21 @@ function formatRevenue(krw: number): string {
       </div>
     </div>
 
+    <div v-if="dashPending" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div v-for="i in 4" :key="i" class="h-28 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+    </div>
+    <div v-else-if="dashError || !dashboard" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">대시보드를 불러오지 못했습니다.</p>
+    </div>
+
     <!-- KPI Cards -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-lg border border-slate-200 bg-white p-5">
         <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">총 조회수 (28d Views)</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
           {{ dashboard?.analytics.views.toLocaleString() }}
         </p>
-        <p class="mt-1 text-xs font-medium text-emerald-600 tabular-nums">+18.4% vs previous 28d</p>
+        <p class="mt-1 text-xs font-medium text-slate-500 tabular-nums">최근 28일 집계</p>
       </div>
 
       <div class="rounded-lg border border-slate-200 bg-white p-5">
@@ -112,7 +83,7 @@ function formatRevenue(krw: number): string {
         <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
           {{ dashboard?.analytics.watchTimeHours.toLocaleString() }} hrs
         </p>
-        <p class="mt-1 text-xs font-medium text-emerald-600 tabular-nums">+12.1% · avg retention 64.2%</p>
+        <p class="mt-1 text-xs font-medium text-slate-500 tabular-nums">최근 28일 집계</p>
       </div>
 
       <div class="rounded-lg border border-slate-200 bg-white p-5">
@@ -120,13 +91,13 @@ function formatRevenue(krw: number): string {
         <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
           {{ dashboard?.analytics.subscribers.toLocaleString() }}
         </p>
-        <p class="mt-1 text-xs font-medium text-slate-600 tabular-nums">+14,200 net new this month</p>
+        <p class="mt-1 text-xs font-medium text-slate-500 tabular-nums">채널 누적 구독자</p>
       </div>
 
       <div class="rounded-lg border border-slate-200 bg-white p-5">
         <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">예상 정산 수익 (Est. Net Revenue)</p>
         <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
-          {{ formatRevenue(dashboard?.analytics.estimatedRevenue || 18450000) }}
+          {{ formatRevenue(dashboard?.analytics.estimatedRevenue ?? 0) }}
         </p>
         <p class="mt-1 text-xs text-slate-500 tabular-nums">Ads + Premium + SuperChat (55%/70% split)</p>
       </div>
@@ -135,7 +106,11 @@ function formatRevenue(krw: number): string {
     <!-- Recent Uploads & Copyright/Policy Alerts -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <!-- Recent Uploads -->
-      <div class="overflow-hidden rounded-lg border border-slate-200 bg-white lg:col-span-2">
+      <div v-if="(dashboard?.recentVideos || []).length === 0" class="rounded-lg border border-slate-200 bg-white p-8 text-center lg:col-span-2">
+        <p class="text-sm font-semibold text-slate-600">아직 업로드한 동영상이 없습니다.</p>
+        <NuxtLink to="/upload" class="mt-2 inline-block text-xs font-medium text-slate-900 underline">첫 동영상 업로드하기</NuxtLink>
+      </div>
+      <div v-else class="overflow-hidden rounded-lg border border-slate-200 bg-white lg:col-span-2">
         <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 class="text-sm font-semibold text-slate-900">최근 업로드 동영상 (Recent Uploads)</h2>
           <NuxtLink to="/content" class="text-xs font-medium text-slate-600 hover:text-slate-900">
@@ -188,15 +163,16 @@ function formatRevenue(krw: number): string {
           저작권 및 정책 알림 (Copyright &amp; Policy Alerts)
         </h2>
         <div class="mt-4 space-y-3 text-xs">
-          <div class="rounded-md border border-emerald-200 bg-emerald-50 p-3.5 text-emerald-900">
+          <div v-if="activeClaims.length === 0" class="rounded-md border border-emerald-200 bg-emerald-50 p-3.5 text-emerald-900">
             <p class="font-semibold">채널 상태 양호 (Channel in Good Standing)</p>
-            <p class="mt-1 text-emerald-700 tabular-nums">커뮤니티 가이드 위반 경고 0건 · 저작권 위반 경고 0건</p>
+            <p class="mt-1 text-emerald-700 tabular-nums">진행 중인 저작권 클레임이 없습니다.</p>
           </div>
 
-          <div class="rounded-md border border-amber-200 bg-amber-50 p-3.5 text-amber-900">
-            <p class="font-semibold">Content ID Audio Track Notice</p>
+          <div v-for="claim in activeClaims" :key="claim.id" class="rounded-md border border-amber-200 bg-amber-50 p-3.5 text-amber-900">
+            <p class="font-semibold">Content ID Claim · {{ claim.id }}</p>
             <p class="mt-1 text-amber-800">
-              Video <code class="rounded-md bg-white px-1.5 py-0.5 font-mono text-slate-900 border border-amber-200">vid_seoul_4k</code> has a non-blocking revenue-share track claim from Synthwave Rights Group.
+              Video <code class="rounded-md bg-white px-1.5 py-0.5 font-mono text-slate-900 border border-amber-200">{{ claim.claimedVideoId }}</code>
+              has a {{ claim.claimAction }} claim from {{ claim.ownerName || claim.rightsOwnerId }}.
             </p>
             <NuxtLink to="/monetization" class="mt-2 inline-block font-semibold text-slate-900 underline hover:text-slate-700">
               Review or File Counter-Dispute

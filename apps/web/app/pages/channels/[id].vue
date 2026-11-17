@@ -7,41 +7,23 @@ const channelId = computed(() => String(route.params.id || 'ch_tech_kr'))
 const api = useApi()
 const appStore = useAppStore()
 
-const fallbackChannel: Channel = {
-  id: channelId.value,
-  ownerId: 'usr_1',
-  handle: '@gvptech',
-  name: 'GVP Tech Engineering',
-  description:
-    'Official engineering channel of StreamVerse Global Video Platform. Sharing deep dives on Go 1.24, Nuxt 4, Flutter 3, OpenSearch, and distributed HLS transcoding.',
-  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80',
-  bannerUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600&q=80',
-  subscriberCount: 284000,
-  videoCount: 142,
-  isVerified: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2026-10-20T00:00:00Z'
-}
-
-const { data: channelData } = await useAsyncData(`channel-${channelId.value}`, async () => {
-  try {
-    return await api.getChannel(channelId.value)
-  } catch {
-    return fallbackChannel
-  }
+const { data: channelData, pending: channelPending, error: channelError } = await useAsyncData(`channel-${channelId.value}`, async () => {
+  return await api.getChannel(channelId.value)
 })
 
-const channel = computed(() => channelData.value || fallbackChannel)
+// Template v-if guards on channelData; the assertion keeps bindings typed.
+const channel = computed(() => channelData.value as Channel)
 
 useSeoMeta({
-  title: () => `${channel.value.name} (${channel.value.handle}) — Channel`,
-  description: () => channel.value.description || ''
+  title: () => channel.value ? `${channel.value.name} (${channel.value.handle}) — Channel` : 'Channel — StreamVerse',
+  description: () => channel.value?.description || ''
 })
 
 const activeTab = ref<'videos' | 'shorts' | 'live' | 'playlists' | 'community'>('videos')
 const isSubscribed = ref(false)
 const pollSelection = ref<number | null>(null)
-const pollRawVotes = ref([640, 210, 150])
+// Local-only widget: no fabricated base votes.
+const pollRawVotes = ref([0, 0, 0])
 
 const totalPollVotes = computed(() => pollRawVotes.value.reduce((a, b) => a + b, 0))
 const pollPercentages = computed(() => {
@@ -55,48 +37,46 @@ function votePoll(index: number) {
   pollRawVotes.value[index] += 1
 }
 
-const channelVideos = [
-  {
-    id: 'vid_arch_2026',
-    title: 'Building a 10M Concurrent Viewer Global Video Platform with Go 1.24, Nuxt 4 & ClickHouse',
-    views: '412.9K views',
-    duration: '30:45',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=700&q=80'
-  },
-  {
-    id: 'vid_ai_agents',
-    title: 'Multimodal Video Indexing with Audio-Visual Fingerprints & Vector Embeddings',
-    views: '189.4K views',
-    duration: '18:40',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=700&q=80'
-  },
-  {
-    id: 'vid_seoul_4k',
-    title: 'Zero-Downtime PostgreSQL 18 Partitioning for Double-Entry Settlement Ledgers',
-    views: '98.2K views',
-    duration: '26:15',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=700&q=80'
-  }
-]
+function formatClock(totalSeconds: number): string {
+  const sec = Math.max(0, Math.floor(totalSeconds || 0))
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+}
 
-const channelPlaylists = [
-  {
-    id: 'pl_01',
-    title: 'Distributed Video Infrastructure Masterclass (12 Videos)',
-    videoCount: 12,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80'
-  },
-  {
-    id: 'pl_02',
-    title: 'Nuxt 4 & Vue 3 Performance Patterns (8 Videos)',
-    videoCount: 8,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&q=80'
+const { data: uploadsData } = await useAsyncData(`channel-videos-${channelId.value}`, async () => {
+  try {
+    const res = await api.getChannelVideos(channelId.value, 1, 24)
+    return res.items || []
+  } catch {
+    return []
   }
-]
+})
+const channelVideos = computed(() => (uploadsData.value || []).filter(v => v.videoType !== 'shorts'))
+const channelShorts = computed(() => (uploadsData.value || []).filter(v => v.videoType === 'shorts'))
+
+const { data: liveData } = await useAsyncData(`channel-live-${channelId.value}`, async () => {
+  try {
+    const res = await api.listLiveStreams(1, 20)
+    return (res.items || []).filter(s => s.channelId === channelId.value)
+  } catch {
+    return []
+  }
+})
+const channelLive = computed(() => liveData.value || [])
+
 </script>
 
 <template>
   <div class="mx-auto max-w-[1600px] bg-white pb-12 text-slate-900">
+    <div v-if="channelPending" class="animate-pulse">
+      <div class="h-44 w-full bg-slate-100 sm:h-60" />
+      <div class="mx-4 mt-6 h-8 w-1/3 rounded-md bg-slate-100 sm:mx-8" />
+    </div>
+    <div v-else-if="channelError || !channelData" class="mx-4 mt-10 rounded-lg border border-red-200 bg-red-50 p-12 text-center sm:mx-8" role="alert">
+      <p class="text-base font-semibold text-red-700">
+        {{ appStore.locale === 'ko' ? '채널을 불러오지 못했습니다.' : 'This channel is unavailable.' }}
+      </p>
+    </div>
+    <template v-else>
     <!-- Channel Banner -->
     <div class="h-44 w-full overflow-hidden border-b border-slate-200 bg-slate-100 sm:h-60">
       <img :src="channel.bannerUrl" :alt="channel.name" class="h-full w-full object-cover" />
@@ -152,7 +132,10 @@ const channelPlaylists = [
       </div>
 
       <!-- Tab Content: Videos -->
-      <div v-if="activeTab === 'videos'" class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <p v-if="activeTab === 'videos' && channelVideos.length === 0" class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
+        {{ appStore.locale === 'ko' ? '업로드된 동영상이 없습니다.' : 'No videos uploaded yet.' }}
+      </p>
+      <div v-if="activeTab === 'videos' && channelVideos.length" class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <NuxtLink
           v-for="vid in channelVideos"
           :key="vid.id"
@@ -162,59 +145,57 @@ const channelPlaylists = [
           <div class="relative aspect-video overflow-hidden rounded-md border border-slate-200 bg-slate-100">
             <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" />
             <span class="absolute bottom-2 right-2 rounded-md border border-slate-200 bg-white/95 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-900 tabular-nums">
-              {{ vid.duration }}
+              {{ formatClock(vid.durationSeconds) }}
             </span>
           </div>
           <h3 class="mt-3 font-bold leading-snug text-slate-900 group-hover:text-blue-600">{{ vid.title }}</h3>
-          <p class="mt-1 text-xs text-slate-500 tabular-nums">{{ vid.views }}</p>
+          <p class="mt-1 text-xs text-slate-500 tabular-nums">{{ vid.viewCount.toLocaleString() }} views</p>
         </NuxtLink>
       </div>
 
       <!-- Tab Content: Shorts -->
+      <p v-else-if="activeTab === 'shorts' && channelShorts.length === 0" class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
+        {{ appStore.locale === 'ko' ? '업로드된 쇼츠가 없습니다.' : 'No Shorts uploaded yet.' }}
+      </p>
       <div v-else-if="activeTab === 'shorts'" class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <NuxtLink
-          v-for="i in 4"
-          :key="i"
-          to="/shorts"
+          v-for="vid in channelShorts"
+          :key="vid.id"
+          :to="`/watch/${vid.id}`"
           class="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:bg-slate-50"
         >
           <div class="aspect-[9/16] w-full overflow-hidden bg-slate-100">
-            <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&q=80" alt="Short" class="h-full w-full object-cover" />
+            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" />
           </div>
           <div class="border-t border-slate-200 bg-white p-3 text-xs font-bold text-slate-900 tabular-nums group-hover:text-blue-600">
-            HLS Segment Caching Explained #{{ i }}
+            {{ vid.title }}
           </div>
         </NuxtLink>
       </div>
 
       <!-- Tab Content: Live -->
-      <div v-else-if="activeTab === 'live'" class="mt-6">
+      <p v-else-if="activeTab === 'live' && channelLive.length === 0" class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
+        {{ appStore.locale === 'ko' ? '현재 진행 중인 라이브가 없습니다.' : 'This channel is not live right now.' }}
+      </p>
+      <div v-else-if="activeTab === 'live'" class="mt-6 space-y-4">
         <NuxtLink
-          to="/live/live_main_01"
+          v-for="stream in channelLive"
+          :key="stream.id"
+          :to="`/live/${stream.id}`"
           class="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 transition hover:bg-slate-50 sm:flex-row"
         >
-          <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80" alt="Live" class="aspect-video w-full rounded-md border border-slate-200 object-cover sm:w-72" />
+          <img :src="stream.thumbnailUrl" :alt="stream.title" class="aspect-video w-full rounded-md border border-slate-200 object-cover sm:w-72" />
           <div>
             <span class="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">LIVE NOW</span>
-            <h3 class="mt-2 text-lg font-bold text-slate-900">[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A</h3>
-            <p class="mt-1 text-xs text-slate-500 tabular-nums">14,820 concurrent viewers · Ultra-low latency HLS + WebSocket Chat</p>
+            <h3 class="mt-2 text-lg font-bold text-slate-900">{{ stream.title }}</h3>
+            <p class="mt-1 text-xs text-slate-500 tabular-nums">{{ stream.viewerCount.toLocaleString() }} concurrent viewers</p>
           </div>
         </NuxtLink>
       </div>
 
       <!-- Tab Content: Playlists -->
-      <div v-else-if="activeTab === 'playlists'" class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <div
-          v-for="pl in channelPlaylists"
-          :key="pl.id"
-          class="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4"
-        >
-          <img :src="pl.thumbnailUrl" :alt="pl.title" class="h-24 w-40 rounded-md border border-slate-200 object-cover" />
-          <div>
-            <h3 class="font-bold text-slate-900">{{ pl.title }}</h3>
-            <p class="mt-1 text-xs font-medium text-blue-700 tabular-nums">{{ pl.videoCount }} videos in playlist</p>
-          </div>
-        </div>
+      <div v-else-if="activeTab === 'playlists'" class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
+        {{ appStore.locale === 'ko' ? '재생목록 연동 준비 중입니다.' : 'Playlist browsing is coming soon.' }}
       </div>
 
       <!-- Tab Content: Community Posts & Polls -->
@@ -252,5 +233,6 @@ const channelPlaylists = [
         </p>
       </div>
     </div>
+    </template>
   </div>
 </template>

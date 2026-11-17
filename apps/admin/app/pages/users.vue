@@ -11,6 +11,7 @@ useSeoMeta({
 
 const searchFilter = ref('')
 const sanctionReason = ref('')
+const sanctionTotp = ref('')
 const page = ref(1)
 const limit = 20
 const total = ref(0)
@@ -56,12 +57,17 @@ async function applySanction(user: User, sanction: 'suspended' | 'banned' | 'act
     actionError.value = '제재 사유를 입력해야 합니다. 감사 기록에 필수로 남습니다.'
     return
   }
+  if (sanctionTotp.value.trim().length !== 6) {
+    actionError.value = '6자리 TOTP 코드를 입력하세요.'
+    return
+  }
   actionError.value = null
   actingIds.value.add(user.id)
   const prev = stateOf(user)
   states.value[user.id] = sanction.toUpperCase()
   try {
-    await api.updateAdminUserStatus(user.id, sanction, sanctionReason.value.trim())
+    await api.updateAdminUserStatus(user.id, sanction, sanctionReason.value.trim(), sanctionTotp.value.trim())
+    sanctionTotp.value = ''
     await refreshAudit()
   } catch (e: unknown) {
     states.value[user.id] = prev
@@ -88,7 +94,7 @@ function tierLabel(t: SubscriptionTier): string {
     </div>
 
     <!-- Search & Sanction Reason Bar -->
-    <div class="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-3">
       <div>
         <label for="admin-user-search" class="block text-xs font-medium text-slate-600">Search by Username or Email</label>
         <input
@@ -106,6 +112,18 @@ function tierLabel(t: SubscriptionTier): string {
           v-model="sanctionReason"
           type="text"
           placeholder="예: 반복 저작권 위반 신고 3회 누적"
+          class="mt-1.5 w-full rounded-md border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white outline-none transition-colors"
+        />
+      </div>
+      <div>
+        <label for="admin-sanction-totp" class="block text-xs font-medium text-slate-600">Step-Up TOTP (6 digits)</label>
+        <input
+          id="admin-sanction-totp"
+          v-model="sanctionTotp"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="123456"
           class="mt-1.5 w-full rounded-md border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white outline-none transition-colors"
         />
       </div>

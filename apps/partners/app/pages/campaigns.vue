@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AdCampaign } from '@gvp/shared-types'
 import { AdFormat, CampaignStatus } from '@gvp/shared-types'
+import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = usePartnerApi()
 
@@ -17,63 +18,11 @@ const cpcBid = ref(850)
 const targetCategory = ref('tech,gaming,cinema')
 const targetCountries = ref('KR,US,JP')
 
-const fallbackCampaigns: AdCampaign[] = [
-  {
-    id: 'cmp_apex_01',
-    advertiserId: 'usr_adv_1',
-    organizationId: 'org_adv_apex',
-    name: 'Apex Horizon Phone 4K Cinema Pre-Roll Campaign (Demo)',
-    format: AdFormat.PREROLL,
-    status: CampaignStatus.ACTIVE,
-    dailyBudget: 5000000,
-    totalBudget: 100000000,
-    spentAmount: 42800000,
-    cpmBid: 15000,
-    cpcBid: 900,
-    targetCategories: ['tech', 'cinema'],
-    targetCountries: ['KR', 'US'],
-    startDate: '2026-10-01',
-    endDate: '2026-11-15',
-    impressions: 2853000,
-    clicks: 94100,
-    views: 1920000,
-    createdAt: '2026-10-01T00:00:00Z',
-    updatedAt: '2026-10-24T00:00:00Z'
-  },
-  {
-    id: 'cmp_gaming_shorts',
-    advertiserId: 'usr_adv_1',
-    organizationId: 'org_adv_apex',
-    name: 'Apex Vision Curved Display Vertical Shorts Sponsored Feed (Demo)',
-    format: AdFormat.SHORTS,
-    status: CampaignStatus.ACTIVE,
-    dailyBudget: 3000000,
-    totalBudget: 60000000,
-    spentAmount: 28400000,
-    cpmBid: 11000,
-    cpcBid: 650,
-    targetCategories: ['gaming'],
-    targetCountries: ['KR', 'US', 'JP'],
-    startDate: '2026-10-05',
-    endDate: '2026-11-05',
-    impressions: 2581000,
-    clicks: 112400,
-    views: 1840000,
-    createdAt: '2026-10-05T00:00:00Z',
-    updatedAt: '2026-10-24T00:00:00Z'
-  }
-]
-
-const { data: campaignsData } = await useAsyncData('partner-campaigns', async () => {
-  try {
-    const res = await api.getPartnerCampaigns()
-    return res.length ? res : fallbackCampaigns
-  } catch {
-    return fallbackCampaigns
-  }
+const { data: campaignsData, pending: campaignsPending, error: campaignsError } = await useAsyncData('partner-campaigns', async () => {
+  return await api.getPartnerCampaigns()
 })
 
-const campaigns = ref<AdCampaign[]>(campaignsData.value || fallbackCampaigns)
+const campaigns = ref<AdCampaign[]>(campaignsData.value || [])
 
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
@@ -261,7 +210,19 @@ async function submitForReview(cmp: AdCampaign) {
     </form>
 
     <!-- Active Campaigns Table -->
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div v-if="campaignsPending" class="rounded-lg border border-slate-200 bg-white p-8">
+      <div class="h-6 animate-pulse rounded-md bg-slate-100" />
+    </div>
+    <div v-else-if="campaignsError" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-red-700">캠페인 목록을 불러오지 못했습니다.</p>
+    </div>
+    <GvpEmptyState
+      v-else-if="campaigns.length === 0"
+      title="등록된 캠페인이 없습니다"
+      description="위 양식으로 첫 캠페인을 초안으로 등록하세요."
+    />
+
+    <div v-else class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
       <table class="w-full text-left">
         <thead>
           <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
