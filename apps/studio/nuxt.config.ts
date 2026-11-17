@@ -23,10 +23,10 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
       wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || '',
-      webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjqppk.workers.dev',
-      partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjqppk.workers.dev',
-      adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjqppk.workers.dev',
-      studioDomain: 'global-video-platform-studio.dnjstjqppk.workers.dev'
+      webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjq0824.workers.dev',
+      partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjq0824.workers.dev',
+      adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjq0824.workers.dev',
+      studioDomain: 'global-video-platform-studio.dnjstjq0824.workers.dev'
     }
   },
   app: {

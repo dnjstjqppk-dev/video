@@ -3,7 +3,7 @@ export default defineEventHandler((event) => {
   // D-08 / GV-08: Canonical redirect from web mirror to primary domain
   if (host && host.startsWith('global-video-platform-web.')) {
     const url = getRequestURL(event)
-    const target = `https://global-video-platform.dnjstjqppk.workers.dev${url.pathname}${url.search}`
+    const target = `https://global-video-platform.dnjstjq0824.workers.dev${url.pathname}${url.search}`
     return sendRedirect(event, target, 301)
   }
 })
