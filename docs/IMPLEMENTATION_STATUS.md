@@ -53,12 +53,13 @@ browser -> console workers (web/studio/partners/admin, /api)
 - 관리자 MFA 강제·민감 작업 재인증: MISSING (역할 게이트에 MFA 클레임 검사 없음).
 - 조직 단위 ABAC(광고주·파트너 격리): PARTIAL (광고 엔진은 캠페인 단위 검사, 조직 스코프 강제 미확인).
 
-### 4.2 영속 저장 — PARTIAL + BROKEN (이중 스키마)
+### 4.2 영속 저장 — PARTIAL (이중 스키마 해소됨, 코어 4종 영속화)
 
-- `db/migrations/00001..00009`: **75개 테이블 DDL IMPLEMENTED** (계정 10, 콘텐츠 14, 소셜 9, 라이브 5, 광고 6, 결제 10, 저작권 8, 운영 5, 광고엔진 8).
-- `services/api/internal/store/postgres.go`의 `InitSchema`는 **별도 간이 스키마 8테이블**(VARCHAR ID, `users`에 display_name 직납)을 만든다.
-  마이그레이션 스키마(UUID, `user_profiles` 분리)와 **컬럼이 충돌**하므로, 마이그레이션된 DB에 연결하면 `SaveUser/SaveVideo`가 실패하고 경고만 남긴 뒤 메모리 독주가 계속된다 → **BROKEN (P0)**.
-- Write-through는 영상/사용자/결제 3종뿐, 나머지는 메모리 전용이다 (`store/persist.go`). 재시작 시 전역 소실, 부팅 시 DB 읽기 없음 → **MISSING**.
+- `db/migrations/00001..00010`: **75개 테이블 DDL IMPLEMENTED** (계정 10, 콘텐츠 14, 소셜 9, 라이브 5, 광고 6, 결제 10, 저작권 8, 운영 5, 광고엔진 8 + 00010 누락 역할 9종·결제 컬럼 2종 추가).
+- **FIXED 2026-11-17:** 간이 DDL `InitSchema` 삭제 → `VerifySchema`(생성 없이 검증; `DATABASE_URL` 설정 + 스키마 불일치 시 부팅 거부)로 교체.
+  `SaveUser/SaveChannel/SaveVideo/SaveTransaction`이 실스키마(users+user_profiles·UUID·tags·원장 계정 매핑) 기준으로 재작성됐고,
+  부팅 시 `Hydrate`로 DB 행을 메모리에 적재한다. 사용자·채널·영상·결제+원장은 재시작 내구성 실증 완료(실서버 재시작 증명).
+- 잔여: 댓글·광고·라이브·소셜 등 나머지 도메인은 메모리 전용 (동일 패턴으로 확장 예정). 비-UUID 구형 fixture ID는 경고 후 스킵.
 - sqlc 쿼리 5종(`db/queries`) PARTIAL, 시드(`db/seeds/seeds.sql`) 존재.
 - `db/schema/schema.sql`, `db/schema/inventory.csv`, `docs/architecture/erd/*`는 실제 마이그레이션과 **다른 88테이블 스키마를 기술** → STALE (본 문서 §7 참조).
 
@@ -150,7 +151,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### P0 — 상용 차단 (순서대로)
 
-1. **이중 스키마 해소 + 영속 저장 완성** (ARTICLE 2.2): `InitSchema` 간이 DDL 삭제, 마이그레이션 75테이블을 기준으로 Repository/Service/Tx 계층 구현, 전 도메인 PG 연결, 부팅 시 읽기, 재시작 내구성 검증.
+1. **이중 스키마 해소 + 영속 저장 완성** (ARTICLE 2.2): ~~`InitSchema` 간이 DDL 삭제, 마이그레이션 기준 저장 계층, 부팅 시 읽기, 재시작 내구성 검증~~ **DONE 2026-11-17 (코어 4종)** —
+   사용자·채널·영상·결제+원장 영속화 + 실서버 재시작 증명 + PG 라운드트립 3종. 댓글·광고·라이브·소셜 전 도메인 확장은 후속 과제로 잔여.
 2. **진짜 트랜스코딩** (ARTICLE 2.3): ffprobe 실측 → 디스패치에 메타 전달 → 워커에서 ffmpeg 실실행(HLS ladder·썸네일·자막·챕터) → R2 업로드 → 실패 시 FAILED + 재시도/DLQ. `REQUIRE_PROBED_SOURCE=true`를 기본으로.
 3. **결제 fail-open 제거** (ARTICLE 2.4): ~~Toss/Stripe 시크릿 없으면 `ConfirmPayment` 거부~~ **DONE 2026-11-17** (목 테스트 8건). 환불·웹훅 재조정·원장 정합 테스트는 P1-17 잔여.
 4. **재생·검색 권한 검사** (ARTICLE 16): ~~HMAC 서명 playback 토큰(1h, 경로 바인딩) + 가시성/회원권 검사 + 검색 가시성 필터~~ **DONE 2026-11-17** (목 테스트 9건). 지역/연령 검사·유효 조회수 정의·중계복 제거는 잔여 (P1-14).

@@ -63,7 +63,6 @@ Per-phase Mermaid diagrams are generated deterministically by `python docs/gener
 
 ## Known schema hazards
 
-- `services/api/internal/store/postgres.go` `InitSchema()` creates a **second, conflicting 8-table schema**
-  (`users` with `VARCHAR(64)` id and inline `display_name`/`bio`/`avatar_url` columns). Against a migrated database
-  the write-through inserts fail (columns do not exist) and the API silently keeps serving from memory. P0 backlog item 1.
+- ~~`InitSchema()` second-schema conflict~~ — **FIXED 2026-11-17:** the simplified DDL is deleted; the API verifies the
+  migrated schema (incl. `00010`) and refuses to boot on mismatch. Users/channels/videos/transactions persist to the real schema.
 - `db/schema/schema.sql` and `db/schema/inventory.csv` also describe the stale 88-table schema, not the 75-table one.

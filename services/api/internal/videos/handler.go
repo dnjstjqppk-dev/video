@@ -156,6 +156,7 @@ func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	video.Status = "DELETED"
+	h.Store.PersistVideo(video)
 	identity.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
@@ -187,6 +188,7 @@ func (h *Handler) LikeVideo(w http.ResponseWriter, r *http.Request) {
 	if !h.Store.Likes[user.ID][id] {
 		h.Store.Likes[user.ID][id] = true
 		video.LikeCount++
+		h.Store.PersistVideo(video)
 	}
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
@@ -209,6 +211,7 @@ func (h *Handler) UnlikeVideo(w http.ResponseWriter, r *http.Request) {
 		if video.LikeCount > 0 {
 			video.LikeCount--
 		}
+		h.Store.PersistVideo(video)
 	}
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{

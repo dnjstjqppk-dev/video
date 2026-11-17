@@ -271,17 +271,25 @@ func main() {
 			slog.Warn("PostgreSQL not immediately reachable, falling back to resilient in-memory store", "error", err)
 		} else {
 			slog.Info("PostgreSQL 18 connection pool initialized", "url", store.SanitizeDatabaseURL(cfg.DatabaseURL))
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := pgStore.InitSchema(ctx); err != nil {
-				slog.Warn("PostgreSQL schema initialization deferred", "error", err)
-			} else {
-				slog.Info("PostgreSQL 18 tables verified and ready")
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			if err := pgStore.VerifySchema(ctx); err != nil {
+				cancel()
+				slog.Error("PostgreSQL schema mismatch with DATABASE_URL set, refusing to boot", "error", err)
+				os.Exit(1)
 			}
+			slog.Info("PostgreSQL 18 schema verified")
 			cancel()
 		}
 	}
 
 	memStore := store.NewMemoryStoreWithDB(pgStore)
+	if pgStore != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		if err := memStore.Hydrate(ctx); err != nil {
+			slog.Warn("PostgreSQL hydration failed, serving from memory seeds", "error", err)
+		}
+		cancel()
+	}
 	r := buildRouter(memStore)
 
 	server := &http.Server{

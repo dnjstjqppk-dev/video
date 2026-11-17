@@ -101,6 +101,7 @@ func (h *Handler) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Store.Channels[ch.ID] = ch
+	h.Store.PersistChannel(ch)
 	identity.WriteJSON(w, http.StatusCreated, ch)
 }
 
@@ -139,6 +140,7 @@ func (h *Handler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.Store.PersistChannel(channel)
 	identity.WriteJSON(w, http.StatusOK, channel)
 }
 

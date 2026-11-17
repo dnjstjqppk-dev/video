@@ -319,9 +319,11 @@ func (h *Handler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
 	entries := CreateDoubleEntryLedger(tx.ID, tx.AmountCents, tx.Currency)
 	tx.LedgerEntries = entries
 	h.Store.Ledger = append(h.Store.Ledger, entries...)
+	h.Store.PersistTransaction(tx)
 
 	if tx.Type == "membership" || tx.Type == "premium" {
 		user.SubscriptionTier = "premium"
+		h.Store.PersistUser(user)
 	}
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
@@ -476,6 +478,7 @@ func (h *Handler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	entries := CreateDoubleEntryLedger(tx.ID, tx.AmountCents, tx.Currency)
 	tx.LedgerEntries = entries
 	h.Store.Ledger = append(h.Store.Ledger, entries...)
+	h.Store.PersistTransaction(tx)
 	h.Store.IdempotencyKeys[webhookKey] = tx.ID
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
