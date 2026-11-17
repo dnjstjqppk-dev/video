@@ -1653,12 +1653,14 @@ paths:
       summary: "Get partners channels"
       operationId: GetPartnersChannels
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
       responses:
         '200':
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /partners/contracts/{id}:
@@ -1667,7 +1669,7 @@ paths:
       summary: "Update partners contracts"
       operationId: UpdatePartnersContractsById
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
       parameters:
         - name: id
           in: path
@@ -1685,6 +1687,8 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /partners/me:
@@ -1693,12 +1697,14 @@ paths:
       summary: "Get partners me"
       operationId: GetPartnersMe
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
       responses:
         '200':
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /payments/transactions:

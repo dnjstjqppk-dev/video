@@ -33,33 +33,76 @@ func NewHandler(s *store.MemoryStore) *Handler {
 
 func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r := chi.NewRouter()
+	r.Use(auth.RequireAuth)
 
 	r.Get("/claims", h.ListClaims)
 	r.Get("/claims/{id}", h.GetClaim)
 	r.Post("/claims", h.CreateClaim)
-
-	r.Group(func(pr chi.Router) {
-		pr.Use(auth.RequireAuth)
-		pr.Post("/claims/{id}/dispute", h.DisputeClaim)
-		pr.Post("/claims/{id}/resolve", h.ResolveClaim)
-		pr.Post("/claims/dmca-takedown", h.SubmitDMCATakedown)
-		pr.Post("/claims/dmca-counter-notice", h.SubmitDMCACounterNotice)
-	})
+	r.Post("/claims/{id}/dispute", h.DisputeClaim)
+	r.Post("/claims/{id}/resolve", h.ResolveClaim)
+	r.Post("/claims/dmca-takedown", h.SubmitDMCATakedown)
+	r.Post("/claims/dmca-counter-notice", h.SubmitDMCACounterNotice)
 
 	return r
 }
 
+func isOperator(user *store.User) bool {
+	return user != nil && (user.Role == "super_admin" || user.Role == "platform_admin" || user.Role == "moderator")
+}
+
+func isRightsRole(user *store.User) bool {
+	if user == nil {
+		return false
+	}
+	switch user.Role {
+	case "rights_holder", "rights_owner", "partner_manager", "mcn_manager", "partner_admin":
+		return true
+	default:
+		return isOperator(user)
+	}
+}
+
+// claimVisible scopes claims to their parties: the reporter, the claimed
+// video's channel owner, rights roles handling the dispute, and operators.
+func (h *Handler) claimVisible(claim *store.CopyrightClaim, user *store.User) bool {
+	if user == nil || claim == nil {
+		return false
+	}
+	if isOperator(user) || isRightsRole(user) {
+		return true
+	}
+	if claim.ReporterUserID != "" && claim.ReporterUserID == user.ID {
+		return true
+	}
+	if video, ok := h.Store.Videos[claim.ClaimedVideoID]; ok {
+		if channel, ok := h.Store.Channels[video.ChannelID]; ok && channel != nil {
+			return channel.OwnerID == user.ID
+		}
+	}
+	return false
+}
+
 func (h *Handler) GetClaim(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
 	id := chi.URLParam(r, "id")
 	claim, ok := h.Store.Claims[id]
 	if !ok {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Copyright claim not found")
+		return
+	}
+	if !h.claimVisible(claim, user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot access another party's claim")
 		return
 	}
 	identity.WriteJSON(w, http.StatusOK, claim)
 }
 
 func (h *Handler) DisputeClaim(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	claim, ok := h.Store.Claims[id]
 	if !ok {
@@ -67,11 +110,9 @@ func (h *Handler) DisputeClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := identity.GetUserFromContext(r.Context())
 	if video, ok := h.Store.Videos[claim.ClaimedVideoID]; ok {
-		if channel, ok := h.Store.Channels[video.ChannelID]; ok {
-			isOperator := user.Role == "super_admin" || user.Role == "platform_admin" || user.Role == "moderator"
-			if channel.OwnerID != user.ID && !isOperator {
+		if channel, ok := h.Store.Channels[video.ChannelID]; ok && channel != nil {
+			if channel.OwnerID != user.ID && !isOperator(user) {
 				identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only the channel owner can dispute this claim")
 				return
 			}
@@ -93,14 +134,33 @@ func (h *Handler) DisputeClaim(w http.ResponseWriter, r *http.Request) {
 	claim.DisputeText = payload.Explanation
 	claim.DisputeFiledAt = &now
 
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   user.ID,
+		"action":    "DISPUTE_COPYRIGHT_CLAIM",
+		"target":    id,
+		"reason":    payload.Reason,
+		"ip":        r.RemoteAddr,
+		"timestamp": now.Format(time.RFC3339),
+	})
+
 	identity.WriteJSON(w, http.StatusOK, claim)
 }
 
 func (h *Handler) ResolveClaim(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	claim, ok := h.Store.Claims[id]
 	if !ok {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Copyright claim not found")
+		return
+	}
+	if claim.ReporterUserID != user.ID && !isOperator(user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only the reporting rights holder or an operator can resolve this claim")
 		return
 	}
 
@@ -131,10 +191,29 @@ func (h *Handler) ResolveClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   user.ID,
+		"action":    "RESOLVE_COPYRIGHT_CLAIM",
+		"target":    id,
+		"reason":    payload.Resolution,
+		"ip":        r.RemoteAddr,
+		"timestamp": now.Format(time.RFC3339),
+	})
+
 	identity.WriteJSON(w, http.StatusOK, claim)
 }
 
 func (h *Handler) SubmitDMCATakedown(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+	if !isRightsRole(user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "DMCA takedowns require a rights-holder role")
+		return
+	}
 	var payload struct {
 		VideoID            string `json:"video_id"`
 		ClaimantName       string `json:"claimant_name"`
@@ -164,6 +243,15 @@ func (h *Handler) SubmitDMCATakedown(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.Store.DMCANotices[noticeID] = notice
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   user.ID,
+		"action":    "SUBMIT_DMCA_TAKEDOWN",
+		"target":    noticeID,
+		"reason":    payload.CopyrightWorkTitle,
+		"ip":        r.RemoteAddr,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
 
 	// Block video immediately
 	var strikeIssuedToUserID string
@@ -190,6 +278,11 @@ func (h *Handler) SubmitDMCATakedown(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SubmitDMCACounterNotice(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	var payload struct {
 		NoticeID         string `json:"notice_id"`
 		LegalFullName    string `json:"legal_full_name"`
@@ -208,8 +301,24 @@ func (h *Handler) SubmitDMCACounterNotice(w http.ResponseWriter, r *http.Request
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "DMCA notice not found")
 		return
 	}
+	if video, ok := h.Store.Videos[notice.VideoID]; ok {
+		if channel, ok := h.Store.Channels[video.ChannelID]; ok && channel != nil {
+			if channel.OwnerID != user.ID && !isOperator(user) {
+				identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only the channel owner can counter this notice")
+				return
+			}
+		}
+	}
 
 	notice.Status = "counter_noticed"
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   user.ID,
+		"action":    "SUBMIT_DMCA_COUNTER_NOTICE",
+		"target":    notice.ID,
+		"ip":        r.RemoteAddr,
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"notice_id":         notice.ID,
@@ -220,14 +329,22 @@ func (h *Handler) SubmitDMCACounterNotice(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) ListClaims(w http.ResponseWriter, r *http.Request) {
-	var list []*store.CopyrightClaim
+	user := identity.GetUserFromContext(r.Context())
+	list := make([]*store.CopyrightClaim, 0)
 	for _, c := range h.Store.Claims {
-		list = append(list, c)
+		if h.claimVisible(c, user) {
+			list = append(list, c)
+		}
 	}
 	identity.WriteJSON(w, http.StatusOK, list)
 }
 
 func (h *Handler) CreateClaim(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	var payload struct {
 		VideoID string `json:"videoId"`
 		AssetID string `json:"assetId"`
@@ -242,6 +359,7 @@ func (h *Handler) CreateClaim(w http.ResponseWriter, r *http.Request) {
 	claim := &store.CopyrightClaim{
 		ID:                uuid.NewString(),
 		ClaimedVideoID:    payload.VideoID,
+		ReporterUserID:    user.ID,
 		OwnerName:         "Independent Content Rights Group",
 		ClaimAction:       payload.Action,
 		Status:            "pending",

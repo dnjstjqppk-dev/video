@@ -147,10 +147,10 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/partners/settlements` | Auth |  |
 | `GET` | `/v1/partners/settlements/earnings-summary` | Auth |  |
 | `POST` | `/v1/partners/settlements/payout` | Auth |  |
-| `GET` | `/v1/partners/channels` | Auth |  |
-| `GET` | `/v1/partners/contracts` | Auth |  |
-| `PATCH` | `/v1/partners/contracts/{id}` | Auth |  |
-| `GET` | `/v1/partners/me` | Auth |  |
+| `GET` | `/v1/partners/channels` | Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin) |  |
+| `GET` | `/v1/partners/contracts` | Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin) |  |
+| `PATCH` | `/v1/partners/contracts/{id}` | Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin) |  |
+| `GET` | `/v1/partners/me` | Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin) |  |
 
 ## ads (15)
 

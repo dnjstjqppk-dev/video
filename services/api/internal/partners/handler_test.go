@@ -42,7 +42,7 @@ func TestRevokeContract(t *testing.T) {
 	}
 	call := func(router http.Handler, method, path, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
-		req.Header.Set("Authorization", "Bearer advertiser-token")
+		req.Header.Set("Authorization", "Bearer admin-token")
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 		return rec

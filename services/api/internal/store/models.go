@@ -323,6 +323,7 @@ type UploadSession struct {
 type CopyrightClaim struct {
 	ID                string     `json:"id"`
 	ClaimedVideoID    string     `json:"claimed_video_id"`
+	ReporterUserID    string     `json:"reporter_user_id,omitempty"`
 	OwnerName         string     `json:"owner_name"`
 	ClaimAction       string     `json:"claim_action"` // monetize, track, block
 	Status            string     `json:"status"`       // active, pending, disputed, released, upheld, takedown

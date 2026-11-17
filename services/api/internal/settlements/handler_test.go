@@ -43,19 +43,29 @@ func TestGetSettlementsAndEarnings(t *testing.T) {
 	srv, memStore := newSettlementsTestServer()
 	defer srv.Close()
 
-	// Seed double-entry ledger item for creator
+	// Seed a succeeded transaction plus its payable leg for the creator.
+	memStore.Transactions["tx_01"] = &store.PaymentTransaction{
+		ID: "tx_01", UserID: "22222222-2222-2222-2222-222222222222",
+		Provider: "stripe", Type: "membership", AmountCents: 10000,
+		Currency: "KRW", Status: "succeeded", CreatedAt: time.Now(),
+	}
 	memStore.Ledger = append(memStore.Ledger, store.LedgerEntry{
 		ID:            "led_01",
 		TransactionID: "tx_01",
 		AccountType:   "creator_payable",
 		Direction:     "CREDIT",
-		AmountCents:   500000,
+		AmountCents:   7000,
 		Currency:      "KRW",
 		CreatedAt:     time.Now(),
 	})
 
-	// 1. Get settlements
+	// 1. Get settlements (P1-18: authenticated + scoped, no fake base)
 	req, rec := settleReq(http.MethodGet, "/settlements/settlements", "", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 anonymous, got %d", rec.Code)
+	}
+	req, rec = settleReq(http.MethodGet, "/settlements/settlements", "creator-token", nil)
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 ok for settlements, got %d", rec.Code)
@@ -63,12 +73,12 @@ func TestGetSettlementsAndEarnings(t *testing.T) {
 
 	var settlements []map[string]interface{}
 	json.Unmarshal(rec.Body.Bytes(), &settlements)
-	if len(settlements) < 2 {
-		t.Fatalf("expected at least 2 settlement periods, got %d", len(settlements))
+	if len(settlements) != 1 {
+		t.Fatalf("expected exactly 1 accrued period, got %d", len(settlements))
 	}
 
 	// 2. Get earnings
-	req, rec = settleReq(http.MethodGet, "/settlements/earnings", "", nil)
+	req, rec = settleReq(http.MethodGet, "/settlements/earnings", "creator-token", nil)
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 ok for earnings, got %d", rec.Code)

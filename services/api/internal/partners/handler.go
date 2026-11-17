@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
@@ -19,9 +20,15 @@ func NewHandler(s *store.MemoryStore) *Handler {
 	return &Handler{Store: s}
 }
 
+// partnerRoles gates the partner portal surface (P1-18 RBAC).
+var partnerRoles = []string{
+	"partner_manager", "advertiser", "rights_holder", "rights_owner",
+	"partner_finance", "mcn_manager", "partner_admin", "platform_admin",
+}
+
 func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r := chi.NewRouter()
-	r.Use(auth.RequireAuth)
+	r.Use(auth.RequireRole(partnerRoles...))
 
 	r.Get("/me", h.GetPartnerMe)
 	r.Get("/channels", h.GetChannels)
@@ -31,25 +38,75 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	return r
 }
 
-func (h *Handler) GetPartnerMe(w http.ResponseWriter, r *http.Request) {
-	partnerOverview := map[string]interface{}{
-		"organization": map[string]interface{}{
-			"id":   "org-acme-media",
-			"name": "Acme Media & Entertainment Group",
-			"type": "advertiser_and_mcn",
-		},
-		"campaignCount":           len(h.Store.Campaigns),
-		"activeChannelsCount":     len(h.Store.Channels),
-		"pendingSettlementAmount": 5860000,
-	}
+func isPlatformOperator(user *store.User) bool {
+	return user != nil && (user.Role == "super_admin" || user.Role == "platform_admin")
+}
 
-	identity.WriteJSON(w, http.StatusOK, partnerOverview)
+// managerSeesAll covers MCN staff operating across creators' channels. Until
+// organization membership lands, managers are role-trusted; every other
+// partner role sees only its own records.
+func managerSeesAll(user *store.User) bool {
+	if user == nil {
+		return false
+	}
+	if isPlatformOperator(user) {
+		return true
+	}
+	switch user.Role {
+	case "partner_manager", "mcn_manager", "partner_admin":
+		return true
+	default:
+		return false
+	}
+}
+
+func (h *Handler) GetPartnerMe(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+	campaigns := 0
+	for _, c := range h.Store.Campaigns {
+		if managerSeesAll(user) || c.AdvertiserID == user.ID {
+			campaigns++
+		}
+	}
+	channels := 0
+	for _, c := range h.Store.Channels {
+		if managerSeesAll(user) || c.OwnerID == user.ID {
+			channels++
+		}
+	}
+	var pending int64
+	for _, tx := range h.Store.Transactions {
+		if tx.Status != "succeeded" {
+			continue
+		}
+		if !managerSeesAll(user) && tx.UserID != user.ID {
+			continue
+		}
+		pending += (tx.AmountCents / 100) * 70
+	}
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"organization": map[string]interface{}{
+			"id":   "org-" + user.ID,
+			"name": user.DisplayName,
+			"type": user.Role,
+		},
+		"campaignCount":           campaigns,
+		"activeChannelsCount":     channels,
+		"pendingSettlementAmount": pending,
+	})
 }
 
 func (h *Handler) GetChannels(w http.ResponseWriter, r *http.Request) {
-	var list []*store.Channel
+	user := identity.GetUserFromContext(r.Context())
+	list := make([]*store.Channel, 0)
 	for _, c := range h.Store.Channels {
-		list = append(list, c)
+		if managerSeesAll(user) || (user != nil && c.OwnerID == user.ID) {
+			list = append(list, c)
+		}
 	}
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"items": list,
@@ -58,9 +115,16 @@ func (h *Handler) GetChannels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetContracts(w http.ResponseWriter, r *http.Request) {
-	contracts := make([]*store.PartnerContract, 0, len(h.Store.Contracts))
+	user := identity.GetUserFromContext(r.Context())
+	contracts := make([]*store.PartnerContract, 0)
 	for _, c := range h.Store.Contracts {
-		contracts = append(contracts, c)
+		if managerSeesAll(user) {
+			contracts = append(contracts, c)
+			continue
+		}
+		if channel, ok := h.Store.Channels[c.ChannelID]; ok && channel != nil && user != nil && channel.OwnerID == user.ID {
+			contracts = append(contracts, c)
+		}
 	}
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"items": contracts,
@@ -69,10 +133,25 @@ func (h *Handler) GetContracts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RevokeContract(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	contract, ok := h.Store.Contracts[id]
 	if !ok {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Contract not found")
+		return
+	}
+	allowed := managerSeesAll(user)
+	if !allowed {
+		if channel, ok := h.Store.Channels[contract.ChannelID]; ok && channel != nil && channel.OwnerID == user.ID {
+			allowed = true
+		}
+	}
+	if !allowed {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot revoke another party's contract")
 		return
 	}
 	var payload struct {
@@ -94,5 +173,14 @@ func (h *Handler) RevokeContract(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	contract.Status = "revoked"
 	contract.RevokedAt = &now
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   user.ID,
+		"action":    "REVOKE_PARTNER_CONTRACT",
+		"target":    id,
+		"reason":    reason,
+		"ip":        r.RemoteAddr,
+		"timestamp": now.Format(time.RFC3339),
+	})
 	identity.WriteJSON(w, http.StatusOK, contract)
 }

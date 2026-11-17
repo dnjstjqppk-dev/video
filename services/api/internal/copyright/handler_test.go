@@ -42,8 +42,13 @@ func TestContentIDClaimsAndDisputeWorkflow(t *testing.T) {
 	srv, _ := newCopyrightTestServer()
 	defer srv.Close()
 
-	// 1. List claims
+	// 1. List claims (P1-18: authenticated; anonymous is refused)
 	req, rec := copyReq(http.MethodGet, "/copyright/claims", "", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 anonymous list, got %d", rec.Code)
+	}
+	req, rec = copyReq(http.MethodGet, "/copyright/claims", "admin-token", nil)
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 ok for list claims, got %d", rec.Code)
@@ -71,8 +76,8 @@ func TestContentIDClaimsAndDisputeWorkflow(t *testing.T) {
 		t.Fatalf("invalid dispute state: status=%s reason=%s", disputed.Status, disputed.DisputeReason)
 	}
 
-	// 3. Rights holder releases claim
-	req, rec = copyReq(http.MethodPost, "/copyright/claims/"+claimID+"/resolve", "advertiser-token", map[string]string{
+	// 3. Operator releases claim (P1-18: reporter or operator only)
+	req, rec = copyReq(http.MethodPost, "/copyright/claims/"+claimID+"/resolve", "admin-token", map[string]string{
 		"resolution": "release",
 	})
 	srv.Config.Handler.ServeHTTP(rec, req)
@@ -108,8 +113,8 @@ func TestDMCATakedownAndCounterNoticeWorkflow(t *testing.T) {
 	creatorUser := memStore.Users["22222222-2222-2222-2222-222222222222"]
 	initialStrikes := creatorUser.CopyrightStrikes
 
-	// 1. Submit DMCA Takedown
-	req, rec := copyReq(http.MethodPost, "/copyright/claims/dmca-takedown", "advertiser-token", map[string]interface{}{
+	// 1. Submit DMCA Takedown (P1-18: rights roles and operators only)
+	req, rec := copyReq(http.MethodPost, "/copyright/claims/dmca-takedown", "admin-token", map[string]interface{}{
 		"video_id":             videoID,
 		"claimant_name":        "Acme Rights Management Corp",
 		"claimant_email":       "dmca@acme-rights.com",

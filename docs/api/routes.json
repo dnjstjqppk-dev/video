@@ -412,22 +412,22 @@
   {
     "method": "GET",
     "path": "/v1/partners/channels",
-    "auth": "Auth"
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/partners/contracts",
-    "auth": "Auth"
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
   },
   {
     "method": "PATCH",
     "path": "/v1/partners/contracts/{id}",
-    "auth": "Auth"
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
   },
   {
     "method": "GET",
     "path": "/v1/partners/me",
-    "auth": "Auth"
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
   },
   {
     "method": "POST",
