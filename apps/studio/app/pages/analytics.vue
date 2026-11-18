@@ -50,16 +50,16 @@ onMounted(async () => {
     chart.setOption({
       backgroundColor: 'transparent',
       tooltip: { trigger: 'axis' },
-      legend: { data: ['Views', 'Watch Hours'], textStyle: { color: '#475569' } },
+      legend: { data: ['Views', 'Watch Hours'], textStyle: { color: '#94A3B8' } },
       xAxis: {
         type: 'category',
         data: seriesPoints.value.map(d => d.date),
-        axisLabel: { color: '#64748B' }
+        axisLabel: { color: '#94A3B8' }
       },
       yAxis: {
         type: 'value',
-        axisLabel: { color: '#64748B' },
-        splitLine: { lineStyle: { color: '#E2E8F0' } }
+        axisLabel: { color: '#94A3B8' },
+        splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.16)' } }
       },
       series: [
         {
@@ -67,14 +67,16 @@ onMounted(async () => {
           type: 'line',
           smooth: true,
           data: seriesPoints.value.map(d => d.views),
-          itemStyle: { color: '#0F172A' }
+          itemStyle: { color: '#6366F1' },
+          lineStyle: { color: '#6366F1' }
         },
         {
           name: 'Watch Hours',
           type: 'line',
           smooth: true,
           data: seriesPoints.value.map(d => d.watchHours),
-          itemStyle: { color: '#2563EB' }
+          itemStyle: { color: '#06B6D4' },
+          lineStyle: { color: '#06B6D4' }
         }
       ]
     })

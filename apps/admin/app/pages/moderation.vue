@@ -4,6 +4,7 @@ import { ModerationStatus } from '@gvp/shared-types'
 import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = useAdminApi()
+const config = useRuntimeConfig()
 
 useSeoMeta({
   title: 'Trust & Safety Moderation Queue'
@@ -14,6 +15,12 @@ const { data: queueData, pending: queuePending, error: queueError } = await useA
 })
 
 const cases = computed(() => queueData.value || [])
+const statusFilter = ref<'all' | 'pending' | 'resolved'>('all')
+const visibleCases = computed(() => {
+  if (statusFilter.value === 'pending') return cases.value.filter(c => c.status === ModerationStatus.PENDING)
+  if (statusFilter.value === 'resolved') return cases.value.filter(c => c.status !== ModerationStatus.PENDING)
+  return cases.value
+})
 const reviewerNotes = ref('')
 const reviewerTotp = ref('')
 const resolveError = ref<string | null>(null)
@@ -59,8 +66,23 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
     />
 
     <div v-else class="space-y-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
+          우선순위 · 상태 필터
+          <select
+            v-model="statusFilter"
+            class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]"
+            aria-label="심의 상태 필터"
+          >
+            <option value="all">전체 ({{ cases.length }})</option>
+            <option value="pending">처리 대기</option>
+            <option value="resolved">처리 완료</option>
+          </select>
+        </label>
+        <span class="tabular-nums text-xs text-[var(--gvp-text-secondary)]">{{ visibleCases.length }}건 표시</span>
+      </div>
       <div
-        v-for="item in cases"
+        v-for="item in visibleCases"
         :key="item.id"
         class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5"
       >
@@ -75,6 +97,15 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
             <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2.5 py-0.5 font-mono text-xs font-medium text-[var(--gvp-text)]">
               {{ item.policyCategory }}
             </span>
+            <a
+              v-if="item.targetType === 'video'"
+              :href="`${config.public.webUrl}/watch/${item.targetId}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-md bg-[var(--gvp-brand)] px-2.5 py-1 text-xs font-medium text-white hover:bg-[var(--gvp-brand-hover)]"
+            >
+              원본 보기 ↗
+            </a>
           </div>
 
           <div class="flex items-center gap-3">
@@ -88,58 +119,60 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
           </div>
         </div>
 
-        <p class="mt-3 text-sm text-[var(--gvp-text-secondary)]">
-          <strong class="font-semibold text-[var(--gvp-text)]">Report Reason:</strong> {{ item.reason }}
-        </p>
+        <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_340px]">
+          <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-muted)]">신고 내용 · 검수 메모</p>
+            <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">
+              <strong class="font-semibold text-[var(--gvp-text)]">Report Reason:</strong> {{ item.reason }}
+            </p>
+            <p v-if="item.actionTaken" class="mt-2 font-mono text-xs font-medium text-[var(--gvp-success)]">
+              Action Recorded: {{ item.actionTaken }}
+            </p>
+            <p v-if="resolveError" class="mt-2 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
+              {{ resolveError }}
+            </p>
+          </div>
 
-        <p v-if="resolveError" class="mt-3 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
-          {{ resolveError }}
-        </p>
-
-        <div class="mt-4 flex flex-wrap items-center gap-2.5">
-          <input
-            v-model="reviewerNotes"
-            type="text"
-            aria-label="Reviewer notes"
-            placeholder="Reviewer notes (recorded in audit log)"
-            class="h-9 min-w-[240px] flex-1 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] outline-none transition-colors"
-          />
-          <input
-            v-model="reviewerTotp"
-            type="text"
-            inputmode="numeric"
-            maxlength="6"
-            aria-label="Step-up TOTP code"
-            placeholder="TOTP"
-            class="h-9 w-24 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] outline-none transition-colors"
-          />
-
-          <button
-            type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
-            @click="resolveCase(item, 'approve')"
-          >
-            Dismiss Report (Approve Content)
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
-            @click="resolveCase(item, 'reject')"
-          >
-            Apply 19+ Age / Geo Restriction
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
-            @click="resolveCase(item, 'remove')"
-          >
-            Takedown &amp; Preserve Evidence Snapshot
-          </button>
+          <div class="flex flex-col gap-2">
+            <input
+              v-model="reviewerNotes"
+              type="text"
+              aria-label="Reviewer notes"
+              placeholder="Reviewer notes (audit log 기록)"
+              class="h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] outline-none transition-colors"
+            />
+            <input
+              v-model="reviewerTotp"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              aria-label="Step-up TOTP code"
+              placeholder="TOTP 6자리"
+              class="tabular-nums h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] outline-none transition-colors"
+            />
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]"
+              @click="resolveCase(item, 'approve')"
+            >
+              정상 승인
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]"
+              @click="resolveCase(item, 'reject')"
+            >
+              19+ 연령 제한
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-live)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
+              @click="resolveCase(item, 'remove')"
+            >
+              차단 · 삭제 (증거 보존)
+            </button>
+          </div>
         </div>
-
-        <p v-if="item.actionTaken" class="mt-3 font-mono text-xs font-medium text-[var(--gvp-success)]">
-          Action Recorded: {{ item.actionTaken }}
-        </p>
       </div>
     </div>
   </div>

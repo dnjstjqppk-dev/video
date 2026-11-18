@@ -52,7 +52,7 @@ function formatDate(iso: string): string {
 
 function statusTone(status: string): string {
   switch (status) {
-    case 'disputed': return 'border-sky-200 bg-sky-50 text-sky-700'
+    case 'disputed': return 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]'
     case 'released': return 'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]'
     case 'upheld':
     case 'takedown': return 'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)]'
@@ -109,7 +109,7 @@ async function submitDispute() {
       <div class="flex items-center gap-3 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 py-2 text-xs tabular-nums" role="status">
         <span class="text-[var(--gvp-text-secondary)]">활성 <strong class="font-semibold text-[var(--gvp-warning)]">{{ activeCount }}</strong></span>
         <span class="text-[var(--gvp-text-muted)]">·</span>
-        <span class="text-[var(--gvp-text-secondary)]">심사 중 <strong class="font-semibold text-sky-700">{{ disputedCount }}</strong></span>
+        <span class="text-[var(--gvp-text-secondary)]">심사 중 <strong class="font-semibold text-[var(--gvp-brand)]">{{ disputedCount }}</strong></span>
         <span class="text-[var(--gvp-text-muted)]">·</span>
         <span class="text-[var(--gvp-text-secondary)]">해제 <strong class="font-semibold text-[var(--gvp-success)]">{{ releasedCount }}</strong></span>
       </div>

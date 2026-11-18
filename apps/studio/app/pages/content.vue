@@ -24,6 +24,8 @@ interface StudioContentRow {
 }
 
 const activeTab = ref<'all' | 'video' | 'shorts' | 'live'>('all')
+const statusFilter = ref<'all' | VideoProcessingStatus>('all')
+const config = useRuntimeConfig()
 const page = ref(1)
 const limit = 20
 const total = ref(0)
@@ -55,7 +57,10 @@ const { data, pending, error, refresh } = await useAsyncData(
   { watch: [activeTab, page] }
 )
 
-const items = computed(() => data.value ?? [])
+const items = computed(() => {
+  const rows = data.value ?? []
+  return statusFilter.value === 'all' ? rows : rows.filter(r => r.status === statusFilter.value)
+})
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)))
 const selectedCount = computed(() => items.value.filter(i => i.selected).length)
 
@@ -122,20 +127,36 @@ function formatDate(iso: string) {
       {{ rowError }}
     </GvpBanner>
 
-    <!-- Filter Tabs -->
-    <div class="flex gap-6 border-b border-[var(--gvp-border)] text-xs font-semibold" role="tablist" aria-label="콘텐츠 유형">
-      <button
-        v-for="tab in (['all', 'video', 'shorts', 'live'] as const)"
-        :key="tab"
-        type="button"
-        role="tab"
-        :aria-selected="activeTab === tab"
-        class="border-b-2 pb-3 uppercase tracking-wider transition-colors"
-        :class="activeTab === tab ? 'border-[var(--gvp-focus)] text-[var(--gvp-text)]' : 'border-transparent text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]'"
-        @click="activeTab = tab; page = 1"
-      >
-        {{ tab }}
-      </button>
+    <!-- Filter Tabs + Status Filter -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--gvp-border)]">
+      <div class="flex gap-6 text-xs font-semibold" role="tablist" aria-label="콘텐츠 유형">
+        <button
+          v-for="tab in (['all', 'video', 'shorts', 'live'] as const)"
+          :key="tab"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab"
+          class="border-b-2 pb-3 uppercase tracking-wider transition-colors"
+          :class="activeTab === tab ? 'border-[var(--gvp-focus)] text-[var(--gvp-text)]' : 'border-transparent text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]'"
+          @click="activeTab = tab; page = 1"
+        >
+          {{ tab === 'all' ? '동영상' : tab === 'video' ? '일반' : tab === 'shorts' ? '숏폼' : '라이브' }}
+        </button>
+      </div>
+      <label class="flex items-center gap-2 pb-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
+        처리 상태
+        <select
+          v-model="statusFilter"
+          class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]"
+          aria-label="처리 상태 필터"
+        >
+          <option value="all">전체</option>
+          <option :value="VideoProcessingStatus.READY">READY</option>
+          <option :value="VideoProcessingStatus.PROCESSING">PROCESSING</option>
+          <option :value="VideoProcessingStatus.QUEUED">QUEUED</option>
+          <option :value="VideoProcessingStatus.FAILED">FAILED</option>
+        </select>
+      </label>
     </div>
 
     <!-- Loading -->
@@ -205,7 +226,7 @@ function formatDate(iso: string) {
                   'border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] text-[var(--gvp-warning)]': resolveStatusBadgeTone(row.status) === 'warning',
                   'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)]': resolveStatusBadgeTone(row.status) === 'danger',
                   'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]': resolveStatusBadgeTone(row.status) === 'neutral',
-                  'border-sky-200 bg-sky-50 text-sky-700': resolveStatusBadgeTone(row.status) === 'info'
+                  'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]': resolveStatusBadgeTone(row.status) === 'info'
                 }"
               >
                 {{ row.status }}
@@ -215,12 +236,12 @@ function formatDate(iso: string) {
             <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums font-mono">{{ row.comments.toLocaleString() }}</td>
             <td class="py-3 px-4 text-sm text-[var(--gvp-text-secondary)] border-b border-[var(--gvp-border)] tabular-nums">{{ formatDate(row.publishedAt) }}</td>
             <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums text-right">
-              <NuxtLink
-                :to="`/editor/${row.id}`"
-                class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
-              >
-                Timeline Editor
-              </NuxtLink>
+              <div class="inline-flex items-center gap-1.5">
+                <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
+                <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
+                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
+                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="실제 영상 보기" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-brand)] px-2.5 text-xs font-medium text-white hover:bg-[var(--gvp-brand-hover)]">보기↗</a>
+              </div>
             </td>
           </tr>
         </tbody>

@@ -39,6 +39,22 @@ function formatKrw(cents: number): string {
   return `₩${Math.round(cents / 100).toLocaleString('ko-KR')}`
 }
 
+function exportSettlementsCsv() {
+  const rows = settlements.value || []
+  if (!rows.length) return
+  const header = 'id,channel_id,status,period_start,period_end,amount_cents,tax_cents,net_cents,currency\n'
+  const body = rows.map(s =>
+    [s.id, s.channelId, s.status, s.periodStart, s.periodEnd, s.amount, s.taxWithheld, s.netAmount, s.currency].join(',')
+  ).join('\n')
+  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `gvp_settlements_${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 async function approveSettlementBatch() {
   if (!summary.value) return
   if (stepUpTotpCode.value.trim().length !== 6) {
@@ -129,13 +145,23 @@ async function approveSettlementBatch() {
       <div class="overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
         <div class="flex items-center justify-between border-b border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-5 py-3">
           <h2 class="text-sm font-semibold text-[var(--gvp-text)]">정산 명세 검토 (Settlement Statements)</h2>
-          <button
-            type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
-            @click="refreshSettlements()"
-          >
-            새로고침
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              :disabled="!settlements || settlements.length === 0"
+              class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+              @click="exportSettlementsCsv()"
+            >
+              CSV 내보내기
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
+              @click="refreshSettlements()"
+            >
+              새로고침
+            </button>
+          </div>
         </div>
 
         <div class="p-5">
