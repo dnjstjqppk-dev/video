@@ -5,6 +5,7 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const api = useStudioApi()
 
+const theme = useConsoleTheme()
 const currency = useState<'KRW' | 'USD'>('studio-currency', () => 'KRW')
 const sessionUser = useState<UserProfile | null>('studio-session', () => null)
 const mobileNavOpen = ref(false)
@@ -50,13 +51,13 @@ const navLinks = [
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col bg-white text-slate-900">
+  <div class="flex min-h-screen flex-col bg-[var(--gvp-surface)] text-[var(--gvp-text)]">
     <!-- Top Studio Header -->
-    <header class="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
+    <header class="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 sm:px-6">
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 md:hidden"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-md text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] md:hidden"
           aria-label="메뉴 열기"
           :aria-expanded="mobileNavOpen"
           @click="mobileNavOpen = !mobileNavOpen"
@@ -66,21 +67,21 @@ const navLinks = [
           </svg>
         </button>
         <NuxtLink to="/" class="flex items-center gap-2.5">
-          <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-xs font-bold text-white">
+          <span class="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--gvp-brand)] text-xs font-bold text-white">
             S
           </span>
           <div class="flex items-center gap-2">
-            <span class="text-sm font-bold tracking-tight text-slate-900">Creator Studio</span>
+            <span class="text-sm font-bold tracking-tight text-[var(--gvp-text)]">Creator Studio</span>
             <span
               v-if="sessionUser"
-              class="rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700"
+              class="rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-success)]"
             >
               {{ sessionUser.role }}
             </span>
             <NuxtLink
               v-else
               to="/login"
-              class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
+              class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-warning)] hover:bg-[var(--gvp-warning-soft)]"
             >
               LOGIN REQUIRED
             </NuxtLink>
@@ -89,13 +90,13 @@ const navLinks = [
       </div>
 
       <div class="flex min-w-0 items-center gap-2 overflow-x-auto sm:gap-2.5">
-        <span v-if="sessionUser" class="hidden text-xs font-medium text-slate-600 md:inline">
+        <span v-if="sessionUser" class="hidden text-xs font-medium text-[var(--gvp-text-secondary)] md:inline">
           {{ sessionUser.displayName }}
         </span>
         <button
           v-if="sessionUser"
           type="button"
-          class="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]"
           @click="logout"
         >
           로그아웃
@@ -103,7 +104,7 @@ const navLinks = [
         <NuxtLink
           v-else
           to="/login"
-          class="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]"
         >
           로그인
         </NuxtLink>
@@ -111,15 +112,24 @@ const navLinks = [
         <!-- Currency Switcher -->
         <button
           type="button"
-          class="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-700 tabular-nums hover:bg-slate-50"
+          class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs font-medium text-[var(--gvp-text)] tabular-nums hover:bg-[var(--gvp-canvas)]"
           @click="currency = currency === 'KRW' ? 'USD' : 'KRW'"
         >
           {{ currency === 'KRW' ? '₩ KRW' : '$ USD' }}
         </button>
 
+        <button
+          type="button"
+          :aria-label="theme.mode.value === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] text-sm text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]"
+          @click="theme.toggle()"
+        >
+          {{ theme.mode.value === 'dark' ? '○' : '◐' }}
+        </button>
+
         <NuxtLink
           to="/upload"
-          class="inline-flex h-8 items-center gap-1.5 rounded-md bg-slate-900 px-3 text-xs font-medium text-white transition-colors hover:bg-slate-800"
+          class="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--gvp-brand)] px-3 text-xs font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)]"
         >
           <span>+</span>
           <span class="hidden sm:inline">동영상 업로드</span>
@@ -129,7 +139,7 @@ const navLinks = [
           :href="config.public.webUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2.5 text-xs font-medium text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-canvas)] hover:text-[var(--gvp-text)]"
         >
           Web Portal
         </a>
@@ -138,7 +148,7 @@ const navLinks = [
           :href="config.public.partnersUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 md:inline-flex"
+          class="hidden h-8 items-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2.5 text-xs font-medium text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-canvas)] hover:text-[var(--gvp-text)] md:inline-flex"
         >
           Partners
         </a>
@@ -147,7 +157,7 @@ const navLinks = [
           :href="config.public.adminUrl"
           target="_blank"
           rel="noopener noreferrer"
-          class="hidden h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 lg:inline-flex"
+          class="hidden h-8 items-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2.5 text-xs font-medium text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-canvas)] hover:text-[var(--gvp-text)] lg:inline-flex"
         >
           Admin
         </a>
@@ -156,33 +166,33 @@ const navLinks = [
 
     <div
       v-if="mobileNavOpen"
-      class="fixed inset-0 z-40 bg-slate-900/40 md:hidden"
+      class="fixed inset-0 z-40 bg-[var(--gvp-scrim)] md:hidden"
       aria-hidden="true"
       @click="mobileNavOpen = false"
     />
     <div class="flex flex-1">
       <!-- Studio Left Navigation Sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-50 w-64 shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 p-3 transition-transform md:static md:z-auto md:w-60 md:translate-x-0"
+        class="fixed inset-y-0 left-0 z-50 w-64 shrink-0 overflow-y-auto border-r border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3 transition-transform md:static md:z-auto md:w-60 md:translate-x-0"
         :class="mobileNavOpen ? 'translate-x-0' : '-translate-x-full'"
       >
         <!-- Creator Channel Badge -->
-        <div class="mb-4 flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+        <div class="mb-4 flex items-center gap-3 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3">
           <img
             v-if="sessionUser?.avatarUrl"
             :src="sessionUser.avatarUrl"
             :alt="sessionUser.displayName"
-            class="h-9 w-9 rounded-full border border-slate-200 object-cover"
+            class="h-9 w-9 rounded-full border border-[var(--gvp-border)] object-cover"
           />
           <span
             v-else
-            class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700"
+            class="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-xs font-bold text-[var(--gvp-text)]"
           >
             CH
           </span>
           <div class="min-w-0">
-            <p class="truncate text-xs font-semibold text-slate-900">{{ sessionUser?.displayName || '미로그인 크리에이터' }}</p>
-            <p class="text-[11px] text-slate-500">{{ sessionUser ? `@${sessionUser.username}` : '로그인 후 채널 표시' }}</p>
+            <p class="truncate text-xs font-semibold text-[var(--gvp-text)]">{{ sessionUser?.displayName || '미로그인 크리에이터' }}</p>
+            <p class="text-[11px] text-[var(--gvp-text-secondary)]">{{ sessionUser ? `@${sessionUser.username}` : '로그인 후 채널 표시' }}</p>
           </div>
         </div>
 
@@ -194,8 +204,8 @@ const navLinks = [
             class="flex items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium transition-colors"
             :class="
               route.path === item.path
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                ? 'bg-[var(--gvp-brand)] text-white font-semibold'
+                : 'text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]'
             "
           >
             <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -205,31 +215,31 @@ const navLinks = [
           </NuxtLink>
         </nav>
 
-        <div class="mt-6 rounded-lg border border-slate-200 bg-white p-3 text-xs">
-          <p class="font-semibold text-slate-900">Subtitles & Copyright Status</p>
-          <p class="mt-1 text-green-700">0 Active Copyright Strikes</p>
-          <p class="mt-0.5 text-slate-500">Auto-captions (ko/en) enabled</p>
+        <div class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3 text-xs">
+          <p class="font-semibold text-[var(--gvp-text)]">Subtitles & Copyright Status</p>
+          <p class="mt-1 text-[var(--gvp-success)]">0 Active Copyright Strikes</p>
+          <p class="mt-0.5 text-[var(--gvp-text-secondary)]">Auto-captions (ko/en) enabled</p>
         </div>
       </aside>
 
       <!-- Main Studio Workspace -->
-      <main class="min-w-0 flex-1 bg-white p-4 sm:p-6 lg:p-8">
+      <main class="min-w-0 flex-1 bg-[var(--gvp-surface)] p-4 sm:p-6 lg:p-8">
         <div class="mx-auto max-w-7xl">
           <div
             v-if="!sessionUser && route.path !== '/login'"
-            class="mb-6 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800"
+            class="mb-6 flex items-center justify-between rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-4 py-2.5 text-xs text-[var(--gvp-warning)]"
           >
             <div class="flex items-center gap-2">
               <span class="font-semibold">로그인이 필요합니다</span>
-              <span class="text-amber-400">|</span>
+              <span class="text-[var(--gvp-warning)]">|</span>
               <span>실제 채널 데이터를 보려면 로그인하세요. 미인증 상태에서는 샘플 화면이 표시될 수 있습니다.</span>
             </div>
-            <NuxtLink to="/login" class="rounded border border-amber-300 bg-white px-2.5 py-1 font-mono text-[11px] font-medium text-amber-800 hover:bg-amber-100">
+            <NuxtLink to="/login" class="rounded border border-[var(--gvp-warning)] bg-[var(--gvp-surface)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--gvp-warning)] hover:bg-[var(--gvp-warning-soft)]">
               LOGIN
             </NuxtLink>
           </div>
           <slot />
-          <footer class="mt-10 border-t border-slate-200 pt-4 text-center text-xs text-slate-400">
+          <footer class="mt-10 border-t border-[var(--gvp-border)] pt-4 text-center text-xs text-[var(--gvp-text-muted)]">
             <span>StreamVerse Creator Studio</span>
           </footer>
         </div>

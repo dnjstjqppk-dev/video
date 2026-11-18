@@ -88,10 +88,10 @@ async function removeComment(cmt: Comment) {
 
 <template>
   <div class="max-w-6xl space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-5">
       <div>
-        <h1 class="text-xl font-semibold tracking-tight text-slate-900">채널 댓글 및 검토 관리 (Comments &amp; Mentions)</h1>
-        <p class="mt-1 text-xs text-slate-500">
+        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">채널 댓글 및 검토 관리 (Comments &amp; Mentions)</h1>
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           내 채널 영상에 달린 댓글을 하트·고정·삭제하고 시청자와 소통하세요
         </p>
       </div>
@@ -102,24 +102,24 @@ async function removeComment(cmt: Comment) {
     </GvpBanner>
 
     <!-- Filter Bar -->
-    <div class="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
-      <p class="text-sm font-medium text-slate-900 tabular-nums" role="status">
-        전체 댓글 <span class="font-semibold text-slate-900">{{ total.toLocaleString() }}</span>개
+    <div class="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 py-3">
+      <p class="text-sm font-medium text-[var(--gvp-text)] tabular-nums" role="status">
+        전체 댓글 <span class="font-semibold text-[var(--gvp-text)]">{{ total.toLocaleString() }}</span>개
       </p>
-      <label class="flex items-center gap-2 text-xs font-medium text-slate-600">
+      <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
         <span>검색</span>
         <input
           v-model="searchQuery"
           type="search"
           placeholder="댓글 내용 또는 작성자..."
-          class="h-9 w-64 rounded-md border border-slate-300 bg-slate-50 px-3 text-xs text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
+          class="h-9 w-64 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)]"
         />
       </label>
     </div>
 
     <!-- Loading -->
     <div v-if="pending" class="space-y-3" role="status" aria-label="불러오는 중">
-      <div v-for="n in 4" :key="n" class="h-24 animate-pulse rounded-lg bg-slate-100" />
+      <div v-for="n in 4" :key="n" class="h-24 animate-pulse rounded-lg bg-[var(--gvp-elevated)]" />
     </div>
 
     <!-- Error -->
@@ -135,11 +135,11 @@ async function removeComment(cmt: Comment) {
     />
 
     <!-- Comments List -->
-    <div v-else class="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div v-else class="divide-y divide-[var(--gvp-border)] overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
       <div
         v-for="cmt in filteredComments"
         :key="cmt.id"
-        class="flex items-start gap-4 p-4 text-xs hover:bg-slate-50 transition-colors"
+        class="flex items-start gap-4 p-4 text-xs hover:bg-[var(--gvp-canvas)] transition-colors"
       >
         <img
           v-if="cmt.author.avatarUrl"
@@ -149,33 +149,33 @@ async function removeComment(cmt: Comment) {
         />
         <span
           v-else
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-sm font-semibold text-[var(--gvp-text)]"
           aria-hidden="true"
         >
           {{ initials(cmt.author.displayName) }}
         </span>
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2 tabular-nums">
-            <span class="font-semibold text-slate-900">{{ cmt.author.displayName }}</span>
-            <span class="text-slate-400">· {{ formatDate(cmt.createdAt) }}</span>
-            <span class="text-slate-500">· Likes {{ cmt.likeCount.toLocaleString() }}</span>
-            <span v-if="cmt.isPinned" class="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+            <span class="font-semibold text-[var(--gvp-text)]">{{ cmt.author.displayName }}</span>
+            <span class="text-[var(--gvp-text-muted)]">· {{ formatDate(cmt.createdAt) }}</span>
+            <span class="text-[var(--gvp-text-secondary)]">· Likes {{ cmt.likeCount.toLocaleString() }}</span>
+            <span v-if="cmt.isPinned" class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2 py-0.5 text-[11px] font-medium text-[var(--gvp-text)]">
               Pinned
             </span>
-            <span v-if="cmt.isHeartedByCreator" class="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700" title="크리에이터 하트">
+            <span v-if="cmt.isHeartedByCreator" class="rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--gvp-live)]" title="크리에이터 하트">
               Creator Hearted
             </span>
           </div>
 
-          <p class="mt-0.5 font-mono text-[11px] text-slate-500">on video: {{ cmt.videoId }}</p>
-          <p class="mt-2 text-sm text-slate-900">{{ cmt.content }}</p>
+          <p class="mt-0.5 font-mono text-[11px] text-[var(--gvp-text-secondary)]">on video: {{ cmt.videoId }}</p>
+          <p class="mt-2 text-sm text-[var(--gvp-text)]">{{ cmt.content }}</p>
 
           <!-- Actions -->
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
-              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
               @click="toggleHeart(cmt)"
             >
               {{ cmt.isHeartedByCreator ? '하트 취소' : '하트' }}
@@ -183,7 +183,7 @@ async function removeComment(cmt: Comment) {
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
-              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
               @click="togglePin(cmt)"
             >
               {{ cmt.isPinned ? '고정 해제' : '상단 고정' }}
@@ -191,7 +191,7 @@ async function removeComment(cmt: Comment) {
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
-              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-live)] bg-[var(--gvp-live-soft)] border border-[var(--gvp-live)] rounded-md hover:bg-[var(--gvp-live-soft)] transition-colors disabled:opacity-40"
               @click="removeComment(cmt)"
             >
               삭제
@@ -206,16 +206,16 @@ async function removeComment(cmt: Comment) {
       <button
         type="button"
         :disabled="page <= 1"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
         @click="page -= 1"
       >
         이전
       </button>
-      <span class="text-slate-500 tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
+      <span class="text-[var(--gvp-text-secondary)] tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
       <button
         type="button"
         :disabled="page >= totalPages"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
         @click="page += 1"
       >
         다음

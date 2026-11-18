@@ -145,11 +145,11 @@ function splitLeft(point: number): string {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-5">
       <div>
-        <h1 class="text-xl font-semibold tracking-tight text-slate-900">Video Editor</h1>
-        <p class="mt-1 text-xs text-slate-500 tabular-nums">
-          Video ID: <code class="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-slate-900">{{ videoId }}</code>
+        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">Video Editor</h1>
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
+          Video ID: <code class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-1.5 py-0.5 font-mono text-[var(--gvp-text)]">{{ videoId }}</code>
           <span v-if="video"> · {{ video.title }} · {{ duration }}s · Non-destructive: the source, URL, views, and comments are preserved.</span>
         </p>
       </div>
@@ -157,7 +157,7 @@ function splitLeft(point: number): string {
         variant="primary"
         :loading="dispatching || polling"
         :disabled="videoPending || !!videoError || !video"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
         @click="dispatchRenderJob"
       >
         Save &amp; Dispatch Render Job
@@ -188,41 +188,41 @@ function splitLeft(point: number): string {
       </GvpBanner>
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section class="rounded-lg border border-slate-200 bg-white p-5 lg:col-span-2" aria-label="Preview and timeline">
-          <div class="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+        <section class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 lg:col-span-2" aria-label="Preview and timeline">
+          <div class="relative aspect-video w-full overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]">
             <img
               v-if="video.thumbnailUrl"
               :src="video.thumbnailUrl"
               :alt="`Preview frame of ${video.title}`"
               class="h-full w-full object-cover"
             />
-            <div v-else class="flex h-full items-center justify-center p-8 text-center text-sm font-medium text-slate-600 bg-slate-50" role="img" :aria-label="`No thumbnail for ${video.title}`">
+            <div v-else class="flex h-full items-center justify-center p-8 text-center text-sm font-medium text-[var(--gvp-text-secondary)] bg-[var(--gvp-canvas)]" role="img" :aria-label="`No thumbnail for ${video.title}`">
               {{ video.title }}
             </div>
             <div
               v-for="box in blurRegions"
               :key="box.id"
-              class="absolute flex h-16 w-36 items-center justify-center rounded-md border-2 border-slate-900 bg-white/90 text-[11px] font-semibold text-slate-900"
+              class="absolute flex h-16 w-36 items-center justify-center rounded-md border-2 border-[var(--gvp-focus)] bg-[var(--gvp-surface)]/90 text-[11px] font-semibold text-[var(--gvp-text)]"
               :style="{ left: `${box.x}%`, top: `${box.y}%` }"
             >
               {{ box.label }}
             </div>
           </div>
 
-          <div class="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs">
+          <div class="mt-5 flex flex-col gap-3 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-4 text-xs">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <span class="font-semibold text-slate-900 tabular-nums">Timeline (Trim: {{ trimStart }}s – {{ trimEnd }}s of {{ duration }}s)</span>
+              <span class="font-semibold text-[var(--gvp-text)] tabular-nums">Timeline (Trim: {{ trimStart }}s – {{ trimEnd }}s of {{ duration }}s)</span>
               <div class="flex gap-2">
                 <button
                   type="button"
-                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
                   @click="addSplitAtPlayhead"
                 >
                   Split at midpoint
                 </button>
                 <button
                   type="button"
-                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                  class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
                   @click="addBlurRegion"
                 >
                   Add blur region
@@ -230,37 +230,37 @@ function splitLeft(point: number): string {
               </div>
             </div>
 
-            <div class="relative w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900" aria-label="Video track with split points">
+            <div class="relative w-full rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-2 text-[var(--gvp-text)]" aria-label="Video track with split points">
               <span class="font-medium">Video track</span>
               <button
                 v-for="sp in splitPoints"
                 :key="sp"
                 type="button"
-                class="absolute top-0 h-full w-1 -ml-0.5 cursor-pointer rounded-md bg-slate-900 hover:bg-slate-700"
+                class="absolute top-0 h-full w-1 -ml-0.5 cursor-pointer rounded-md bg-[var(--gvp-brand)] hover:bg-[var(--gvp-elevated)]"
                 :style="{ left: splitLeft(sp) }"
                 :title="`Split at ${sp}s — activate to remove`"
                 :aria-label="`Remove split at ${sp} seconds`"
                 @click="removeSplit(sp)"
               />
-              <span v-if="splitPoints.length === 0" class="ml-2 text-slate-500">No splits — the trim plays straight through.</span>
+              <span v-if="splitPoints.length === 0" class="ml-2 text-[var(--gvp-text-secondary)]">No splits — the trim plays straight through.</span>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-700 tabular-nums">
+            <div class="flex flex-wrap items-center gap-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-2 text-[var(--gvp-text)] tabular-nums">
               <span>Blur regions: {{ blurRegions.length }} active mask(s)</span>
               <button
                 v-for="box in blurRegions"
                 :key="box.id"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                class="inline-flex items-center gap-1 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]"
                 :title="`Remove ${box.label}`"
                 @click="removeBlurRegion(box.id)"
               >
                 <span>{{ box.label }}</span>
-                <span class="text-slate-500">(Remove)</span>
+                <span class="text-[var(--gvp-text-secondary)]">(Remove)</span>
               </button>
             </div>
 
-            <div class="rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-700 tabular-nums">
+            <div class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-2 text-[var(--gvp-text)] tabular-nums">
               <template v-if="mutedSegments.length > 0">
                 Muted {{ mutedSegments[0]?.startSec }}s–{{ mutedSegments[0]?.endSec }}s · {{ replacementAudio }}
               </template>
@@ -271,43 +271,43 @@ function splitLeft(point: number): string {
           </div>
         </section>
 
-        <aside class="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 text-xs" aria-label="Edit decision list controls">
-          <h2 class="text-sm font-semibold text-slate-900">Edit Decision List</h2>
+        <aside class="flex flex-col gap-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 text-xs" aria-label="Edit decision list controls">
+          <h2 class="text-sm font-semibold text-[var(--gvp-text)]">Edit Decision List</h2>
 
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-1.5">
-              <label for="editor-trim-in" class="font-medium text-slate-600">Trim in (sec)</label>
+              <label for="editor-trim-in" class="font-medium text-[var(--gvp-text-secondary)]">Trim in (sec)</label>
               <input
                 id="editor-trim-in"
                 v-model.number="trimStart"
                 type="number"
                 min="0"
                 :max="duration"
-                class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 tabular-nums outline-none focus:border-slate-900"
+                class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
               />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label for="editor-trim-out" class="font-medium text-slate-600">Trim out (sec)</label>
+              <label for="editor-trim-out" class="font-medium text-[var(--gvp-text-secondary)]">Trim out (sec)</label>
               <input
                 id="editor-trim-out"
                 v-model.number="trimEnd"
                 type="number"
                 min="0"
                 :max="duration"
-                class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 tabular-nums outline-none focus:border-slate-900"
+                class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
               />
             </div>
           </div>
-          <p v-if="trimEnd <= trimStart" class="font-semibold text-red-600 tabular-nums" role="alert">
+          <p v-if="trimEnd <= trimStart" class="font-semibold text-[var(--gvp-live)] tabular-nums" role="alert">
             Trim out must be greater than trim in (0–{{ duration }}s).
           </p>
 
           <div class="flex flex-col gap-1.5">
-            <label for="editor-audio" class="font-medium text-slate-600">Audio replacement (resolves copyright claims)</label>
+            <label for="editor-audio" class="font-medium text-[var(--gvp-text-secondary)]">Audio replacement (resolves copyright claims)</label>
             <select
               id="editor-audio"
               v-model="replacementAudio"
-              class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900"
+              class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
             >
               <option>Royalty-Free Synthwave Ambient #04 (StreamVerse Audio Library)</option>
               <option>Lo-Fi Chill Coding Beats #12 (Cleared Global License)</option>
@@ -315,7 +315,7 @@ function splitLeft(point: number): string {
             </select>
           </div>
 
-          <p class="leading-relaxed text-slate-500">
+          <p class="leading-relaxed text-[var(--gvp-text-secondary)]">
             Dispatch sends this EDL to the media worker render queue. The original file keeps serving until the edited rendition is ready.
           </p>
         </aside>

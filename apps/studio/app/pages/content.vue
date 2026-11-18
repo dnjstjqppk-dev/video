@@ -92,25 +92,25 @@ function formatDate(iso: string) {
   <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-xl font-semibold tracking-tight text-slate-900">채널 콘텐츠 관리 (Content Manager)</h1>
-        <p class="mt-1 text-xs text-slate-500">
+        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">채널 콘텐츠 관리 (Content Manager)</h1>
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           Manage visibility, processing status, and comments across Videos, Shorts, and Live VODs
         </p>
       </div>
 
       <!-- Bulk Actions Toolbar -->
-      <div v-if="selectedCount > 0" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs">
-        <span class="font-semibold text-slate-900 tabular-nums">{{ selectedCount }} selected</span>
+      <div v-if="selectedCount > 0" class="flex items-center gap-2 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs">
+        <span class="font-semibold text-[var(--gvp-text)] tabular-nums">{{ selectedCount }} selected</span>
         <button
           type="button"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
           @click="applyBulkVisibility(VideoVisibility.PUBLIC)"
         >
           Set Public
         </button>
         <button
           type="button"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
           @click="applyBulkVisibility(VideoVisibility.PRIVATE)"
         >
           Set Private
@@ -123,7 +123,7 @@ function formatDate(iso: string) {
     </GvpBanner>
 
     <!-- Filter Tabs -->
-    <div class="flex gap-6 border-b border-slate-200 text-xs font-semibold" role="tablist" aria-label="콘텐츠 유형">
+    <div class="flex gap-6 border-b border-[var(--gvp-border)] text-xs font-semibold" role="tablist" aria-label="콘텐츠 유형">
       <button
         v-for="tab in (['all', 'video', 'shorts', 'live'] as const)"
         :key="tab"
@@ -131,7 +131,7 @@ function formatDate(iso: string) {
         role="tab"
         :aria-selected="activeTab === tab"
         class="border-b-2 pb-3 uppercase tracking-wider transition-colors"
-        :class="activeTab === tab ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'"
+        :class="activeTab === tab ? 'border-[var(--gvp-focus)] text-[var(--gvp-text)]' : 'border-transparent text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]'"
         @click="activeTab = tab; page = 1"
       >
         {{ tab }}
@@ -140,7 +140,7 @@ function formatDate(iso: string) {
 
     <!-- Loading -->
     <div v-if="pending" class="space-y-2" role="status" aria-label="불러오는 중">
-      <div v-for="n in 5" :key="n" class="h-12 animate-pulse rounded-lg bg-slate-100" />
+      <div v-for="n in 5" :key="n" class="h-12 animate-pulse rounded-lg bg-[var(--gvp-elevated)]" />
     </div>
 
     <!-- Error -->
@@ -158,9 +158,9 @@ function formatDate(iso: string) {
     />
 
     <!-- Content Table -->
-    <div v-else class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div v-else class="overflow-x-auto rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
       <table class="w-full text-left">
-        <thead class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+        <thead class="bg-[var(--gvp-canvas)] border-y border-[var(--gvp-border)] text-xs font-semibold text-[var(--gvp-text-secondary)] uppercase tracking-wider">
           <tr>
             <th scope="col" class="py-2.5 px-4">Select</th>
             <th scope="col" class="py-2.5 px-4">Video / Content</th>
@@ -172,23 +172,23 @@ function formatDate(iso: string) {
             <th scope="col" class="py-2.5 px-4 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr v-for="row in items" :key="row.id" class="hover:bg-slate-50 transition-colors">
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
-              <input v-model="row.selected" type="checkbox" class="rounded-md border-slate-300 accent-slate-900" :aria-label="`${row.title} 선택`" />
+        <tbody class="divide-y divide-[var(--gvp-border)]">
+          <tr v-for="row in items" :key="row.id" class="hover:bg-[var(--gvp-canvas)] transition-colors">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
+              <input v-model="row.selected" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" :aria-label="`${row.title} 선택`" />
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100">
-              <p class="font-medium text-slate-900">{{ row.title }}</p>
-              <span class="mt-1 inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-600">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)]">
+              <p class="font-medium text-[var(--gvp-text)]">{{ row.title }}</p>
+              <span class="mt-1 inline-block rounded-md bg-[var(--gvp-elevated)] px-2 py-0.5 text-[11px] font-medium uppercase text-[var(--gvp-text-secondary)]">
                 {{ row.type }}
               </span>
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
               <select
                 :value="row.visibility"
                 :disabled="savingIds.has(row.id)"
                 :aria-label="`${row.title} 공개 범위`"
-                class="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50"
+                class="rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--gvp-text)] disabled:opacity-50"
                 @change="setRowVisibility(row, ($event.target as HTMLSelectElement).value as VideoVisibility)"
               >
                 <option :value="VideoVisibility.PUBLIC">Public</option>
@@ -197,27 +197,27 @@ function formatDate(iso: string) {
                 <option :value="VideoVisibility.MEMBERS_ONLY">Members Only</option>
               </select>
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
               <span
                 class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium"
                 :class="{
-                  'border-emerald-200 bg-emerald-50 text-emerald-700': resolveStatusBadgeTone(row.status) === 'success',
-                  'border-amber-200 bg-amber-50 text-amber-700': resolveStatusBadgeTone(row.status) === 'warning',
-                  'border-red-200 bg-red-50 text-red-700': resolveStatusBadgeTone(row.status) === 'danger',
-                  'border-slate-200 bg-slate-100 text-slate-600': resolveStatusBadgeTone(row.status) === 'neutral',
+                  'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]': resolveStatusBadgeTone(row.status) === 'success',
+                  'border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] text-[var(--gvp-warning)]': resolveStatusBadgeTone(row.status) === 'warning',
+                  'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)]': resolveStatusBadgeTone(row.status) === 'danger',
+                  'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]': resolveStatusBadgeTone(row.status) === 'neutral',
                   'border-sky-200 bg-sky-50 text-sky-700': resolveStatusBadgeTone(row.status) === 'info'
                 }"
               >
                 {{ row.status }}
               </span>
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums font-mono">{{ row.views.toLocaleString() }}</td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums font-mono">{{ row.comments.toLocaleString() }}</td>
-            <td class="py-3 px-4 text-sm text-slate-600 border-b border-slate-100 tabular-nums">{{ formatDate(row.publishedAt) }}</td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums text-right">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums font-mono">{{ row.views.toLocaleString() }}</td>
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums font-mono">{{ row.comments.toLocaleString() }}</td>
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text-secondary)] border-b border-[var(--gvp-border)] tabular-nums">{{ formatDate(row.publishedAt) }}</td>
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums text-right">
               <NuxtLink
                 :to="`/editor/${row.id}`"
-                class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+                class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
               >
                 Timeline Editor
               </NuxtLink>
@@ -232,16 +232,16 @@ function formatDate(iso: string) {
       <button
         type="button"
         :disabled="page <= 1"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
         @click="page -= 1"
       >
         이전
       </button>
-      <span class="text-slate-500 tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
+      <span class="text-[var(--gvp-text-secondary)] tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
       <button
         type="button"
         :disabled="page >= totalPages"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-40"
+        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
         @click="page += 1"
       >
         다음

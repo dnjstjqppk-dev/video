@@ -285,7 +285,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100vh-3.5rem)] w-full items-center justify-center bg-slate-50 px-4 py-6 text-slate-900">
+  <div class="flex min-h-[calc(100vh-3.5rem)] w-full items-center justify-center bg-[var(--gvp-canvas)] px-4 py-6 text-[var(--gvp-text)]">
     <!-- Preload Link for Next Short Poster/Segment -->
     <Head>
       <link v-if="nextShort" rel="preload" as="image" :href="nextShort.posterUrl" />
@@ -294,44 +294,44 @@ onUnmounted(() => {
     <div v-if="currentShort" class="relative flex items-center gap-4">
       <!-- Vertical 9:16 Viewport Container -->
       <div
-        class="relative flex h-[82vh] w-[46vh] max-w-[420px] select-none flex-col overflow-hidden rounded-lg border border-slate-200 bg-white cursor-pointer"
+        class="relative flex h-[82vh] w-[46vh] max-w-[420px] select-none flex-col overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] cursor-pointer"
         @click="togglePlayPause"
       >
         <!-- Top Light Utility Bar -->
-        <div class="flex items-center justify-between border-b border-slate-200 bg-white px-3.5 py-2.5" @click.stop>
-          <span class="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-900 tabular-nums">
+        <div class="flex items-center justify-between border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3.5 py-2.5" @click.stop>
+          <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2.5 py-1 text-xs font-bold text-[var(--gvp-text)] tabular-nums">
             SHORTS · {{ activeIndex + 1 }} / {{ shortsList.length }}
           </span>
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              class="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
               @click="loopEnabled = !loopEnabled"
             >
               {{ loopEnabled ? 'Loop: ON' : 'Auto-Next' }}
             </button>
             <button
               type="button"
-              class="rounded-md border border-slate-200 bg-slate-50 p-1.5 text-slate-700 transition hover:bg-slate-100"
+              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
               :aria-label="isMuted ? 'Unmute' : 'Mute'"
               @click="isMuted = !isMuted"
             >
-              <svg v-if="isMuted" class="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <svg v-if="isMuted" class="h-4 w-4 text-[var(--gvp-live)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
               </svg>
-              <svg v-else class="h-4 w-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <svg v-else class="h-4 w-4 text-[var(--gvp-text)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             </button>
           </div>
         </div>
 
-        <p v-if="shortsError" class="border-b border-red-200 bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-700" role="alert">
+        <p v-if="shortsError" class="border-b border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-3.5 py-1.5 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
           {{ shortsError }}
         </p>
 
         <!-- Video Frame -->
-        <div class="relative flex-1 overflow-hidden bg-slate-950">
+        <div class="relative flex-1 overflow-hidden bg-black">
           <img
             :src="currentShort.posterUrl"
             :alt="currentShort.title"
@@ -343,7 +343,7 @@ onUnmounted(() => {
             v-if="showPlayPauseOverlay"
             class="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
-            <div class="flex h-16 w-16 items-center justify-center rounded-lg border border-slate-200 bg-white/95 text-slate-900 shadow-sm">
+            <div class="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 text-[var(--gvp-text)] shadow-sm">
               <svg v-if="isPlaying" class="h-6 w-6 fill-current" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
@@ -355,16 +355,16 @@ onUnmounted(() => {
         </div>
 
         <!-- Bottom Metadata Panel (Clean White Surface) -->
-        <div class="border-t border-slate-200 bg-white p-4 text-slate-900" @click.stop>
+        <div class="border-t border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-[var(--gvp-text)]" @click.stop>
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2.5 min-w-0">
-              <span v-if="currentShort.isSponsored" class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">
+              <span v-if="currentShort.isSponsored" class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--gvp-warning)]">
                 Sponsored
               </span>
               <NuxtLink :to="`/channels/${currentShort.channelId}`" class="shrink-0">
-                <img :src="currentShort.channelAvatar" :alt="currentShort.channelHandle" class="h-8 w-8 rounded-full border border-slate-200 object-cover" />
+                <img :src="currentShort.channelAvatar" :alt="currentShort.channelHandle" class="h-8 w-8 rounded-full border border-[var(--gvp-border)] object-cover" />
               </NuxtLink>
-              <NuxtLink :to="`/channels/${currentShort.channelId}`" class="truncate text-sm font-bold text-slate-900 hover:text-blue-600">
+              <NuxtLink :to="`/channels/${currentShort.channelId}`" class="truncate text-sm font-bold text-[var(--gvp-text)] hover:text-[var(--gvp-brand)]">
                 {{ currentShort.channelHandle }}
               </NuxtLink>
             </div>
@@ -372,14 +372,14 @@ onUnmounted(() => {
               v-if="!currentShort.isSponsored"
               type="button"
               class="shrink-0 rounded-md px-3 py-1 text-xs font-semibold transition"
-              :class="currentShort.subscribed ? 'border border-slate-200 bg-slate-100 text-slate-700' : 'bg-slate-900 text-white hover:bg-slate-800'"
+              :class="currentShort.subscribed ? 'border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text)]' : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'"
               @click="toggleSubscribe(currentShort)"
             >
               {{ currentShort.subscribed ? 'Subscribed' : 'Subscribe' }}
             </button>
           </div>
 
-          <p class="mt-2.5 line-clamp-2 text-xs font-medium leading-relaxed text-slate-700">
+          <p class="mt-2.5 line-clamp-2 text-xs font-medium leading-relaxed text-[var(--gvp-text)]">
             {{ currentShort.title }}
           </p>
 
@@ -389,7 +389,7 @@ onUnmounted(() => {
               :href="currentShort.destinationUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+              class="inline-flex items-center gap-1.5 rounded-md bg-[var(--gvp-brand)] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
               @click="api.recordAdEvent({ decision_id: currentShort.decisionId || '', campaign_id: currentShort.campaignId || '', event_type: 'click' })"
             >
               <span>{{ currentShort.ctaText || 'Learn More' }}</span>
@@ -403,9 +403,9 @@ onUnmounted(() => {
           <div v-if="currentShort.relatedVideoId" class="mt-2.5">
             <NuxtLink
               :to="`/watch/${currentShort.relatedVideoId}`"
-              class="inline-flex max-w-full items-center gap-1.5 truncate rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+              class="inline-flex max-w-full items-center gap-1.5 truncate rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1 text-xs font-medium text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
             >
-              <svg class="h-3.5 w-3.5 shrink-0 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="h-3.5 w-3.5 shrink-0 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
               <span class="truncate">{{ currentShort.relatedVideoTitle }}</span>
@@ -415,10 +415,10 @@ onUnmounted(() => {
           <!-- Remix / Sound Attribution Pill -->
           <button
             type="button"
-            class="mt-2.5 flex w-full items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            class="mt-2.5 flex w-full items-center gap-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1.5 text-left text-xs text-[var(--gvp-text-secondary)] transition hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]"
             @click="showSoundModal = !showSoundModal"
           >
-            <svg class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="h-4 w-4 shrink-0 text-[var(--gvp-brand)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
             <span class="truncate font-medium">{{ currentShort.audioTitle }}</span>
@@ -432,7 +432,7 @@ onUnmounted(() => {
         <button
           type="button"
           class="flex w-16 flex-col items-center gap-1 rounded-lg border px-2 py-2.5 text-xs font-semibold transition"
-          :class="currentShort.liked ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+          :class="currentShort.liked ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
           @click="toggleLike(currentShort)"
         >
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -445,7 +445,7 @@ onUnmounted(() => {
         <button
           type="button"
           class="flex w-16 flex-col items-center gap-1 rounded-lg border px-2 py-2.5 text-xs font-semibold transition"
-          :class="currentShort.disliked ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+          :class="currentShort.disliked ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
           @click="toggleDislike(currentShort)"
         >
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -457,7 +457,7 @@ onUnmounted(() => {
         <!-- Comments Drawer Button -->
         <button
           type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-2.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
           @click="showCommentsDrawer = !showCommentsDrawer"
         >
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -469,7 +469,7 @@ onUnmounted(() => {
         <!-- Share Button -->
         <button
           type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-2.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
           @click="handleShare(currentShort)"
         >
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -481,7 +481,7 @@ onUnmounted(() => {
         <!-- Remix / Audio Button -->
         <button
           type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-2.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
           @click="showSoundModal = !showSoundModal"
         >
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -494,7 +494,7 @@ onUnmounted(() => {
         <div class="mt-2 flex flex-col gap-2">
           <button
             type="button"
-            class="flex h-10 w-16 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+            class="flex h-10 w-16 items-center justify-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
             aria-label="Previous Short"
             @click="goPrev"
           >
@@ -504,7 +504,7 @@ onUnmounted(() => {
           </button>
           <button
             type="button"
-            class="flex h-10 w-16 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+            class="flex h-10 w-16 items-center justify-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
             aria-label="Next Short"
             @click="goNext"
           >
@@ -518,38 +518,38 @@ onUnmounted(() => {
       <!-- Interactive Shorts Comments Drawer (Side Sheet) -->
       <div
         v-if="showCommentsDrawer"
-        class="hidden h-[82vh] w-80 flex-col rounded-lg border border-slate-200 bg-white p-4 text-slate-900 lg:flex"
+        class="hidden h-[82vh] w-80 flex-col rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-[var(--gvp-text)] lg:flex"
       >
-        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 class="text-sm font-bold text-slate-900 tabular-nums">Shorts Comments ({{ currentShort.comments }})</h3>
-          <button type="button" class="rounded-md p-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900" @click="showCommentsDrawer = false">
+        <div class="flex items-center justify-between border-b border-[var(--gvp-border)] pb-3">
+          <h3 class="text-sm font-bold text-[var(--gvp-text)] tabular-nums">Shorts Comments ({{ currentShort.comments }})</h3>
+          <button type="button" class="rounded-md p-1 text-xs text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]" @click="showCommentsDrawer = false">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <p v-if="shortCommentsError" class="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+        <p v-if="shortCommentsError" class="rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
           {{ shortCommentsError }}
         </p>
 
         <!-- Comments Feed -->
         <div class="mt-3 flex-1 space-y-3 overflow-y-auto pr-1 text-xs">
-          <p v-if="shortComments.length === 0" class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-xs text-slate-500">
+          <p v-if="shortComments.length === 0" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-4 text-center text-xs text-[var(--gvp-text-secondary)]">
             {{ appStore.locale === 'ko' ? '아직 댓글이 없습니다.' : 'No comments yet.' }}
           </p>
           <div
             v-for="cmt in shortComments"
             :key="cmt.id"
-            class="rounded-lg border border-slate-200 bg-slate-50 p-3"
+            class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3"
           >
             <div class="flex items-center justify-between">
-              <span class="font-semibold text-blue-700">{{ cmt.user }}</span>
-              <span class="text-[10px] text-slate-500">{{ cmt.time }}</span>
+              <span class="font-semibold text-[var(--gvp-brand-hover)]">{{ cmt.user }}</span>
+              <span class="text-[10px] text-[var(--gvp-text-secondary)]">{{ cmt.time }}</span>
             </div>
-            <p class="mt-1 text-slate-700">{{ cmt.text }}</p>
-            <div class="mt-2 flex items-center gap-3 text-slate-500">
-              <button type="button" class="flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-slate-200 hover:text-slate-900 tabular-nums" @click="cmt.likes++">
+            <p class="mt-1 text-[var(--gvp-text)]">{{ cmt.text }}</p>
+            <div class="mt-2 flex items-center gap-3 text-[var(--gvp-text-secondary)]">
+              <button type="button" class="flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)] tabular-nums" @click="cmt.likes++">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                 </svg>
@@ -560,16 +560,16 @@ onUnmounted(() => {
         </div>
 
         <!-- Add Comment Input Box -->
-        <form class="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3" @submit.prevent="addShortComment">
+        <form class="mt-3 flex items-center gap-2 border-t border-[var(--gvp-border)] pt-3" @submit.prevent="addShortComment">
           <input
             v-model="newShortComment"
             type="text"
             :placeholder="appStore.locale === 'ko' ? '댓글 추가...' : 'Add comment...'"
-            class="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+            class="flex-1 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-brand)] focus:bg-[var(--gvp-surface)]"
           />
           <button
             type="submit"
-            class="rounded-md bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+            class="rounded-md bg-[var(--gvp-brand)] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
           >
             {{ appStore.locale === 'ko' ? '게시' : 'Post' }}
           </button>
@@ -579,26 +579,26 @@ onUnmounted(() => {
       <!-- Sound Attribution / Remix Sheet Modal -->
       <div
         v-if="showSoundModal"
-        class="hidden h-[82vh] w-80 flex-col rounded-lg border border-slate-200 bg-white p-5 text-slate-900 lg:flex"
+        class="hidden h-[82vh] w-80 flex-col rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 text-[var(--gvp-text)] lg:flex"
       >
-        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h3 class="text-sm font-bold text-slate-900">{{ appStore.locale === 'ko' ? '오디오 상세' : 'Audio Details' }}</h3>
-          <button type="button" class="rounded-md p-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900" @click="showSoundModal = false">
+        <div class="flex items-center justify-between border-b border-[var(--gvp-border)] pb-3">
+          <h3 class="text-sm font-bold text-[var(--gvp-text)]">{{ appStore.locale === 'ko' ? '오디오 상세' : 'Audio Details' }}</h3>
+          <button type="button" class="rounded-md p-1 text-xs text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]" @click="showSoundModal = false">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         <div class="mt-6 flex flex-col items-center text-center">
-          <div class="flex h-16 w-16 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700">
+          <div class="flex h-16 w-16 items-center justify-center rounded-lg border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]">
             <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
           </div>
-          <h4 class="mt-4 text-sm font-bold text-slate-900">{{ currentShort.audioTitle }}</h4>
+          <h4 class="mt-4 text-sm font-bold text-[var(--gvp-text)]">{{ currentShort.audioTitle }}</h4>
           <button
             type="button"
-            class="mt-5 w-full rounded-md bg-slate-900 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+            class="mt-5 w-full rounded-md bg-[var(--gvp-brand)] py-2 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
             @click="showSoundModal = false"
           >
             {{ appStore.locale === 'ko' ? '이 사운드로 만들기' : 'Use this sound' }}
@@ -606,7 +606,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    <p v-else role="status" class="text-sm text-slate-500">
+    <p v-else role="status" class="text-sm text-[var(--gvp-text-secondary)]">
       {{ appStore.locale === 'ko' ? '표시할 Shorts가 없습니다.' : 'No Shorts available.' }}
     </p>
   </div>

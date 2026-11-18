@@ -726,17 +726,17 @@ defineExpose({
     <!-- TASK-131: Ambient Mode Subtle Frame Ring -->
     <div
       v-if="isAmbientModeEnabled"
-      class="pointer-events-none absolute -inset-1.5 -z-10 rounded-lg border border-slate-200 bg-slate-50 transition-opacity duration-300"
+      class="pointer-events-none absolute -inset-1.5 -z-10 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] transition-opacity duration-300"
     />
 
     <div
       ref="playerContainerRef"
-      class="group relative flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white select-none"
+      class="group relative flex flex-col overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] select-none"
     >
       <!-- 16:9 Video Frame -->
-      <div class="relative aspect-video w-full overflow-hidden bg-slate-950">
+      <div class="relative aspect-video w-full overflow-hidden bg-black">
         <!-- Pre-Roll Ad Player Surface & Overlay -->
-        <div v-if="isAdPlaying && currentAd" class="absolute inset-0 z-30 flex flex-col justify-between bg-slate-950">
+        <div v-if="isAdPlaying && currentAd" class="absolute inset-0 z-30 flex flex-col justify-between bg-black">
           <video
             :src="api.resolveUrl(currentAd.mediaUrl)"
             autoplay
@@ -746,16 +746,16 @@ defineExpose({
           />
 
           <!-- Top Ad Info Bar -->
-          <div class="absolute inset-x-0 top-0 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-2.5">
+          <div class="absolute inset-x-0 top-0 flex items-center justify-between border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-4 py-2.5">
             <div class="flex items-center gap-3">
-              <span class="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-700 tabular-nums">Ad · 1 of 1</span>
-              <span class="text-sm font-semibold text-slate-900">{{ currentAd.title }}</span>
-              <span class="text-xs text-slate-500">Sponsored by {{ currentAd.advertiserName }}</span>
+              <span class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-[var(--gvp-warning)] tabular-nums">Ad · 1 of 1</span>
+              <span class="text-sm font-semibold text-[var(--gvp-text)]">{{ currentAd.title }}</span>
+              <span class="text-xs text-[var(--gvp-text-secondary)]">Sponsored by {{ currentAd.advertiserName }}</span>
             </div>
             <button
               type="button"
               @click="clickAd"
-              class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              class="inline-flex items-center gap-1 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
             >
               <span>Visit Advertiser</span>
               <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -765,11 +765,11 @@ defineExpose({
           </div>
 
           <!-- Bottom Controls & Skip CTA -->
-          <div class="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-slate-200 bg-white/95 px-4 py-3">
+          <div class="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-4 py-3">
             <button
               type="button"
               @click="clickAd"
-              class="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+              class="flex items-center gap-2 rounded-md bg-[var(--gvp-brand)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
             >
               <span>{{ currentAd.callToAction || 'Learn More' }}</span>
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -780,16 +780,16 @@ defineExpose({
             <div>
               <div
                 v-if="!canSkipAd"
-                class="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700 tabular-nums"
+                class="flex items-center gap-2 rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-3.5 py-2 text-xs font-semibold text-[var(--gvp-warning)] tabular-nums"
               >
-                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span class="h-2 w-2 rounded-full bg-[var(--gvp-warning)] animate-pulse" />
                 <span>You can skip ad in {{ adCountdownSeconds }}s</span>
               </div>
               <button
                 v-else
                 type="button"
                 @click="skipAd"
-                class="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                class="flex items-center gap-2 rounded-md bg-[var(--gvp-brand)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
               >
                 <span>Skip Ad</span>
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -825,15 +825,15 @@ defineExpose({
         </video>
 
         <!-- Live Badge Overlay -->
-        <div v-if="isLive" class="absolute left-4 top-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-red-700">
-          <span class="h-2 w-2 animate-ping rounded-full bg-red-600" />
+        <div v-if="isLive" class="absolute left-4 top-4 flex items-center gap-2 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-[var(--gvp-live)]">
+          <span class="h-2 w-2 animate-ping rounded-full bg-[var(--gvp-live)]" />
           <span>LIVE ABR</span>
         </div>
 
         <!-- Active Caption Overlay Banner -->
         <div
           v-if="activeCaptionLang !== 'off'"
-          class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-md border border-slate-200 bg-white/95 px-4 py-1.5 text-center text-sm font-medium text-slate-900 shadow-sm"
+          class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-4 py-1.5 text-center text-sm font-medium text-[var(--gvp-text)] shadow-sm"
         >
           [{{ activeCaptionLang.toUpperCase() }}] {{ title }} — {{ currentChapter?.title || 'Subtitles Active' }}
         </div>
@@ -841,54 +841,54 @@ defineExpose({
         <!-- TASK-138: Stats for Nerds (전문 통계 오버레이) -->
         <div
           v-if="showStatsForNerds"
-          class="absolute left-4 top-4 z-40 max-w-sm rounded-lg border border-slate-200 bg-white p-4 font-mono text-[11px] leading-relaxed text-slate-700 shadow-sm"
+          class="absolute left-4 top-4 z-40 max-w-sm rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 font-mono text-[11px] leading-relaxed text-[var(--gvp-text)] shadow-sm"
         >
-          <div class="mb-2 flex items-center justify-between border-b border-slate-200 pb-1.5 font-bold text-slate-900">
-            <span class="flex items-center gap-1.5 text-blue-700">
-              <span class="h-2 w-2 rounded-full bg-blue-600" />
+          <div class="mb-2 flex items-center justify-between border-b border-[var(--gvp-border)] pb-1.5 font-bold text-[var(--gvp-text)]">
+            <span class="flex items-center gap-1.5 text-[var(--gvp-brand-hover)]">
+              <span class="h-2 w-2 rounded-full bg-[var(--gvp-brand)]" />
               Stats for Nerds
             </span>
-            <button type="button" class="rounded-md px-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900" @click="showStatsForNerds = false">
+            <button type="button" class="rounded-md px-1 text-[var(--gvp-text-muted)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]" @click="showStatsForNerds = false">
               <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
           <div class="grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 tabular-nums">
-            <span class="text-slate-500">Video ID / sPID:</span>
-            <span class="truncate text-slate-900" :title="`${props.videoId} / ${playbackSessionId}`">{{ props.videoId }}</span>
+            <span class="text-[var(--gvp-text-secondary)]">Video ID / sPID:</span>
+            <span class="truncate text-[var(--gvp-text)]" :title="`${props.videoId} / ${playbackSessionId}`">{{ props.videoId }}</span>
 
-            <span class="text-slate-500">Viewport / Frames:</span>
+            <span class="text-[var(--gvp-text-secondary)]">Viewport / Frames:</span>
             <span>{{ nerdStats.viewport }} / {{ nerdStats.droppedFrames }} dropped</span>
 
-            <span class="text-slate-500">Resolution / FPS:</span>
-            <span class="font-semibold text-green-700">{{ nerdStats.currentRes }}</span>
+            <span class="text-[var(--gvp-text-secondary)]">Resolution / FPS:</span>
+            <span class="font-semibold text-[var(--gvp-success)]">{{ nerdStats.currentRes }}</span>
 
-            <span class="text-slate-500">Codecs:</span>
+            <span class="text-[var(--gvp-text-secondary)]">Codecs:</span>
             <span class="truncate" :title="nerdStats.codecs">{{ nerdStats.codecs }}</span>
 
-            <span class="text-slate-500">Est. Bandwidth:</span>
+            <span class="text-[var(--gvp-text-secondary)]">Est. Bandwidth:</span>
             <span>{{ nerdStats.bandwidthEstimateMbps }} Mbps</span>
 
-            <span class="text-slate-500">Buffer Health:</span>
-            <span :class="parseFloat(nerdStats.bufferSeconds) > 10 ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'">{{ nerdStats.bufferSeconds }}s ({{ bufferedPercent.toFixed(0) }}%)</span>
+            <span class="text-[var(--gvp-text-secondary)]">Buffer Health:</span>
+            <span :class="parseFloat(nerdStats.bufferSeconds) > 10 ? 'text-[var(--gvp-success)] font-semibold' : 'text-[var(--gvp-warning)] font-semibold'">{{ nerdStats.bufferSeconds }}s ({{ bufferedPercent.toFixed(0) }}%)</span>
 
-            <span class="text-slate-500">Audio Mode:</span>
-            <span :class="isStableVolumeEnabled ? 'text-blue-700 font-semibold' : 'text-slate-600'">
+            <span class="text-[var(--gvp-text-secondary)]">Audio Mode:</span>
+            <span :class="isStableVolumeEnabled ? 'text-[var(--gvp-brand-hover)] font-semibold' : 'text-[var(--gvp-text-secondary)]'">
               {{ isStableVolumeEnabled ? 'Stable Volume (-14 LUFS)' : 'Standard' }}
             </span>
 
-            <span class="text-slate-500">Shortcuts:</span>
-            <span class="text-[10px] text-slate-500">Shift+S: close | J/K/L: seek</span>
+            <span class="text-[var(--gvp-text-secondary)]">Shortcuts:</span>
+            <span class="text-[10px] text-[var(--gvp-text-secondary)]">Shift+S: close | J/K/L: seek</span>
           </div>
         </div>
       </div>
 
       <!-- Bottom Light Utility Controls Bar -->
-      <div class="relative border-t border-slate-200 bg-white px-4 py-3 text-slate-900">
+      <div class="relative border-t border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 py-3 text-[var(--gvp-text)]">
         <!-- TASK-122: Timeline Scrub Bar with Storyboard Sheet Hover Preview -->
         <div
-          class="player-seekbar relative mb-3 h-2 w-full cursor-pointer rounded-md bg-slate-200 transition-all"
+          class="player-seekbar relative mb-3 h-2 w-full cursor-pointer rounded-md bg-[var(--gvp-elevated)] transition-all"
           role="slider"
           tabindex="0"
           aria-label="Seek"
@@ -904,44 +904,44 @@ defineExpose({
           <!-- Floating Storyboard Preview Tooltip -->
           <div
             v-if="isTimelineHovering && duration > 0"
-            class="pointer-events-none absolute bottom-5 z-30 -translate-x-1/2 flex flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm"
+            class="pointer-events-none absolute bottom-5 z-30 -translate-x-1/2 flex flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-1.5 shadow-sm"
             :style="{ left: `${hoverPreviewX}px` }"
           >
             <!-- Storyboard Thumbnail Frame -->
-            <div class="relative h-20 w-36 overflow-hidden rounded-md border border-slate-200 bg-slate-950">
+            <div class="relative h-20 w-36 overflow-hidden rounded-md border border-[var(--gvp-border)] bg-black">
               <img
                 v-if="posterUrl"
                 :src="posterUrl"
                 alt="Storyboard frame preview"
                 class="h-full w-full object-cover opacity-90"
               />
-              <div class="absolute inset-x-0 bottom-0 bg-white/95 px-1.5 py-0.5 text-center">
-                <span class="font-mono text-xs font-bold text-slate-900 tabular-nums">
+              <div class="absolute inset-x-0 bottom-0 bg-[var(--gvp-surface)]/95 px-1.5 py-0.5 text-center">
+                <span class="font-mono text-xs font-bold text-[var(--gvp-text)] tabular-nums">
                   {{ formatTime(hoverTimeSeconds) }}
                 </span>
               </div>
             </div>
             <!-- Chapter title on hover -->
-            <span v-if="hoverChapter" class="max-w-[150px] truncate text-[10px] font-medium text-slate-600">
+            <span v-if="hoverChapter" class="max-w-[150px] truncate text-[10px] font-medium text-[var(--gvp-text-secondary)]">
               {{ hoverChapter.title }}
             </span>
           </div>
 
           <!-- Buffered Bar -->
           <div
-            class="absolute inset-y-0 left-0 rounded-md bg-slate-300"
+            class="absolute inset-y-0 left-0 rounded-md bg-[var(--gvp-border-strong)]"
             :style="{ width: `${bufferedPercent}%` }"
           />
           <!-- Current Playback Bar -->
           <div
-            class="absolute inset-y-0 left-0 rounded-md bg-blue-600"
+            class="absolute inset-y-0 left-0 rounded-md bg-[var(--gvp-brand)]"
             :style="{ width: `${progressPercent}%` }"
           />
           <!-- Chapter Segment Tick Markers -->
           <template v-for="chapter in chapters" :key="chapter.id">
             <div
               v-if="chapter.startTimeSeconds > 0 && duration > 0"
-              class="absolute top-0 h-full w-0.5 bg-white"
+              class="absolute top-0 h-full w-0.5 bg-[var(--gvp-surface)]"
               :style="{ left: `${(chapter.startTimeSeconds / duration) * 100}%` }"
               :title="chapter.title"
             />
@@ -949,12 +949,12 @@ defineExpose({
         </div>
 
         <!-- Controls Row -->
-        <div class="flex flex-wrap items-center justify-between gap-2 text-slate-900">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-[var(--gvp-text)]">
           <!-- Left Controls: Play/Pause, -10s/+10s, Volume, Time, Active Chapter -->
           <div class="flex items-center gap-2.5">
             <button
               type="button"
-              class="rounded-md border border-slate-200 bg-slate-900 p-1.5 text-white transition hover:bg-slate-800"
+              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-brand)] p-1.5 text-white transition hover:bg-[var(--gvp-brand-hover)]"
               :aria-label="isPlaying ? 'Pause (k)' : 'Play (k)'"
               @click="togglePlay"
             >
@@ -968,7 +968,7 @@ defineExpose({
 
             <button
               type="button"
-              class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 tabular-nums"
+              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] tabular-nums"
               title="Rewind 10s (j)"
               @click="seekRelative(-10)"
             >
@@ -976,7 +976,7 @@ defineExpose({
             </button>
             <button
               type="button"
-              class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 tabular-nums"
+              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] tabular-nums"
               title="Forward 10s (l)"
               @click="seekRelative(10)"
             >
@@ -987,13 +987,13 @@ defineExpose({
             <div class="flex items-center gap-1.5">
               <button
                 type="button"
-                class="rounded-md p-1.5 text-slate-700 transition hover:bg-slate-100"
+                class="rounded-md p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
                 title="Mute (m)"
                 :aria-label="isMuted ? 'Unmute (m)' : 'Mute (m)'"
                 :aria-pressed="isMuted"
                 @click="toggleMute"
               >
-                <svg v-if="isMuted || volume === 0" class="h-4 w-4 fill-current text-red-600" viewBox="0 0 24 24">
+                <svg v-if="isMuted || volume === 0" class="h-4 w-4 fill-current text-[var(--gvp-live)]" viewBox="0 0 24 24">
                   <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
                 </svg>
                 <svg v-else class="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -1012,13 +1012,13 @@ defineExpose({
               />
             </div>
 
-            <span class="font-mono text-xs font-medium text-slate-600 tabular-nums">
+            <span class="font-mono text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">
               {{ formatTime(currentTime) }} / {{ isLive ? 'LIVE' : formatTime(duration) }}
             </span>
 
             <span
               v-if="currentChapter"
-              class="hidden truncate rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700 md:inline-block"
+              class="hidden truncate rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-text)] md:inline-block"
             >
               {{ currentChapter.title }}
             </span>
@@ -1030,7 +1030,7 @@ defineExpose({
             <button
               type="button"
               class="hidden sm:flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition"
-              :class="isStableVolumeEnabled ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'"
+              :class="isStableVolumeEnabled ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]'"
               title="Stable Volume: Normalizes loudness to -14 LUFS"
               @click="toggleStableVolume"
             >
@@ -1044,7 +1044,7 @@ defineExpose({
             <button
               type="button"
               class="rounded-md border px-2.5 py-1 text-xs font-semibold transition"
-              :class="activeCaptionLang !== 'off' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+              :class="activeCaptionLang !== 'off' ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
               @click="activeCaptionLang = activeCaptionLang === 'off' ? 'ko' : activeCaptionLang === 'ko' ? 'en' : 'off'"
             >
               CC: {{ activeCaptionLang.toUpperCase() }}
@@ -1053,28 +1053,28 @@ defineExpose({
             <!-- Quality Badge + Settings Trigger -->
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 tabular-nums"
+              class="flex items-center gap-1.5 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] tabular-nums"
               @click="showSettingsMenu = !showSettingsMenu"
             >
               <span>{{ selectedQuality }}</span>
-              <span class="text-blue-700">{{ selectedSpeed }}x</span>
+              <span class="text-[var(--gvp-brand-hover)]">{{ selectedSpeed }}x</span>
             </button>
 
             <!-- Settings Popover -->
             <div
               v-if="showSettingsMenu"
-              class="absolute bottom-11 right-0 z-40 w-72 rounded-lg border border-slate-200 bg-white p-3.5 text-xs text-slate-900 shadow-sm"
+              class="absolute bottom-11 right-0 z-40 w-72 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3.5 text-xs text-[var(--gvp-text)] shadow-sm"
             >
               <!-- ABR Quality Selection -->
               <div class="mb-3">
-                <p class="mb-1.5 font-semibold text-slate-600">화질 선택 (ABR Quality)</p>
+                <p class="mb-1.5 font-semibold text-[var(--gvp-text-secondary)]">화질 선택 (ABR Quality)</p>
                 <div class="grid grid-cols-3 gap-1">
                   <button
                     v-for="q in qualityOptions"
                     :key="q"
                     type="button"
                     class="rounded-md border px-2 py-1 font-medium transition tabular-nums"
-                    :class="selectedQuality === q ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+                    :class="selectedQuality === q ? 'border-[var(--gvp-focus)] bg-[var(--gvp-brand)] text-white' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
                     @click="changeQuality(q)"
                   >
                     {{ q }}
@@ -1084,14 +1084,14 @@ defineExpose({
 
               <!-- Playback Speed Selection -->
               <div class="mb-3">
-                <p class="mb-1.5 font-semibold text-slate-600">재생 속도 (Speed)</p>
+                <p class="mb-1.5 font-semibold text-[var(--gvp-text-secondary)]">재생 속도 (Speed)</p>
                 <div class="grid grid-cols-3 gap-1">
                   <button
                     v-for="spd in speedOptions"
                     :key="spd"
                     type="button"
                     class="rounded-md border px-2 py-1 font-medium transition tabular-nums"
-                    :class="selectedSpeed === spd ? 'border-blue-600 bg-blue-600 text-white font-bold' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+                    :class="selectedSpeed === spd ? 'border-[var(--gvp-brand)] bg-[var(--gvp-brand)] text-white font-bold' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
                     @click="changeSpeed(spd)"
                   >
                     {{ spd }}x
@@ -1100,16 +1100,16 @@ defineExpose({
               </div>
 
               <!-- Audio Experience & Stable Volume Toggle (TASK-114) -->
-              <div class="mb-3 border-t border-slate-200 pt-2.5">
+              <div class="mb-3 border-t border-[var(--gvp-border)] pt-2.5">
                 <div class="flex items-center justify-between">
                   <div>
-                    <p class="font-semibold text-slate-900">안정적인 볼륨 (Stable Volume)</p>
-                    <p class="text-[10px] text-slate-500">급격한 음량 변화를 방지 (-14 LUFS)</p>
+                    <p class="font-semibold text-[var(--gvp-text)]">안정적인 볼륨 (Stable Volume)</p>
+                    <p class="text-[10px] text-[var(--gvp-text-secondary)]">급격한 음량 변화를 방지 (-14 LUFS)</p>
                   </div>
                   <button
                     type="button"
                     class="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition"
-                    :class="isStableVolumeEnabled ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-100 text-slate-600'"
+                    :class="isStableVolumeEnabled ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
                     @click="toggleStableVolume"
                   >
                     {{ isStableVolumeEnabled ? 'ON' : 'OFF' }}
@@ -1118,16 +1118,16 @@ defineExpose({
               </div>
 
               <!-- Ambient Mode Toggle (TASK-131) -->
-              <div class="mb-3 border-t border-slate-200 pt-2.5">
+              <div class="mb-3 border-t border-[var(--gvp-border)] pt-2.5">
                 <div class="flex items-center justify-between">
                   <div>
-                    <p class="font-semibold text-slate-900">앰비언트 모드 (Ambient Frame)</p>
-                    <p class="text-[10px] text-slate-500">영상 주변 프레임 강조 효과</p>
+                    <p class="font-semibold text-[var(--gvp-text)]">앰비언트 모드 (Ambient Frame)</p>
+                    <p class="text-[10px] text-[var(--gvp-text-secondary)]">영상 주변 프레임 강조 효과</p>
                   </div>
                   <button
                     type="button"
                     class="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition"
-                    :class="isAmbientModeEnabled ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-100 text-slate-600'"
+                    :class="isAmbientModeEnabled ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
                     @click="isAmbientModeEnabled = !isAmbientModeEnabled"
                   >
                     {{ isAmbientModeEnabled ? 'ON' : 'OFF' }}
@@ -1136,15 +1136,15 @@ defineExpose({
               </div>
 
               <!-- Sleep Timer (TASK-137) -->
-              <div class="mb-3 border-t border-slate-200 pt-2.5">
-                <p class="mb-1 font-semibold text-slate-600">수면 타이머 (Sleep Timer)</p>
+              <div class="mb-3 border-t border-[var(--gvp-border)] pt-2.5">
+                <p class="mb-1 font-semibold text-[var(--gvp-text-secondary)]">수면 타이머 (Sleep Timer)</p>
                 <div class="grid grid-cols-4 gap-1 text-[11px]">
                   <button
                     v-for="opt in (['off', '15', '30', '60'] as const)"
                     :key="opt"
                     type="button"
                     class="rounded-md border px-1.5 py-1 text-center font-medium transition tabular-nums"
-                    :class="sleepTimerOption === opt ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'"
+                    :class="sleepTimerOption === opt ? 'border-[var(--gvp-brand)] bg-[var(--gvp-brand)] text-white' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
                     @click="setSleepTimer(opt)"
                   >
                     {{ opt === 'off' ? 'Off' : `${opt}분` }}
@@ -1153,14 +1153,14 @@ defineExpose({
               </div>
 
               <!-- Stats for Nerds Trigger (TASK-138) -->
-              <div class="border-t border-slate-200 pt-2.5">
+              <div class="border-t border-[var(--gvp-border)] pt-2.5">
                 <button
                   type="button"
-                  class="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  class="flex w-full items-center justify-between rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1.5 text-left font-medium text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]"
                   @click="showStatsForNerds = !showStatsForNerds; showSettingsMenu = false; updateNerdStats()"
                 >
                   <span>전문 통계 (Stats for Nerds)</span>
-                  <span class="font-mono text-[10px] text-slate-500">Shift+S</span>
+                  <span class="font-mono text-[10px] text-[var(--gvp-text-secondary)]">Shift+S</span>
                 </button>
               </div>
             </div>
@@ -1168,7 +1168,7 @@ defineExpose({
             <!-- PiP -->
             <button
               type="button"
-              class="rounded-md p-1.5 text-slate-700 transition hover:bg-slate-100"
+              class="rounded-md p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
               title="Picture-in-Picture (i)"
               aria-label="Picture-in-Picture (i)"
               @click="togglePiP"
@@ -1181,7 +1181,7 @@ defineExpose({
             <!-- Fullscreen -->
             <button
               type="button"
-              class="rounded-md p-1.5 text-slate-700 transition hover:bg-slate-100"
+              class="rounded-md p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
               title="Fullscreen (f)"
               aria-label="Fullscreen (f)"
               @click="toggleFullscreen"

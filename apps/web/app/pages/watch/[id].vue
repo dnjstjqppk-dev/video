@@ -314,16 +314,16 @@ async function removeComment(commentId: string, parentId?: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1720px] bg-white px-4 py-5 text-slate-900 lg:px-8">
+  <div class="mx-auto max-w-[1720px] bg-[var(--gvp-surface)] px-4 py-5 text-[var(--gvp-text)] lg:px-8">
     <div v-if="videoPending" class="animate-pulse">
-      <div class="aspect-video w-full rounded-lg border border-slate-200 bg-slate-100" />
-      <div class="mt-4 h-6 w-2/3 rounded-md bg-slate-100" />
+      <div class="aspect-video w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]" />
+      <div class="mt-4 h-6 w-2/3 rounded-md bg-[var(--gvp-elevated)]" />
     </div>
-    <div v-else-if="videoError || !video" class="rounded-lg border border-red-200 bg-red-50 p-12 text-center" role="alert">
-      <p class="text-base font-semibold text-red-700">
+    <div v-else-if="videoError || !video" class="rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-12 text-center" role="alert">
+      <p class="text-base font-semibold text-[var(--gvp-live)]">
         {{ appStore.locale === 'ko' ? '동영상을 불러오지 못했습니다.' : 'This video is unavailable.' }}
       </p>
-      <p class="mt-1 text-xs text-slate-500">{{ videoId }}</p>
+      <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">{{ videoId }}</p>
     </div>
     <div v-else class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <!-- Primary Column: Video Player, Metadata, Chapters, Comments -->
@@ -342,38 +342,38 @@ async function removeComment(commentId: string, parentId?: string) {
             :sources="activeVideo.sources"
           />
           <template #fallback>
-            <div class="flex aspect-video w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-500">
+            <div class="flex aspect-video w-full items-center justify-center rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-sm text-[var(--gvp-text-secondary)]">
               Loading Shaka HLS ABR Player...
             </div>
           </template>
         </ClientOnly>
 
         <!-- Video Title -->
-        <h1 class="mt-4 text-lg font-bold leading-snug text-slate-900 sm:text-xl">
+        <h1 class="mt-4 text-lg font-bold leading-snug text-[var(--gvp-text)] sm:text-xl">
           {{ activeVideo.title }}
         </h1>
-        <p v-if="actionError" class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+        <p v-if="actionError" class="mt-2 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
           {{ actionError }}
         </p>
 
         <!-- Channel Bar & Action Buttons -->
-        <div class="mt-3 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-4">
           <div class="flex items-center gap-3">
             <NuxtLink :to="`/channels/${activeVideo.channelId}`">
               <img
                 :src="activeVideo.channel?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
                 :alt="activeVideo.channel?.name"
-                class="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                class="h-10 w-10 rounded-full border border-[var(--gvp-border)] object-cover"
               />
             </NuxtLink>
             <div>
-              <NuxtLink :to="`/channels/${activeVideo.channelId}`" class="flex items-center gap-1 font-bold text-slate-900 hover:text-blue-600">
+              <NuxtLink :to="`/channels/${activeVideo.channelId}`" class="flex items-center gap-1 font-bold text-[var(--gvp-text)] hover:text-[var(--gvp-brand)]">
                 <span>{{ activeVideo.channel?.name || 'GVP Tech Engineering' }}</span>
-                <svg class="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                <svg class="h-4 w-4 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
               </NuxtLink>
-              <p class="text-xs text-slate-500 tabular-nums">
+              <p class="text-xs text-[var(--gvp-text-secondary)] tabular-nums">
                 {{ subscriberCount.toLocaleString() }} subscribers
               </p>
             </div>
@@ -383,8 +383,8 @@ async function removeComment(commentId: string, parentId?: string) {
               class="ml-3 rounded-md px-4 py-2 text-xs font-semibold transition"
               :class="
                 isSubscribed
-                  ? 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  : 'bg-slate-900 text-white hover:bg-slate-800'
+                  ? 'border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'
+                  : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'
               "
               @click="toggleSubscribe"
             >
@@ -395,11 +395,11 @@ async function removeComment(commentId: string, parentId?: string) {
           <!-- Action Pills: Like/Dislike, Share, Save, Report -->
           <div class="flex flex-wrap items-center gap-2">
             <!-- Unified Like / Dislike Split Control -->
-            <div class="flex items-center overflow-hidden rounded-md border border-slate-200 bg-white">
+            <div class="flex items-center overflow-hidden rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
               <button
                 type="button"
                 class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition tabular-nums"
-                :class="isLiked ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'"
+                :class="isLiked ? 'bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
                 @click="toggleLike"
               >
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -407,11 +407,11 @@ async function removeComment(commentId: string, parentId?: string) {
                 </svg>
                 <span>{{ likeCount.toLocaleString() }}</span>
               </button>
-              <div class="h-4 w-px bg-slate-200" />
+              <div class="h-4 w-px bg-[var(--gvp-elevated)]" />
               <button
                 type="button"
                 class="px-3 py-1.5 text-xs font-semibold transition"
-                :class="isDisliked ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'"
+                :class="isDisliked ? 'bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
                 @click="toggleDislike"
                 title="I dislike this"
               >
@@ -423,7 +423,7 @@ async function removeComment(commentId: string, parentId?: string) {
 
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              class="flex items-center gap-1.5 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
               @click="shareVideo"
             >
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -435,7 +435,7 @@ async function removeComment(commentId: string, parentId?: string) {
             <button
               type="button"
               class="flex items-center gap-1.5 rounded-md border px-3.5 py-1.5 text-xs font-semibold transition"
-              :class="isSaved ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+              :class="isSaved ? 'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
               @click="isSaved = !isSaved"
             >
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -446,7 +446,7 @@ async function removeComment(commentId: string, parentId?: string) {
 
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+              class="flex items-center gap-1.5 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--gvp-text-secondary)] transition hover:bg-[var(--gvp-canvas)] hover:text-[var(--gvp-text)]"
               @click="showReportModal = true"
             >
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -458,27 +458,27 @@ async function removeComment(commentId: string, parentId?: string) {
         </div>
 
         <!-- Expandable Description & Interactive Chapters -->
-        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-          <div class="flex flex-wrap items-center gap-2.5 font-semibold text-slate-900 tabular-nums">
+        <div class="mt-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-4 text-sm">
+          <div class="flex flex-wrap items-center gap-2.5 font-semibold text-[var(--gvp-text)] tabular-nums">
             <span>{{ activeVideo.viewCount.toLocaleString() }} views</span>
-            <span class="text-slate-400">•</span>
+            <span class="text-[var(--gvp-text-muted)]">•</span>
             <span>Published {{ new Date(activeVideo.publishedAt || activeVideo.createdAt).toLocaleDateString() }}</span>
             <span
               v-for="tag in activeVideo.tags"
               :key="tag"
-              class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
+              class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-brand-hover)]"
             >
               #{{ tag }}
             </span>
           </div>
 
-          <p class="mt-2 whitespace-pre-line text-slate-600" :class="!descriptionExpanded ? 'line-clamp-3' : ''">
+          <p class="mt-2 whitespace-pre-line text-[var(--gvp-text-secondary)]" :class="!descriptionExpanded ? 'line-clamp-3' : ''">
             {{ activeVideo.description }}
           </p>
 
           <!-- Chapters Timeline Strip -->
-          <div v-if="activeVideo.chapters?.length" class="mt-4 border-t border-slate-200 pt-3">
-            <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div v-if="activeVideo.chapters?.length" class="mt-4 border-t border-[var(--gvp-border)] pt-3">
+            <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
               {{ appStore.locale === 'ko' ? '챕터 바로가기 (Video Chapters)' : 'Video Chapters' }}
             </h3>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -486,11 +486,11 @@ async function removeComment(commentId: string, parentId?: string) {
                 v-for="chp in activeVideo.chapters"
                 :key="chp.id"
                 type="button"
-                class="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs transition hover:bg-slate-50"
+                class="flex items-center justify-between rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-2 text-left text-xs transition hover:bg-[var(--gvp-canvas)]"
                 @click="playerRef?.seekToSeconds(chp.startTimeSeconds)"
               >
-                <span class="truncate font-medium text-slate-900">{{ chp.title }}</span>
-                <span class="ml-2 shrink-0 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-blue-700 tabular-nums">
+                <span class="truncate font-medium text-[var(--gvp-text)]">{{ chp.title }}</span>
+                <span class="ml-2 shrink-0 rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-[var(--gvp-brand-hover)] tabular-nums">
                   {{ Math.floor(chp.startTimeSeconds / 60) }}:{{ String(chp.startTimeSeconds % 60).padStart(2, '0') }}
                 </span>
               </button>
@@ -499,7 +499,7 @@ async function removeComment(commentId: string, parentId?: string) {
 
           <button
             type="button"
-            class="mt-3 text-xs font-bold text-blue-700 hover:underline"
+            class="mt-3 text-xs font-bold text-[var(--gvp-brand-hover)] hover:underline"
             @click="descriptionExpanded = !descriptionExpanded"
           >
             {{ descriptionExpanded ? (appStore.locale === 'ko' ? '간략히 보기' : 'Show less') : (appStore.locale === 'ko' ? '더보기' : 'Show more') }}
@@ -510,14 +510,14 @@ async function removeComment(commentId: string, parentId?: string) {
         <section class="mt-6">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-6">
-              <h2 class="text-base font-bold text-slate-900 tabular-nums">
+              <h2 class="text-base font-bold text-[var(--gvp-text)] tabular-nums">
                 {{ comments.length.toLocaleString() }} {{ appStore.locale === 'ko' ? '개의 댓글' : 'Comments' }}
               </h2>
               <div class="flex items-center gap-1.5 text-xs font-medium">
                 <button
                   type="button"
                   class="rounded-md border px-2.5 py-1 transition"
-                  :class="commentSort === 'top' ? 'border-slate-900 bg-slate-900 text-white font-semibold' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'"
+                  :class="commentSort === 'top' ? 'border-[var(--gvp-focus)] bg-[var(--gvp-brand)] text-white font-semibold' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]'"
                   @click="commentSort = 'top'"
                 >
                   <span>{{ appStore.locale === 'ko' ? '인기순' : 'Top' }}</span>
@@ -525,7 +525,7 @@ async function removeComment(commentId: string, parentId?: string) {
                 <button
                   type="button"
                   class="rounded-md border px-2.5 py-1 transition"
-                  :class="commentSort === 'newest' ? 'border-slate-900 bg-slate-900 text-white font-semibold' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'"
+                  :class="commentSort === 'newest' ? 'border-[var(--gvp-focus)] bg-[var(--gvp-brand)] text-white font-semibold' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]'"
                   @click="commentSort = 'newest'"
                 >
                   <span>{{ appStore.locale === 'ko' ? '최신순' : 'Newest' }}</span>
@@ -539,26 +539,26 @@ async function removeComment(commentId: string, parentId?: string) {
             <img
               :src="appStore.currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
               :alt="appStore.currentUser?.displayName"
-              class="h-9 w-9 rounded-full border border-slate-200 object-cover"
+              class="h-9 w-9 rounded-full border border-[var(--gvp-border)] object-cover"
             />
             <div class="flex-1">
               <input
                 v-model="newCommentText"
                 type="text"
                 :placeholder="appStore.locale === 'ko' ? '공개 댓글 추가...' : 'Add a public comment...'"
-                class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                class="w-full rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-brand)] focus:bg-[var(--gvp-surface)]"
               />
               <div class="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-1.5 text-xs font-medium text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-canvas)]"
                   @click="newCommentText = ''"
                 >
                   {{ appStore.locale === 'ko' ? '취소' : 'Cancel' }}
                 </button>
                 <button
                   type="submit"
-                  class="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                  class="rounded-md bg-[var(--gvp-brand)] px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
                 >
                   {{ appStore.locale === 'ko' ? '댓글 작성' : 'Comment' }}
                 </button>
@@ -566,52 +566,52 @@ async function removeComment(commentId: string, parentId?: string) {
             </div>
           </form>
 
-          <p v-if="commentsError" class="mt-4 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+          <p v-if="commentsError" class="mt-4 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
             {{ commentsError }}
           </p>
-          <div v-if="sortedComments.length === 0" class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
-            <p class="text-sm font-semibold text-slate-600">
+          <div v-if="sortedComments.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-8 text-center">
+            <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">
               {{ appStore.locale === 'ko' ? '아직 댓글이 없습니다. 첫 댓글을 남겨보세요.' : 'No comments yet. Start the conversation.' }}
             </p>
           </div>
 
           <!-- Comment Thread List -->
-          <div v-else class="mt-6 space-y-6 divide-y divide-slate-100">
+          <div v-else class="mt-6 space-y-6 divide-y divide-[var(--gvp-border)]">
             <article v-for="cmt in sortedComments" :key="cmt.id" class="flex items-start gap-3 pt-4 first:pt-0">
               <img
                 :src="cmt.author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
                 :alt="cmt.author?.displayName"
-                class="h-9 w-9 shrink-0 rounded-full border border-slate-200 object-cover"
+                class="h-9 w-9 shrink-0 rounded-full border border-[var(--gvp-border)] object-cover"
               />
               <div class="flex-1 text-sm">
                 <!-- Header: Display name, Badges, Date -->
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="font-semibold text-slate-900">{{ cmt.author?.displayName || 'User' }}</span>
+                  <span class="font-semibold text-[var(--gvp-text)]">{{ cmt.author?.displayName || 'User' }}</span>
                   <span
                     v-if="cmt.isChannelOwner || cmt.author?.isCreator"
-                    class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700"
+                    class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--gvp-brand-hover)]"
                   >
                     {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
                   </span>
                   <span
                     v-if="cmt.isPinned"
-                    class="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                    class="inline-flex items-center gap-1 rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--gvp-warning)]"
                   >
                     <span>{{ appStore.locale === 'ko' ? '고정됨' : 'Pinned' }}</span>
                   </span>
-                  <span class="text-xs text-slate-400 tabular-nums">
+                  <span class="text-xs text-[var(--gvp-text-muted)] tabular-nums">
                     {{ new Date(cmt.createdAt).toLocaleDateString() }}
                   </span>
                 </div>
 
                 <!-- Body -->
-                <p class="mt-1 text-slate-700">{{ cmt.content }}</p>
+                <p class="mt-1 text-[var(--gvp-text)]">{{ cmt.content }}</p>
 
                 <!-- Actions: Like, Heart, Pin, Reply, Delete -->
-                <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-[var(--gvp-text-secondary)]">
                   <button
                     type="button"
-                    class="flex items-center gap-1 transition hover:text-slate-900 tabular-nums"
+                    class="flex items-center gap-1 transition hover:text-[var(--gvp-text)] tabular-nums"
                     @click="handleLikeComment(cmt)"
                   >
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -623,7 +623,7 @@ async function removeComment(commentId: string, parentId?: string) {
                   <!-- Creator Heart indicator -->
                   <span
                     v-if="cmt.isHeartedByCreator"
-                    class="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
+                    class="inline-flex items-center gap-1 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--gvp-live)]"
                     :title="appStore.locale === 'ko' ? '게시자가 하트를 눌렀습니다' : 'Hearted by creator'"
                   >
                     <svg class="h-3 w-3 fill-current" viewBox="0 0 24 24">
@@ -636,8 +636,8 @@ async function removeComment(commentId: string, parentId?: string) {
                   <button
                     v-if="appStore.currentUser?.id && activeVideo.channel?.ownerId && appStore.currentUser.id === activeVideo.channel.ownerId"
                     type="button"
-                    class="flex items-center gap-1 transition hover:text-slate-900"
-                    :class="cmt.isHeartedByCreator ? 'text-red-700 font-semibold' : 'text-slate-500'"
+                    class="flex items-center gap-1 transition hover:text-[var(--gvp-text)]"
+                    :class="cmt.isHeartedByCreator ? 'text-[var(--gvp-live)] font-semibold' : 'text-[var(--gvp-text-secondary)]'"
                     @click="handleHeartComment(cmt)"
                   >
                     <span>{{ appStore.locale === 'ko' ? '하트' : 'Heart' }}</span>
@@ -645,8 +645,8 @@ async function removeComment(commentId: string, parentId?: string) {
                   <button
                     v-if="appStore.currentUser?.id && activeVideo.channel?.ownerId && appStore.currentUser.id === activeVideo.channel.ownerId"
                     type="button"
-                    class="flex items-center gap-1 transition hover:text-slate-900"
-                    :class="cmt.isPinned ? 'text-amber-700 font-semibold' : 'text-slate-500'"
+                    class="flex items-center gap-1 transition hover:text-[var(--gvp-text)]"
+                    :class="cmt.isPinned ? 'text-[var(--gvp-warning)] font-semibold' : 'text-[var(--gvp-text-secondary)]'"
                     @click="handlePinComment(cmt)"
                   >
                     <span>{{ cmt.isPinned ? (appStore.locale === 'ko' ? '고정 해제' : 'Unpin') : (appStore.locale === 'ko' ? '고정' : 'Pin') }}</span>
@@ -654,7 +654,7 @@ async function removeComment(commentId: string, parentId?: string) {
 
                   <button
                     type="button"
-                    class="font-semibold transition hover:text-slate-900"
+                    class="font-semibold transition hover:text-[var(--gvp-text)]"
                     @click="replyTargetId = replyTargetId === cmt.id ? null : cmt.id"
                   >
                     {{ appStore.locale === 'ko' ? '답글' : 'Reply' }}
@@ -662,7 +662,7 @@ async function removeComment(commentId: string, parentId?: string) {
                   <button
                     v-if="cmt.userId === appStore.currentUser?.id"
                     type="button"
-                    class="text-red-600 transition hover:underline"
+                    class="text-[var(--gvp-live)] transition hover:underline"
                     @click="removeComment(cmt.id)"
                   >
                     {{ appStore.locale === 'ko' ? '삭제' : 'Delete' }}
@@ -675,12 +675,12 @@ async function removeComment(commentId: string, parentId?: string) {
                     v-model="replyText"
                     type="text"
                     :placeholder="appStore.locale === 'ko' ? '답글 작성...' : 'Write a reply...'"
-                    class="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                    class="flex-1 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-brand)] focus:bg-[var(--gvp-surface)]"
                     @keydown.enter="submitReply(cmt.id)"
                   />
                   <button
                     type="button"
-                    class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                    class="rounded-md bg-[var(--gvp-brand)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
                     @click="submitReply(cmt.id)"
                   >
                     {{ appStore.locale === 'ko' ? '등록' : 'Send' }}
@@ -691,7 +691,7 @@ async function removeComment(commentId: string, parentId?: string) {
                 <div v-if="cmt.replies && cmt.replies.length > 0" class="mt-3">
                   <button
                     type="button"
-                    class="flex items-center gap-1.5 text-xs font-bold text-blue-700 transition hover:underline tabular-nums"
+                    class="flex items-center gap-1.5 text-xs font-bold text-[var(--gvp-brand-hover)] transition hover:underline tabular-nums"
                     @click="toggleExpandReplies(cmt.id)"
                   >
                     <span>{{ expandedReplies[cmt.id] ? '▲' : '▼' }}</span>
@@ -700,31 +700,31 @@ async function removeComment(commentId: string, parentId?: string) {
                     </span>
                   </button>
 
-                  <div v-if="expandedReplies[cmt.id]" class="mt-3 space-y-3 border-l-2 border-slate-200 pl-4">
+                  <div v-if="expandedReplies[cmt.id]" class="mt-3 space-y-3 border-l-2 border-[var(--gvp-border)] pl-4">
                     <article v-for="reply in cmt.replies" :key="reply.id" class="flex items-start gap-2.5">
                       <img
                         :src="reply.author?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80'"
                         :alt="reply.author?.displayName"
-                        class="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover"
+                        class="h-7 w-7 shrink-0 rounded-full border border-[var(--gvp-border)] object-cover"
                       />
                       <div class="flex-1 text-xs">
                         <div class="flex items-center gap-2">
-                          <span class="font-semibold text-slate-900">{{ reply.author?.displayName || 'User' }}</span>
+                          <span class="font-semibold text-[var(--gvp-text)]">{{ reply.author?.displayName || 'User' }}</span>
                           <span
                             v-if="reply.isChannelOwner || reply.author?.isCreator"
-                            class="rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700"
+                            class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--gvp-brand-hover)]"
                           >
                             {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
                           </span>
-                          <span class="text-slate-400 tabular-nums">
+                          <span class="text-[var(--gvp-text-muted)] tabular-nums">
                             {{ new Date(reply.createdAt).toLocaleDateString() }}
                           </span>
                         </div>
-                        <p class="mt-0.5 text-slate-700">{{ reply.content }}</p>
-                        <div class="mt-1 flex items-center gap-3 text-slate-500">
+                        <p class="mt-0.5 text-[var(--gvp-text)]">{{ reply.content }}</p>
+                        <div class="mt-1 flex items-center gap-3 text-[var(--gvp-text-secondary)]">
                           <button
                             type="button"
-                            class="flex items-center gap-1 transition hover:text-slate-900 tabular-nums"
+                            class="flex items-center gap-1 transition hover:text-[var(--gvp-text)] tabular-nums"
                             @click="handleLikeComment(reply)"
                           >
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -735,7 +735,7 @@ async function removeComment(commentId: string, parentId?: string) {
                           <button
                             v-if="reply.userId === appStore.currentUser?.id"
                             type="button"
-                            class="text-red-600 hover:underline"
+                            class="text-[var(--gvp-live)] hover:underline"
                             @click="removeComment(reply.id, cmt.id)"
                           >
                             {{ appStore.locale === 'ko' ? '삭제' : 'Delete' }}
@@ -753,7 +753,7 @@ async function removeComment(commentId: string, parentId?: string) {
 
       <!-- Right Sidebar: Related & Up Next Videos -->
       <aside v-if="relatedVideos.length" class="xl:col-span-4">
-        <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
           {{ appStore.locale === 'ko' ? '같은 채널의 다른 동영상' : 'More from this channel' }}
         </h2>
         <div class="flex flex-col gap-3">
@@ -761,19 +761,19 @@ async function removeComment(commentId: string, parentId?: string) {
             v-for="item in relatedVideos"
             :key="item.id"
             :to="`/watch/${item.id}`"
-            class="group flex gap-3 rounded-lg border border-transparent p-1.5 transition hover:border-slate-200 hover:bg-slate-50"
+            class="group flex gap-3 rounded-lg border border-transparent p-1.5 transition hover:border-[var(--gvp-border)] hover:bg-[var(--gvp-canvas)]"
           >
-            <div class="relative aspect-video w-44 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <div class="relative aspect-video w-44 shrink-0 overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]">
               <img :src="item.thumbnailUrl" :alt="item.title" class="h-full w-full object-cover" />
-              <span class="absolute bottom-1.5 right-1.5 rounded-md border border-slate-200 bg-white/95 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-900 tabular-nums">
+              <span class="absolute bottom-1.5 right-1.5 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-[var(--gvp-text)] tabular-nums">
                 {{ formatClock(item.durationSeconds) }}
               </span>
             </div>
             <div class="min-w-0 flex-1">
-              <h3 class="line-clamp-2 text-xs font-semibold leading-snug text-slate-900 group-hover:text-blue-600">
+              <h3 class="line-clamp-2 text-xs font-semibold leading-snug text-[var(--gvp-text)] group-hover:text-[var(--gvp-brand)]">
                 {{ item.title }}
               </h3>
-              <p class="mt-1 text-[11px] text-slate-500 tabular-nums">{{ item.viewCount.toLocaleString() }} views</p>
+              <p class="mt-1 text-[11px] text-[var(--gvp-text-secondary)] tabular-nums">{{ item.viewCount.toLocaleString() }} views</p>
             </div>
           </NuxtLink>
         </div>
@@ -783,23 +783,23 @@ async function removeComment(commentId: string, parentId?: string) {
     <!-- Report Modal -->
     <div
       v-if="showReportModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--gvp-scrim)] p-4"
       @mousedown.self="closeReportModal"
       @keydown="onReportModalKeydown"
     >
       <div
-        class="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 text-slate-900 shadow-sm"
+        class="w-full max-w-md rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6 text-[var(--gvp-text)] shadow-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-modal-title"
       >
-        <h3 id="report-modal-title" class="text-base font-bold text-slate-900">
+        <h3 id="report-modal-title" class="text-base font-bold text-[var(--gvp-text)]">
           {{ appStore.locale === 'ko' ? '콘텐츠 신고 (Trust & Safety Report)' : 'Report Video to Trust & Safety' }}
         </h3>
-        <p class="mt-1 text-xs text-slate-500">
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           Reports are queued directly to the Moderation Engine (`/v1/admin/moderation`).
         </p>
-        <div class="mt-4 space-y-2 text-xs text-slate-700">
+        <div class="mt-4 space-y-2 text-xs text-[var(--gvp-text)]">
           <label class="flex items-center gap-2">
             <input v-model="reportReason" type="radio" value="copyright_or_policy" />
             <span>Copyright infringement or unauthorized re-upload</span>
@@ -813,16 +813,16 @@ async function removeComment(commentId: string, parentId?: string) {
             <span>Harmful, hateful, or age-inappropriate content</span>
           </label>
         </div>
-        <p v-if="reportSubmitted" class="mt-3 rounded-md border border-green-200 bg-green-50 p-2 text-xs font-semibold text-green-700" role="status">
+        <p v-if="reportSubmitted" class="mt-3 rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] p-2 text-xs font-semibold text-[var(--gvp-success)]" role="status">
           Report {{ reportCaseId }} received. Our Trust & Safety team will review it shortly.
         </p>
-        <p v-if="reportError" class="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+        <p v-if="reportError" class="mt-3 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
           {{ reportError }}
         </p>
         <div class="mt-5 flex justify-end gap-2">
           <button
             type="button"
-            class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 py-1.5 text-xs font-semibold text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]"
             @click="closeReportModal"
           >
             Close
@@ -830,7 +830,7 @@ async function removeComment(commentId: string, parentId?: string) {
           <button
             type="button"
             :disabled="reportSubmitting || reportSubmitted"
-            class="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+            class="rounded-md bg-[var(--gvp-brand)] px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)] disabled:opacity-50"
             @click="submitReport"
           >
             {{ reportSubmitting ? 'Submitting…' : 'Submit Report' }}

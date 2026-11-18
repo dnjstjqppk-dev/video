@@ -38,9 +38,14 @@
   --gvp-accent-soft: rgba(6, 182, 212, 0.12);
   --gvp-live: #f43f5e;
   --gvp-live-soft: rgba(244, 63, 94, 0.12);
+  --gvp-brand-active: #4338ca;
   --gvp-success: #22c55e;
+  --gvp-success-soft: rgba(34, 197, 94, 0.12);
   --gvp-warning: #f59e0b;
+  --gvp-warning-soft: rgba(245, 158, 11, 0.12);
   --gvp-danger: #ef4444;
+  --gvp-danger-soft: rgba(239, 68, 68, 0.12);
+  --gvp-info-soft: rgba(6, 182, 212, 0.12);
   --gvp-ease: cubic-bezier(0.2, 0, 0, 1);
   --gvp-motion: 180ms;
   /* Compat aliases for existing @gvp/ui primitives. */

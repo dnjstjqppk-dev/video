@@ -37,20 +37,20 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
 
 <template>
   <div class="space-y-6">
-    <div class="border-b border-slate-200 pb-4">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+    <div class="border-b border-[var(--gvp-border)] pb-4">
+      <h1 class="text-2xl font-bold tracking-tight text-[var(--gvp-text)]">
         콘텐츠 신뢰 및 안전 심의 큐 (Trust &amp; Safety Moderation Queue)
       </h1>
-      <p class="mt-1 text-sm text-slate-600">
+      <p class="mt-1 text-sm text-[var(--gvp-text-secondary)]">
         Connected to <span class="font-mono text-xs">/v1/admin/moderation</span> · Policy classification, age/geo restriction, and takedown with legal evidence preservation
       </p>
     </div>
 
     <div v-if="queuePending" class="space-y-4">
-      <div v-for="i in 3" :key="i" class="h-32 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+      <div v-for="i in 3" :key="i" class="h-32 animate-pulse rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]" />
     </div>
-    <div v-else-if="queueError" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
-      <p class="text-sm font-semibold text-red-700">심의 큐를 불러오지 못했습니다.</p>
+    <div v-else-if="queueError" class="rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-[var(--gvp-live)]">심의 큐를 불러오지 못했습니다.</p>
     </div>
     <GvpEmptyState
       v-else-if="cases.length === 0"
@@ -62,37 +62,37 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
       <div
         v-for="item in cases"
         :key="item.id"
-        class="rounded-lg border border-slate-200 bg-white p-5"
+        class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5"
       >
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--gvp-border)] pb-3">
           <div class="flex flex-wrap items-center gap-2.5">
-            <span class="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-0.5 font-mono text-xs font-semibold text-rose-700 tabular-nums">
+            <span class="rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--gvp-live)] tabular-nums">
               {{ item.id }}
             </span>
-            <span class="text-sm font-semibold uppercase text-slate-900 tabular-nums">
+            <span class="text-sm font-semibold uppercase text-[var(--gvp-text)] tabular-nums">
               [{{ item.targetType }}] {{ item.targetId }}
             </span>
-            <span class="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-0.5 font-mono text-xs font-medium text-slate-700">
+            <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2.5 py-0.5 font-mono text-xs font-medium text-[var(--gvp-text)]">
               {{ item.policyCategory }}
             </span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="font-mono text-xs text-slate-400 tabular-nums">{{ item.createdAt }}</span>
+            <span class="font-mono text-xs text-[var(--gvp-text-muted)] tabular-nums">{{ item.createdAt }}</span>
             <span
               class="rounded-md px-2.5 py-0.5 text-xs font-semibold uppercase"
-              :class="item.status === ModerationStatus.PENDING ? 'border border-amber-200 bg-amber-50 text-amber-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'"
+              :class="item.status === ModerationStatus.PENDING ? 'border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] text-[var(--gvp-warning)]' : 'border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]'"
             >
               {{ item.status }}
             </span>
           </div>
         </div>
 
-        <p class="mt-3 text-sm text-slate-600">
-          <strong class="font-semibold text-slate-900">Report Reason:</strong> {{ item.reason }}
+        <p class="mt-3 text-sm text-[var(--gvp-text-secondary)]">
+          <strong class="font-semibold text-[var(--gvp-text)]">Report Reason:</strong> {{ item.reason }}
         </p>
 
-        <p v-if="resolveError" class="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-700" role="alert">
+        <p v-if="resolveError" class="mt-3 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
           {{ resolveError }}
         </p>
 
@@ -102,7 +102,7 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
             type="text"
             aria-label="Reviewer notes"
             placeholder="Reviewer notes (recorded in audit log)"
-            class="h-9 min-w-[240px] flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-900 focus:border-slate-900 focus:bg-white outline-none transition-colors"
+            class="h-9 min-w-[240px] flex-1 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] outline-none transition-colors"
           />
           <input
             v-model="reviewerTotp"
@@ -111,33 +111,33 @@ async function resolveCase(item: ModerationCase, action: 'approve' | 'reject' | 
             maxlength="6"
             aria-label="Step-up TOTP code"
             placeholder="TOTP"
-            class="h-9 w-24 rounded-md border border-slate-300 bg-slate-50 px-3 text-sm text-slate-900 focus:border-slate-900 focus:bg-white outline-none transition-colors"
+            class="h-9 w-24 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] outline-none transition-colors"
           />
 
           <button
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
             @click="resolveCase(item, 'approve')"
           >
             Dismiss Report (Approve Content)
           </button>
           <button
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
             @click="resolveCase(item, 'reject')"
           >
             Apply 19+ Age / Geo Restriction
           </button>
           <button
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
             @click="resolveCase(item, 'remove')"
           >
             Takedown &amp; Preserve Evidence Snapshot
           </button>
         </div>
 
-        <p v-if="item.actionTaken" class="mt-3 font-mono text-xs font-medium text-emerald-700">
+        <p v-if="item.actionTaken" class="mt-3 font-mono text-xs font-medium text-[var(--gvp-success)]">
           Action Recorded: {{ item.actionTaken }}
         </p>
       </div>

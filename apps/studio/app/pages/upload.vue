@@ -208,43 +208,43 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mx-auto max-w-5xl space-y-6">
-    <div class="border-b border-slate-200 pb-5">
-      <h1 class="text-xl font-semibold tracking-tight text-slate-900">
+    <div class="border-b border-[var(--gvp-border)] pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">
         클라우드플레어 R2 멀티파트 업로더 (Resumable R2 Multipart Upload)
       </h1>
-      <p class="mt-1 text-xs text-slate-500">
+      <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
         Presigned S3/R2 chunked upload with pause/resume/retry and real-time FFmpeg HLS ABR transcoding state machine
       </p>
     </div>
 
     <div
       v-if="uploadError"
-      class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700"
+      class="rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-4 py-3 text-xs font-medium text-[var(--gvp-live)]"
       role="alert"
     >
       {{ uploadError }}
     </div>
 
     <!-- File Dropzone & Chunk Controls -->
-    <div class="rounded-lg border border-slate-200 bg-white p-6">
+    <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-start gap-3">
-          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)]">
             <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.5 2H4.5a1 1 0 00-1 1v10a1 1 0 001 1h7a1 1 0 001-1V5L9.5 2z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.5 2v3h3" />
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-slate-900">{{ selectedFileName }}</p>
-            <p class="mt-0.5 text-xs text-slate-500 tabular-nums">
+            <p class="text-sm font-medium text-[var(--gvp-text)]">{{ selectedFileName }}</p>
+            <p class="mt-0.5 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
               Size: {{ (selectedFileSizeBytes / (1024 * 1024)).toFixed(1) }} MB · {{ totalParts }} Multipart Chunks · ETag Verified
             </p>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <label class="cursor-pointer inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">
+          <label class="cursor-pointer inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors">
             Select Video File
             <input type="file" accept="video/*" class="hidden" @change="onFileSelected" />
           </label>
@@ -252,7 +252,7 @@ onBeforeUnmount(() => {
           <button
             v-if="!isUploading && uploadedParts === 0"
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
             @click="startMultipartUpload"
           >
             Start Multipart Upload (POST /v1/uploads)
@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
           <button
             v-if="isUploading"
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
             @click="togglePauseResume"
           >
             {{ isPaused ? 'Resume Chunks' : 'Pause Upload' }}
@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
           <button
             v-if="uploadError"
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
             @click="retryUpload"
           >
             Retry Failed Part
@@ -281,24 +281,24 @@ onBeforeUnmount(() => {
       <!-- Progress Bar -->
       <div class="mt-5">
         <div class="flex justify-between text-xs font-medium">
-          <span class="text-slate-600 tabular-nums">
+          <span class="text-[var(--gvp-text-secondary)] tabular-nums">
             Part {{ uploadedParts }} / {{ totalParts }} ({{ progressPercent }}%)
           </span>
-          <span class="font-mono text-slate-500 tabular-nums">
+          <span class="font-mono text-[var(--gvp-text-secondary)] tabular-nums">
             {{ uploadId ? `Upload ID: ${uploadId}` : 'Ready to initialize session' }}
           </span>
         </div>
-        <div class="mt-2 h-2 w-full overflow-hidden rounded-md bg-slate-100">
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-md bg-[var(--gvp-elevated)]">
           <div
-            class="h-full bg-slate-900 transition-all"
+            class="h-full bg-[var(--gvp-brand)] transition-all"
             :style="{ width: `${progressPercent}%` }"
           />
         </div>
       </div>
 
       <!-- Transcoding Pipeline Stepper -->
-      <div class="mt-6 border-t border-slate-200 pt-5">
-        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500 tabular-nums">
+      <div class="mt-6 border-t border-[var(--gvp-border)] pt-5">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)] tabular-nums">
           Live Transcoding Pipeline Status (240p → 360p → 480p → 720p → 1080p → 1440p → 2160p HLS)
         </p>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -308,10 +308,10 @@ onBeforeUnmount(() => {
             class="rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors"
             :class="
               currentStatus === step
-                ? 'border-slate-900 bg-slate-900 text-white'
+                ? 'border-[var(--gvp-focus)] bg-[var(--gvp-brand)] text-white'
                 : transcodeSteps.indexOf(currentStatus) > transcodeSteps.indexOf(step)
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-slate-200 bg-slate-50 text-slate-500'
+                  ? 'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]'
+                  : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)]'
             "
           >
             {{ step }}
@@ -321,42 +321,42 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Video Metadata Editor -->
-    <div class="grid grid-cols-1 gap-6 rounded-lg border border-slate-200 bg-white p-6 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6 lg:grid-cols-3">
       <div class="space-y-4 lg:col-span-2">
         <div>
-          <label class="block text-xs font-medium text-slate-700">동영상 제목 (Title)</label>
+          <label class="block text-xs font-medium text-[var(--gvp-text)]">동영상 제목 (Title)</label>
           <input
             v-model="title"
             type="text"
-            class="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-700">설명 (Description)</label>
+          <label class="block text-xs font-medium text-[var(--gvp-text)]">설명 (Description)</label>
           <textarea
             v-model="description"
             rows="4"
-            class="mt-1.5 w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none focus:border-slate-900"
+            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-3 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-700">타임라인 챕터 마커 (Chapters)</label>
+          <label class="block text-xs font-medium text-[var(--gvp-text)]">타임라인 챕터 마커 (Chapters)</label>
           <textarea
             v-model="chaptersInput"
             rows="4"
-            class="mt-1.5 w-full rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs text-slate-800 tabular-nums outline-none focus:border-slate-900"
+            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] p-3 font-mono text-xs text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
       </div>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-medium text-slate-700">공개 상태 (Visibility)</label>
+          <label class="block text-xs font-medium text-[var(--gvp-text)]">공개 상태 (Visibility)</label>
           <select
             v-model="visibility"
-            class="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-slate-900"
+            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs font-medium text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           >
             <option :value="VideoVisibility.PUBLIC">Public (전체 공개)</option>
             <option :value="VideoVisibility.UNLISTED">Unlisted (일부 공개)</option>
@@ -367,25 +367,25 @@ onBeforeUnmount(() => {
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-700">예약 게시 일시 (Scheduled Publish)</label>
+          <label class="block text-xs font-medium text-[var(--gvp-text)]">예약 게시 일시 (Scheduled Publish)</label>
           <input
             v-model="scheduledPublishAt"
             type="datetime-local"
-            class="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 tabular-nums outline-none focus:border-slate-900"
+            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
 
-        <label class="flex items-center gap-2 pt-2 text-xs text-slate-700">
-          <input v-model="isAgeRestricted" type="checkbox" class="rounded-md border-slate-300 accent-slate-900" />
+        <label class="flex items-center gap-2 pt-2 text-xs text-[var(--gvp-text)]">
+          <input v-model="isAgeRestricted" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" />
           <span class="tabular-nums">연령 제한 콘텐츠 (19+ Age Restriction)</span>
         </label>
 
-        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-          <p class="font-medium text-slate-900">Auto-Generated Thumbnails</p>
+        <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3 text-xs">
+          <p class="font-medium text-[var(--gvp-text)]">Auto-Generated Thumbnails</p>
           <img
             src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80"
             alt="Thumbnail preview"
-            class="mt-2 aspect-video w-full rounded-md border border-slate-200 object-cover"
+            class="mt-2 aspect-video w-full rounded-md border border-[var(--gvp-border)] object-cover"
           />
         </div>
       </div>

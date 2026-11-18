@@ -97,9 +97,9 @@ function formatDuration(seconds: number): string {
 
 <template>
   <div class="space-y-6">
-    <div class="border-b border-slate-200 pb-5">
-      <h1 class="text-xl font-semibold tracking-tight text-slate-900">동영상 자막 관리 (Subtitles &amp; Captions)</h1>
-      <p class="mt-1 text-xs text-slate-500">
+    <div class="border-b border-[var(--gvp-border)] pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">동영상 자막 관리 (Subtitles &amp; Captions)</h1>
+      <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
         영상별 WebVTT 자막 트랙을 등록·삭제하세요. 등록된 자막은 플레이어에서 선택할 수 있습니다.
       </p>
     </div>
@@ -109,7 +109,7 @@ function formatDuration(seconds: number): string {
     </GvpBanner>
 
     <div v-if="pending" class="space-y-4" role="status" aria-label="불러오는 중">
-      <div v-for="n in 3" :key="n" class="h-32 animate-pulse rounded-lg bg-slate-100" />
+      <div v-for="n in 3" :key="n" class="h-32 animate-pulse rounded-lg bg-[var(--gvp-elevated)]" />
     </div>
 
     <GvpBanner v-else-if="error" tone="danger">
@@ -128,47 +128,47 @@ function formatDuration(seconds: number): string {
       <div
         v-for="video in videos"
         :key="video.id"
-        class="rounded-lg border border-slate-200 bg-white p-5"
+        class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5"
       >
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--gvp-border)] pb-4">
           <div class="min-w-0">
-            <p class="truncate text-sm font-semibold text-slate-900">{{ video.title }}</p>
-            <p class="mt-0.5 font-mono text-xs text-slate-500 tabular-nums">{{ formatDuration(video.durationSeconds) }} · {{ video.id }}</p>
+            <p class="truncate text-sm font-semibold text-[var(--gvp-text)]">{{ video.title }}</p>
+            <p class="mt-0.5 font-mono text-xs text-[var(--gvp-text-secondary)] tabular-nums">{{ formatDuration(video.durationSeconds) }} · {{ video.id }}</p>
           </div>
           <button
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
             @click="openAddModal(video)"
           >
             + 자막 추가
           </button>
         </div>
 
-        <div v-if="loadingTracks.has(video.id)" class="mt-3 h-10 animate-pulse rounded-md bg-slate-100" role="status" aria-label="자막 불러오는 중" />
+        <div v-if="loadingTracks.has(video.id)" class="mt-3 h-10 animate-pulse rounded-md bg-[var(--gvp-elevated)]" role="status" aria-label="자막 불러오는 중" />
         <GvpBanner v-else-if="trackError[video.id]" tone="danger" class="mt-3">
           {{ trackError[video.id] }}
           <button type="button" class="font-semibold underline" @click="delete trackError[video.id]; loadTracks(video)">다시 시도</button>
         </GvpBanner>
-        <p v-else-if="(tracksByVideo[video.id] || []).length === 0" class="mt-3 text-xs text-slate-500">
+        <p v-else-if="(tracksByVideo[video.id] || []).length === 0" class="mt-3 text-xs text-[var(--gvp-text-secondary)]">
           등록된 자막이 없습니다.
         </p>
         <ul v-else class="mt-3 space-y-2">
           <li
             v-for="track in tracksByVideo[video.id]"
             :key="track.id"
-            class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs"
+            class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-4 py-2.5 text-xs"
           >
             <div class="flex items-center gap-3">
-              <span class="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono font-semibold text-slate-900">{{ track.language }}</span>
-              <span class="font-medium text-slate-700">{{ track.label }}</span>
-              <a :href="track.vttUrl" target="_blank" rel="noopener noreferrer" class="font-mono text-xs text-slate-500 underline hover:text-slate-900">
+              <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-0.5 font-mono font-semibold text-[var(--gvp-text)]">{{ track.language }}</span>
+              <span class="font-medium text-[var(--gvp-text)]">{{ track.label }}</span>
+              <a :href="track.vttUrl" target="_blank" rel="noopener noreferrer" class="font-mono text-xs text-[var(--gvp-text-secondary)] underline hover:text-[var(--gvp-text)]">
                 VTT 열기
               </a>
             </div>
             <button
               type="button"
               :disabled="deletingIds.has(track.id)"
-              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-40"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-live)] bg-[var(--gvp-live-soft)] border border-[var(--gvp-live)] rounded-md hover:bg-[var(--gvp-live-soft)] transition-colors disabled:opacity-40"
               @click="removeTrack(video, track.id)"
             >
               삭제
@@ -179,8 +179,8 @@ function formatDuration(seconds: number): string {
     </div>
 
     <GvpModal :model-value="addTarget !== null" title="자막 트랙 추가" @update:model-value="(v: boolean) => { if (!v) addTarget = null }">
-      <p class="text-xs text-slate-600">
-        <strong class="font-semibold text-slate-900">{{ addTarget?.title }}</strong>에 WebVTT(.vtt) 자막을 등록합니다.
+      <p class="text-xs text-[var(--gvp-text-secondary)]">
+        <strong class="font-semibold text-[var(--gvp-text)]">{{ addTarget?.title }}</strong>에 WebVTT(.vtt) 자막을 등록합니다.
       </p>
       <div class="mt-4 space-y-3">
         <GvpTextInput v-model="newLanguage" input-id="cap-lang" label="언어 코드 (ISO 639-1, 예: ko, en, ja)" placeholder="ko" />
@@ -190,7 +190,7 @@ function formatDuration(seconds: number): string {
       <template #footer>
         <button
           type="button"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
           @click="addTarget = null"
         >
           취소
@@ -198,7 +198,7 @@ function formatDuration(seconds: number): string {
         <button
           type="button"
           :disabled="adding || !newLanguage.trim() || !newVttUrl.trim()"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-50"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors disabled:opacity-50"
           @click="submitAddTrack"
         >
           {{ adding ? '등록 중…' : '자막 등록' }}

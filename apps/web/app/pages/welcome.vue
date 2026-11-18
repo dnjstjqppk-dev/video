@@ -55,9 +55,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl bg-white px-4 py-16 text-slate-900 sm:px-6">
-    <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Welcome</p>
-    <h1 class="mt-2 text-3xl font-extrabold text-slate-900">
+  <div class="mx-auto max-w-2xl bg-[var(--gvp-surface)] px-4 py-16 text-[var(--gvp-text)] sm:px-6">
+    <p class="text-xs font-bold uppercase tracking-wider text-[var(--gvp-brand-hover)]">Welcome</p>
+    <h1 class="mt-2 text-3xl font-extrabold text-[var(--gvp-text)]">
       {{ appStore.locale === 'ko' ? 'StreamVerse 시작하기' : 'Get started with StreamVerse' }}
     </h1>
 
@@ -66,20 +66,20 @@ onMounted(() => {
         v-for="(_, i) in steps"
         :key="i"
         class="h-1.5 flex-1 rounded-md"
-        :class="i <= step ? 'bg-slate-900' : 'bg-slate-200'"
+        :class="i <= step ? 'bg-[var(--gvp-brand)]' : 'bg-[var(--gvp-elevated)]'"
         :aria-current="i === step ? 'step' : undefined"
       />
     </ol>
 
-    <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-6" role="status">
-      <p class="text-xs font-bold text-blue-700 tabular-nums">Step {{ step + 1 }} / {{ steps.length }}</p>
-      <h2 class="mt-1 text-xl font-bold text-slate-900">{{ steps[step]?.title }}</h2>
-      <p class="mt-2 text-sm text-slate-600">{{ steps[step]?.body }}</p>
+    <div class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6" role="status">
+      <p class="text-xs font-bold text-[var(--gvp-brand-hover)] tabular-nums">Step {{ step + 1 }} / {{ steps.length }}</p>
+      <h2 class="mt-1 text-xl font-bold text-[var(--gvp-text)]">{{ steps[step]?.title }}</h2>
+      <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">{{ steps[step]?.body }}</p>
       <div class="mt-5 flex flex-wrap items-center gap-3">
         <NuxtLink
           v-if="steps[step]?.to"
           :to="steps[step]?.to"
-          class="rounded-md bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          class="rounded-md bg-[var(--gvp-brand)] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
         >
           {{ steps[step]?.cta }}
         </NuxtLink>
@@ -88,7 +88,7 @@ onMounted(() => {
           :href="steps[step]?.href"
           target="_blank"
           rel="noopener noreferrer"
-          class="rounded-md bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          class="rounded-md bg-[var(--gvp-brand)] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
         >
           {{ steps[step]?.cta }}
         </a>
@@ -96,7 +96,7 @@ onMounted(() => {
           <button
             v-if="step > 0"
             type="button"
-            class="rounded-md border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]"
             @click="back"
           >
             {{ appStore.locale === 'ko' ? '이전' : 'Back' }}
@@ -104,7 +104,7 @@ onMounted(() => {
           <button
             v-if="step < steps.length - 1"
             type="button"
-            class="rounded-md border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]"
             @click="next"
           >
             {{ appStore.locale === 'ko' ? '다음' : 'Next' }}
@@ -112,7 +112,7 @@ onMounted(() => {
           <NuxtLink
             v-else
             to="/premium"
-            class="rounded-md border border-blue-200 bg-blue-50 px-5 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+            class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-5 py-2.5 text-sm font-semibold text-[var(--gvp-brand-hover)] hover:bg-[var(--gvp-info-soft)]"
           >
             Premium 보기
           </NuxtLink>
@@ -120,10 +120,10 @@ onMounted(() => {
       </div>
     </div>
 
-    <p class="mt-4 text-center text-xs text-slate-500">
-      <NuxtLink to="/terms" class="underline hover:text-slate-900">이용약관</NuxtLink>
+    <p class="mt-4 text-center text-xs text-[var(--gvp-text-secondary)]">
+      <NuxtLink to="/terms" class="underline hover:text-[var(--gvp-text)]">이용약관</NuxtLink>
       ·
-      <NuxtLink to="/privacy" class="underline hover:text-slate-900">개인정보처리방침</NuxtLink>
+      <NuxtLink to="/privacy" class="underline hover:text-[var(--gvp-text)]">개인정보처리방침</NuxtLink>
     </p>
   </div>
 </template>

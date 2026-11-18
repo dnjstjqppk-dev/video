@@ -45,31 +45,31 @@ async function loginWithDevToken() {
 </script>
 
 <template>
-  <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center bg-white px-4 py-8 text-slate-900">
-    <div class="w-full rounded-lg border border-slate-200 bg-white p-8">
+  <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center bg-[var(--gvp-surface)] px-4 py-8 text-[var(--gvp-text)]">
+    <div class="w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8">
       <div class="flex items-center gap-2">
-        <span class="flex h-8 w-10 items-center justify-center rounded-md bg-slate-900 text-white">
+        <span class="flex h-8 w-10 items-center justify-center rounded-md bg-[var(--gvp-brand)] text-white">
           <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         </span>
-        <span class="text-lg font-extrabold text-slate-900">StreamVerse</span>
+        <span class="text-lg font-extrabold text-[var(--gvp-text)]">StreamVerse</span>
       </div>
-      <h1 class="mt-4 text-xl font-bold text-slate-900">로그인</h1>
-      <p class="mt-1 text-xs text-slate-500">
+      <h1 class="mt-4 text-xl font-bold text-[var(--gvp-text)]">로그인</h1>
+      <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
         OIDC 싱글사인온으로 안전하게 로그인하세요.
       </p>
 
       <a
         href="/auth/login"
-        class="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+        class="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-[var(--gvp-brand)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
       >
         StreamVerse 계정으로 계속하기
       </a>
 
-      <div v-if="isLocalhost" class="mt-6 border-t border-slate-200 pt-5">
-        <p class="text-xs font-bold text-amber-700">로컬 개발 전용 토큰 로그인</p>
-        <p class="mt-1 text-[11px] text-slate-500">
+      <div v-if="isLocalhost" class="mt-6 border-t border-[var(--gvp-border)] pt-5">
+        <p class="text-xs font-bold text-[var(--gvp-warning)]">로컬 개발 전용 토큰 로그인</p>
+        <p class="mt-1 text-[11px] text-[var(--gvp-text-secondary)]">
           예: admin-token · creator-token · viewer-token · advertiser-token
         </p>
         <div class="mt-3 flex gap-2">
@@ -77,19 +77,19 @@ async function loginWithDevToken() {
             v-model="devToken"
             type="text"
             placeholder="dev token"
-            class="h-10 flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 font-mono text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+            class="h-10 flex-1 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 font-mono text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-brand)] focus:bg-[var(--gvp-surface)]"
             @keyup.enter="loginWithDevToken"
           />
           <button
             type="button"
             :disabled="devLoading"
-            class="rounded-md border border-slate-200 bg-slate-100 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+            class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-4 text-xs font-semibold text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)] disabled:opacity-50"
             @click="loginWithDevToken"
           >
             {{ devLoading ? '...' : '로그인' }}
           </button>
         </div>
-        <p v-if="devError" class="mt-2 text-xs font-medium text-red-700">{{ devError }}</p>
+        <p v-if="devError" class="mt-2 text-xs font-medium text-[var(--gvp-live)]">{{ devError }}</p>
       </div>
     </div>
   </div>

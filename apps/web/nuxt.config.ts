@@ -38,8 +38,8 @@ export default defineNuxtConfig({
   },
   colorMode: {
     classSuffix: '',
-    preference: 'light',
-    fallback: 'light'
+    preference: 'dark',
+    fallback: 'dark'
   },
   i18n: {
     locales: [
@@ -62,7 +62,7 @@ export default defineNuxtConfig({
           name: 'description',
           content: 'StreamVerse — Watch 4K HDR videos, Shorts, and ultra-low latency Live streams from global creators.'
         },
-        { name: 'theme-color', content: '#FFFFFF' },
+        { name: 'theme-color', content: '#0B0D12' },
         { property: 'og:site_name', content: 'StreamVerse' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' }

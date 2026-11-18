@@ -86,10 +86,10 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-5">
       <div>
-        <h1 class="text-xl font-semibold tracking-tight text-slate-900">심층 채널 분석 (ClickHouse Analytics &amp; Retention)</h1>
-        <p class="mt-1 text-xs text-slate-500">
+        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">심층 채널 분석 (ClickHouse Analytics &amp; Retention)</h1>
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           일별 조회수 · 시청 시간 · 정산 수익 추이 및 CSV 내보내기
         </p>
       </div>
@@ -97,7 +97,7 @@ onMounted(async () => {
       <div class="flex items-center gap-2">
         <select
           v-model="selectedRange"
-          class="h-9 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900 tabular-nums outline-none focus:border-slate-900"
+          class="h-9 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
         >
           <option value="7d">Last 7 Days</option>
           <option value="28d">Last 28 Days</option>
@@ -107,7 +107,7 @@ onMounted(async () => {
 
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-2 h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+          class="inline-flex items-center justify-center gap-2 h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
           @click="exportCsvReport"
         >
           <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -119,24 +119,24 @@ onMounted(async () => {
     </div>
 
     <!-- ECharts Time Series Chart -->
-    <div class="rounded-lg border border-slate-200 bg-white p-5">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-        <h2 class="text-sm font-semibold text-slate-900">조회수 및 시청 시간 추이 (Views &amp; Watch Time Time-Series)</h2>
-        <span class="text-xs font-medium text-slate-500 tabular-nums">{{ selectedRange }} · 일별 집계</span>
+    <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--gvp-border)] pb-3">
+        <h2 class="text-sm font-semibold text-[var(--gvp-text)]">조회수 및 시청 시간 추이 (Views &amp; Watch Time Time-Series)</h2>
+        <span class="text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">{{ selectedRange }} · 일별 집계</span>
       </div>
-      <div v-if="analyticsError" class="mt-4 rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
-        <p class="text-sm font-semibold text-red-700">분석 데이터를 불러오지 못했습니다.</p>
+      <div v-if="analyticsError" class="mt-4 rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-8 text-center" role="alert">
+        <p class="text-sm font-semibold text-[var(--gvp-live)]">분석 데이터를 불러오지 못했습니다.</p>
       </div>
-      <div v-else-if="seriesPoints.length === 0" class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-12 text-center">
-        <p class="text-sm font-semibold text-slate-600">아직 집계된 시청 기록이 없습니다.</p>
+      <div v-else-if="seriesPoints.length === 0" class="mt-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+        <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">아직 집계된 시청 기록이 없습니다.</p>
       </div>
       <div v-else ref="chartCanvasRef" class="mt-4 h-72 w-full" />
     </div>
 
     <!-- Detailed breakdowns land with the telemetry warehouse connection -->
-    <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-      <p class="text-sm font-semibold text-slate-600">시청 지속률 · 트래픽 소스 · 지역 분포 연동 준비 중</p>
-      <p class="mt-1 text-xs text-slate-500">일별 조회수·시청 시간·수익 추이는 위 차트에서 확인할 수 있습니다.</p>
+    <div class="rounded-lg border border-dashed border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] p-8 text-center">
+      <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">시청 지속률 · 트래픽 소스 · 지역 분포 연동 준비 중</p>
+      <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">일별 조회수·시청 시간·수익 추이는 위 차트에서 확인할 수 있습니다.</p>
     </div>
   </div>
 </template>

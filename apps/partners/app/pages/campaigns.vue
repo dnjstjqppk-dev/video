@@ -100,38 +100,38 @@ async function submitForReview(cmp: AdCampaign) {
 
 <template>
   <div class="space-y-6">
-    <div class="border-b border-slate-200 pb-5">
-      <h1 class="text-xl font-semibold tracking-tight text-slate-900">광고주 캠페인 매니저 (Advertiser Campaign Console)</h1>
-      <p class="mt-1 text-sm text-slate-600">
+    <div class="border-b border-[var(--gvp-border)] pb-5">
+      <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">광고주 캠페인 매니저 (Advertiser Campaign Console)</h1>
+      <p class="mt-1 text-sm text-[var(--gvp-text-secondary)]">
         Create Pre-Roll, Mid-Roll, and Shorts campaigns · Configure CPM/CPC bidding &amp; daily budget pacing
       </p>
     </div>
 
     <!-- Alert Notifications -->
-    <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
+    <div v-if="errorMessage" class="rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-4 text-xs font-medium text-[var(--gvp-live)]">
       {{ errorMessage }}
     </div>
-    <div v-if="successMessage" class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-700">
+    <div v-if="successMessage" class="rounded-lg border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] p-4 text-xs font-medium text-[var(--gvp-success)]">
       {{ successMessage }}
     </div>
 
     <!-- Create Campaign Form -->
-    <form class="rounded-lg border border-slate-200 bg-white p-6" @submit.prevent="createCampaign">
-      <h2 class="text-sm font-semibold text-slate-900">신규 광고 캠페인 생성 (<code class="font-mono text-xs text-slate-600">POST /v1/partners/campaigns</code>)</h2>
+    <form class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6" @submit.prevent="createCampaign">
+      <h2 class="text-sm font-semibold text-[var(--gvp-text)]">신규 광고 캠페인 생성 (<code class="font-mono text-xs text-[var(--gvp-text-secondary)]">POST /v1/partners/campaigns</code>)</h2>
       <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="md:col-span-2">
-          <label class="text-xs font-medium text-slate-700">Campaign Name</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Campaign Name</label>
           <input
             v-model="newCampaignName"
             type="text"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs font-medium text-slate-700">Placement Format</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Placement Format</label>
           <select
             v-model="newFormat"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           >
             <option :value="AdFormat.PREROLL">Pre-Roll (In-Stream Skippable)</option>
             <option :value="AdFormat.MIDROLL">Mid-Roll (Watch Page Break)</option>
@@ -140,69 +140,69 @@ async function submitForReview(cmp: AdCampaign) {
           </select>
         </div>
         <div>
-          <label class="text-xs font-medium text-slate-700">Daily Budget (KRW)</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Daily Budget (KRW)</label>
           <input
             v-model.number="dailyBudget"
             type="number"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs font-medium text-slate-700">CPM Bid (KRW per 1,000 impressions)</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">CPM Bid (KRW per 1,000 impressions)</label>
           <input
             v-model.number="cpmBid"
             type="number"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs font-medium text-slate-700">CPC Bid (KRW per Click)</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">CPC Bid (KRW per Click)</label>
           <input
             v-model.number="cpcBid"
             type="number"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 tabular-nums focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
       </div>
 
-      <div class="mt-5 grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-3">
+      <div class="mt-5 grid grid-cols-1 gap-4 border-t border-[var(--gvp-border)] pt-4 md:grid-cols-3">
         <div>
-          <label class="text-xs font-medium text-slate-700">Creative File (mp4/webm/mov or jpg/png/gif/webp)</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Creative File (mp4/webm/mov or jpg/png/gif/webp)</label>
           <input
             type="file"
             :accept="creativeAccept"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-xs text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
             @change="onCreativeFileChange"
           />
         </div>
         <div>
-          <label class="text-xs font-medium text-slate-700">Creative Headline</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Creative Headline</label>
           <input
             v-model="creativeHeadline"
             type="text"
             placeholder="Optional — defaults to campaign name"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
         <div>
-          <label class="text-xs font-medium text-slate-700">Destination URL</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Destination URL</label>
           <input
             v-model="creativeDestinationUrl"
             type="url"
             placeholder="https://…"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-900 focus:border-slate-900 focus:bg-white focus:outline-none"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
       </div>
 
-      <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-        <p class="text-xs text-slate-500">
-          Campaigns start as <code class="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-slate-800">draft</code> — upload a creative, then submit for review.
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--gvp-border)] pt-4">
+        <p class="text-xs text-[var(--gvp-text-secondary)]">
+          Campaigns start as <code class="rounded-md bg-[var(--gvp-elevated)] px-1.5 py-0.5 font-mono text-[var(--gvp-text)]">draft</code> — upload a creative, then submit for review.
         </p>
         <button
           type="submit"
           :disabled="isUploading"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors disabled:opacity-60"
+          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors disabled:opacity-60"
         >
           {{ isUploading ? 'Uploading Creative…' : 'Create Draft Campaign' }}
         </button>
@@ -210,11 +210,11 @@ async function submitForReview(cmp: AdCampaign) {
     </form>
 
     <!-- Active Campaigns Table -->
-    <div v-if="campaignsPending" class="rounded-lg border border-slate-200 bg-white p-8">
-      <div class="h-6 animate-pulse rounded-md bg-slate-100" />
+    <div v-if="campaignsPending" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8">
+      <div class="h-6 animate-pulse rounded-md bg-[var(--gvp-elevated)]" />
     </div>
-    <div v-else-if="campaignsError" class="rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
-      <p class="text-sm font-semibold text-red-700">캠페인 목록을 불러오지 못했습니다.</p>
+    <div v-else-if="campaignsError" class="rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-[var(--gvp-live)]">캠페인 목록을 불러오지 못했습니다.</p>
     </div>
     <GvpEmptyState
       v-else-if="campaigns.length === 0"
@@ -222,10 +222,10 @@ async function submitForReview(cmp: AdCampaign) {
       description="위 양식으로 첫 캠페인을 초안으로 등록하세요."
     />
 
-    <div v-else class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+    <div v-else class="overflow-x-auto rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
       <table class="w-full text-left">
         <thead>
-          <tr class="bg-slate-50 border-y border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+          <tr class="bg-[var(--gvp-canvas)] border-y border-[var(--gvp-border)] text-xs font-semibold text-[var(--gvp-text-secondary)] uppercase tracking-wider">
             <th class="py-2.5 px-4">Campaign</th>
             <th class="py-2.5 px-4">Placement</th>
             <th class="py-2.5 px-4">Budget Pacing</th>
@@ -236,35 +236,35 @@ async function submitForReview(cmp: AdCampaign) {
             <th class="py-2.5 px-4">Review</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr v-for="cmp in campaigns" :key="cmp.id" class="hover:bg-slate-50">
-            <td class="py-3 px-4 text-sm font-medium text-slate-900 border-b border-slate-100">{{ cmp.name }}</td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
-              <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs uppercase text-slate-700">{{ cmp.format }}</span>
+        <tbody class="divide-y divide-[var(--gvp-border)]">
+          <tr v-for="cmp in campaigns" :key="cmp.id" class="hover:bg-[var(--gvp-canvas)]">
+            <td class="py-3 px-4 text-sm font-medium text-[var(--gvp-text)] border-b border-[var(--gvp-border)]">{{ cmp.name }}</td>
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
+              <span class="rounded-md bg-[var(--gvp-elevated)] px-2 py-0.5 font-mono text-xs uppercase text-[var(--gvp-text)]">{{ cmp.format }}</span>
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
               ₩{{ cmp.spentAmount.toLocaleString() }} / ₩{{ cmp.totalBudget.toLocaleString() }}
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
               ₩{{ cmp.cpmBid.toLocaleString() }} / ₩{{ cmp.cpcBid.toLocaleString() }}
             </td>
-            <td class="py-3 px-4 font-mono text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+            <td class="py-3 px-4 font-mono text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
               {{ cmp.impressions.toLocaleString() }}
             </td>
-            <td class="py-3 px-4 font-mono text-sm text-slate-900 border-b border-slate-100 tabular-nums">
+            <td class="py-3 px-4 font-mono text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
               {{ cmp.clicks.toLocaleString() }}
               ({{ cmp.impressions ? ((cmp.clicks / cmp.impressions) * 100).toFixed(2) : '0.00' }}%)
             </td>
-            <td class="py-3 px-4 text-sm text-slate-900 border-b border-slate-100 tabular-nums">
-              <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium uppercase text-emerald-700">
+            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
+              <span class="rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] px-2 py-0.5 text-xs font-medium uppercase text-[var(--gvp-success)]">
                 {{ cmp.status }}
               </span>
             </td>
-            <td class="py-3 px-4 border-b border-slate-100">
+            <td class="py-3 px-4 border-b border-[var(--gvp-border)]">
               <button
                 v-if="cmp.status === 'draft'"
                 type="button"
-                class="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2.5 py-1 text-xs font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]"
                 @click="submitForReview(cmp)"
               >
                 Submit for review

@@ -33,7 +33,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      htmlAttrs: { lang: 'ko' },
+      htmlAttrs: { lang: 'ko', 'data-theme': 'light', class: 'light' },
       titleTemplate: '%s — StreamVerse Super Admin Governance Console',
       meta: [
         { charset: 'utf-8' },

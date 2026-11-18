@@ -31,7 +31,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      htmlAttrs: { lang: 'ko' },
+      htmlAttrs: { lang: 'ko', 'data-theme': 'light', class: 'light' },
       titleTemplate: '%s — StreamVerse Creator Studio',
       meta: [
         { charset: 'utf-8' },

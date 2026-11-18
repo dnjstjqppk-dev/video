@@ -119,10 +119,10 @@ async function toggleBroadcast() {
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-5">
       <div>
-        <h1 class="text-xl font-semibold tracking-tight text-slate-900">라이브 관제실 (Live Control Room)</h1>
-        <p class="mt-1 text-xs text-slate-500">
+        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">라이브 관제실 (Live Control Room)</h1>
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           RTMPS / SRT Dual Ingest · Sub-2s LL-HLS Packaging · Real-time Chat Moderation &amp; DVR Auto-Archive
         </p>
       </div>
@@ -130,7 +130,7 @@ async function toggleBroadcast() {
       <div class="flex items-center gap-3">
         <span
           class="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tabular-nums"
-          :class="streamStatus === LiveStreamStatus.LIVE ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-100 text-slate-600'"
+          :class="streamStatus === LiveStreamStatus.LIVE ? 'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
         >
           <span>{{ streamStatus }} (동시 시청 {{ liveViewers.toLocaleString() }}명)</span>
         </span>
@@ -138,8 +138,8 @@ async function toggleBroadcast() {
           type="button"
           :class="
             streamStatus === LiveStreamStatus.LIVE
-              ? 'inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors'
-              : 'inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors'
+              ? 'inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors'
+              : 'inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors'
           "
           @click="toggleBroadcast"
         >
@@ -151,57 +151,57 @@ async function toggleBroadcast() {
     <!-- Copy Toast -->
     <div
       v-if="copyToast"
-      class="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-700"
+      class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3 text-xs font-medium text-[var(--gvp-text)]"
       role="status"
     >
       {{ copyToast }}
     </div>
 
     <!-- Live Telemetry Stats Bar -->
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-5 rounded-lg border border-slate-200 bg-white p-4 text-xs">
+    <div class="grid grid-cols-2 gap-4 md:grid-cols-5 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-xs">
       <div>
-        <span class="text-slate-500">인제스트 상태</span>
-        <div class="mt-1 font-semibold text-emerald-600 tabular-nums">{{ telemetry.status }}</div>
+        <span class="text-[var(--gvp-text-secondary)]">인제스트 상태</span>
+        <div class="mt-1 font-semibold text-[var(--gvp-success)] tabular-nums">{{ telemetry.status }}</div>
       </div>
       <div>
-        <span class="text-slate-500">비트레이트</span>
-        <div class="mt-1 font-semibold text-slate-900 tabular-nums">{{ telemetry.bitrateKbps }} kbps</div>
+        <span class="text-[var(--gvp-text-secondary)]">비트레이트</span>
+        <div class="mt-1 font-semibold text-[var(--gvp-text)] tabular-nums">{{ telemetry.bitrateKbps }} kbps</div>
       </div>
       <div>
-        <span class="text-slate-500">프레임 레이트</span>
-        <div class="mt-1 font-semibold text-slate-900 tabular-nums">{{ telemetry.fps }} fps</div>
+        <span class="text-[var(--gvp-text-secondary)]">프레임 레이트</span>
+        <div class="mt-1 font-semibold text-[var(--gvp-text)] tabular-nums">{{ telemetry.fps }} fps</div>
       </div>
       <div>
-        <span class="text-slate-500">키프레임 간격 (GOP)</span>
-        <div class="mt-1 font-semibold text-slate-900 tabular-nums">{{ telemetry.gopSeconds }}s</div>
+        <span class="text-[var(--gvp-text-secondary)]">키프레임 간격 (GOP)</span>
+        <div class="mt-1 font-semibold text-[var(--gvp-text)] tabular-nums">{{ telemetry.gopSeconds }}s</div>
       </div>
       <div>
-        <span class="text-slate-500">패킷 손실률</span>
-        <div class="mt-1 font-semibold text-emerald-600 tabular-nums">{{ telemetry.packetLossPct }}%</div>
+        <span class="text-[var(--gvp-text-secondary)]">패킷 손실률</span>
+        <div class="mt-1 font-semibold text-[var(--gvp-success)] tabular-nums">{{ telemetry.packetLossPct }}%</div>
       </div>
     </div>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <!-- Ingest Configuration & Stream Key Rotation -->
-      <div class="space-y-4 rounded-lg border border-slate-200 bg-white p-5 lg:col-span-2">
-        <h2 class="text-sm font-semibold text-slate-900">스트림 인제스트 설정 (OBS / Hardware Encoder Setup)</h2>
+      <div class="space-y-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 lg:col-span-2">
+        <h2 class="text-sm font-semibold text-[var(--gvp-text)]">스트림 인제스트 설정 (OBS / Hardware Encoder Setup)</h2>
 
         <div>
-          <label class="text-xs font-medium text-slate-700">Stream Title</label>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Stream Title</label>
           <input
             v-model="streamTitle"
             type="text"
-            class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-slate-700">Primary RTMPS Ingest URL</label>
+              <label class="text-xs font-medium text-[var(--gvp-text)]">Primary RTMPS Ingest URL</label>
               <button
                 type="button"
-                class="text-xs font-medium text-slate-600 underline hover:text-slate-900"
+                class="text-xs font-medium text-[var(--gvp-text-secondary)] underline hover:text-[var(--gvp-text)]"
                 @click="copyToClipboard(rtmpsUrl, 'RTMPS URL')"
               >
                 복사
@@ -210,15 +210,15 @@ async function toggleBroadcast() {
             <input
               :value="rtmpsUrl"
               readonly
-              class="mt-1 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-800"
+              class="mt-1 w-full rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-2 font-mono text-xs text-[var(--gvp-text)]"
             />
           </div>
           <div>
             <div class="flex items-center justify-between">
-              <label class="text-xs font-medium text-slate-700">Low-Latency SRT Ingest URL</label>
+              <label class="text-xs font-medium text-[var(--gvp-text)]">Low-Latency SRT Ingest URL</label>
               <button
                 type="button"
-                class="text-xs font-medium text-slate-600 underline hover:text-slate-900"
+                class="text-xs font-medium text-[var(--gvp-text-secondary)] underline hover:text-[var(--gvp-text)]"
                 @click="copyToClipboard(srtUrl, 'SRT URL')"
               >
                 복사
@@ -227,17 +227,17 @@ async function toggleBroadcast() {
             <input
               :value="srtUrl"
               readonly
-              class="mt-1 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-800"
+              class="mt-1 w-full rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-2 font-mono text-xs text-[var(--gvp-text)]"
             />
           </div>
         </div>
 
         <div>
           <div class="flex items-center justify-between">
-            <label class="text-xs font-medium text-slate-700">Stream Key (OBS 설정용 스트림 키)</label>
+            <label class="text-xs font-medium text-[var(--gvp-text)]">Stream Key (OBS 설정용 스트림 키)</label>
             <button
               type="button"
-              class="text-xs font-medium text-slate-600 underline hover:text-slate-900"
+              class="text-xs font-medium text-[var(--gvp-text-secondary)] underline hover:text-[var(--gvp-text)]"
               @click="copyToClipboard(streamKey, '스트림 키가')"
             >
               키 복사
@@ -248,18 +248,18 @@ async function toggleBroadcast() {
               :type="showStreamKey ? 'text' : 'password'"
               :value="streamKey"
               readonly
-              class="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-900"
+              class="flex-1 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-2 font-mono text-xs text-[var(--gvp-text)]"
             />
             <button
               type="button"
-              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
               @click="showStreamKey = !showStreamKey"
             >
               {{ showStreamKey ? 'Hide' : 'Reveal' }}
             </button>
             <button
               type="button"
-              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-colors"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
               @click="rotateKey"
             >
               Rotate Key
@@ -267,17 +267,17 @@ async function toggleBroadcast() {
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-6 border-t border-slate-200 pt-4 text-xs">
-          <label class="flex items-center gap-2 text-slate-700">
-            <input v-model="dvrEnabled" type="checkbox" class="rounded-md border-slate-300 accent-slate-900" />
+        <div class="flex flex-wrap items-center gap-6 border-t border-[var(--gvp-border)] pt-4 text-xs">
+          <label class="flex items-center gap-2 text-[var(--gvp-text)]">
+            <input v-model="dvrEnabled" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" />
             <span>Enable DVR Instant Rewind &amp; Automatic Live VOD Recording</span>
           </label>
 
           <div class="flex items-center gap-2">
-            <span class="text-slate-500">Latency Profile:</span>
+            <span class="text-[var(--gvp-text-secondary)]">Latency Profile:</span>
             <select
               v-model="lowLatencyMode"
-              class="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-900 tabular-nums"
+              class="rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--gvp-text)] tabular-nums"
             >
               <option value="ultra_low">Ultra-Low Latency (LL-HLS ~1.5s)</option>
               <option value="normal">Standard ABR (4K60 High Buffer)</option>
@@ -287,28 +287,28 @@ async function toggleBroadcast() {
       </div>
 
       <!-- Live Chat Moderation Queue -->
-      <div class="rounded-lg border border-slate-200 bg-white p-5">
-        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h2 class="text-sm font-semibold text-slate-900">실시간 채팅 모더레이션</h2>
-          <span class="text-xs text-slate-500 tabular-nums">Slow Mode: {{ slowModeSeconds }}s</span>
+      <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5">
+        <div class="flex items-center justify-between border-b border-[var(--gvp-border)] pb-3">
+          <h2 class="text-sm font-semibold text-[var(--gvp-text)]">실시간 채팅 모더레이션</h2>
+          <span class="text-xs text-[var(--gvp-text-secondary)] tabular-nums">Slow Mode: {{ slowModeSeconds }}s</span>
         </div>
 
         <div class="mt-4 max-h-[380px] space-y-2.5 overflow-y-auto text-xs">
           <div
             v-for="msg in moderationFeed"
             :key="msg.id"
-            class="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+            class="flex items-center justify-between gap-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3"
           >
             <div class="min-w-0">
-              <p class="font-semibold text-slate-900 tabular-nums">{{ msg.user }}</p>
-              <p class="mt-0.5" :class="msg.blocked ? 'line-through text-red-600' : 'text-slate-600'">
+              <p class="font-semibold text-[var(--gvp-text)] tabular-nums">{{ msg.user }}</p>
+              <p class="mt-0.5" :class="msg.blocked ? 'line-through text-[var(--gvp-live)]' : 'text-[var(--gvp-text-secondary)]'">
                 {{ msg.text }}
               </p>
             </div>
             <button
               type="button"
               class="shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors"
-              :class="msg.blocked ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'"
+              :class="msg.blocked ? 'border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]' : 'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)] hover:bg-[var(--gvp-live-soft)]'"
               @click="msg.blocked = !msg.blocked"
             >
               {{ msg.blocked ? 'Unban' : 'Timeout' }}

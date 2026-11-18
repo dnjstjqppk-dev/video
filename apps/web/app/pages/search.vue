@@ -57,16 +57,16 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl bg-white px-4 py-6 text-slate-900">
+  <div class="mx-auto max-w-6xl bg-[var(--gvp-surface)] px-4 py-6 text-[var(--gvp-text)]">
     <!-- Filter & Sort Bar -->
-    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-4">
       <div class="flex flex-wrap items-center gap-2">
         <button
           v-for="filter in typeFilters"
           :key="filter.id"
           type="button"
           class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition"
-          :class="selectedType === filter.id ? 'bg-slate-900 text-white' : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-50'"
+          :class="selectedType === filter.id ? 'bg-[var(--gvp-brand)] text-white' : 'border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
           @click="selectedType = filter.id"
         >
           {{ filter.label }}
@@ -74,10 +74,10 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
       </div>
 
       <div class="flex items-center gap-2 text-xs">
-        <span class="font-medium text-slate-500">{{ appStore.locale === 'ko' ? '정렬 기준:' : 'Sort by:' }}</span>
+        <span class="font-medium text-[var(--gvp-text-secondary)]">{{ appStore.locale === 'ko' ? '정렬 기준:' : 'Sort by:' }}</span>
         <select
           v-model="selectedSort"
-          class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-900 outline-none focus:border-blue-600"
+          class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-1.5 text-xs font-medium text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-brand)]"
         >
           <option value="relevance">Relevance (BM25 + Vector)</option>
           <option value="views">View Count (High to Low)</option>
@@ -89,7 +89,7 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
     <!-- Typo Correction Banner -->
     <div
       v-if="typoCorrection"
-      class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700"
+      class="mt-4 rounded-lg border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-4 py-2.5 text-xs text-[var(--gvp-warning)]"
     >
       Did you mean:
       <button
@@ -102,20 +102,20 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
       ?
     </div>
 
-    <p class="mt-4 text-xs text-slate-500">
-      Showing OpenSearch results for <strong class="font-semibold text-slate-900">"{{ query }}"</strong> (Korean Nori + English stemmer active)
+    <p class="mt-4 text-xs text-[var(--gvp-text-secondary)]">
+      Showing OpenSearch results for <strong class="font-semibold text-[var(--gvp-text)]">"{{ query }}"</strong> (Korean Nori + English stemmer active)
     </p>
 
     <div v-if="searchPending" class="mt-5 space-y-4">
-      <div v-for="i in 3" :key="i" class="h-32 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+      <div v-for="i in 3" :key="i" class="h-32 animate-pulse rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]" />
     </div>
-    <div v-else-if="searchError" class="mt-5 rounded-lg border border-red-200 bg-red-50 p-8 text-center" role="alert">
-      <p class="text-sm font-semibold text-red-700">
+    <div v-else-if="searchError" class="mt-5 rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-8 text-center" role="alert">
+      <p class="text-sm font-semibold text-[var(--gvp-live)]">
         {{ appStore.locale === 'ko' ? '검색 중 오류가 발생했습니다.' : 'Search failed. Please retry.' }}
       </p>
     </div>
-    <div v-else-if="results.length === 0" class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-12 text-center">
-      <p class="text-sm font-semibold text-slate-600">
+    <div v-else-if="results.length === 0" class="mt-5 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+      <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? `"${query}"에 대한 결과가 없습니다.` : `No results for "${query}".` }}
       </p>
     </div>
@@ -125,40 +125,40 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
       <article
         v-for="video in results"
         :key="video.id"
-        class="group flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-3 transition hover:bg-slate-50 sm:flex-row"
+        class="group flex flex-col gap-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3 transition hover:bg-[var(--gvp-canvas)] sm:flex-row"
       >
-        <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100 sm:w-80">
+        <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full shrink-0 overflow-hidden rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] sm:w-80">
           <img :src="video.thumbnailUrl" :alt="video.title" class="h-full w-full object-cover" />
-          <span class="absolute bottom-2 right-2 rounded-md border border-slate-200 bg-white/95 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-900 tabular-nums">
+          <span class="absolute bottom-2 right-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-1.5 py-0.5 font-mono text-xs font-semibold text-[var(--gvp-text)] tabular-nums">
             {{ Math.floor(video.durationSeconds / 60) }}:{{ String(video.durationSeconds % 60).padStart(2, '0') }}
           </span>
         </NuxtLink>
 
         <div class="flex flex-1 flex-col justify-between py-1">
           <div>
-            <NuxtLink :to="`/watch/${video.id}`" class="text-base font-bold leading-snug text-slate-900 group-hover:text-blue-600">
+            <NuxtLink :to="`/watch/${video.id}`" class="text-base font-bold leading-snug text-[var(--gvp-text)] group-hover:text-[var(--gvp-brand)]">
               {{ video.title }}
             </NuxtLink>
-            <p class="mt-1 text-xs text-slate-500 tabular-nums">
+            <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
               {{ video.viewCount.toLocaleString() }} views · Published {{ new Date(video.publishedAt || video.createdAt).toLocaleDateString() }}
             </p>
-            <NuxtLink :to="`/channels/${video.channelId}`" class="mt-3 flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900">
-              <img :src="video.channel?.avatarUrl" :alt="video.channel?.name" class="h-6 w-6 rounded-full border border-slate-200 object-cover" />
+            <NuxtLink :to="`/channels/${video.channelId}`" class="mt-3 flex items-center gap-2 text-xs text-[var(--gvp-text)] hover:text-[var(--gvp-text)]">
+              <img :src="video.channel?.avatarUrl" :alt="video.channel?.name" class="h-6 w-6 rounded-full border border-[var(--gvp-border)] object-cover" />
               <span class="font-semibold">{{ video.channel?.name }}</span>
-              <span class="rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">Verified</span>
+              <span class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--gvp-brand-hover)]">Verified</span>
             </NuxtLink>
-            <p class="mt-2 line-clamp-2 text-xs text-slate-600">
+            <p class="mt-2 line-clamp-2 text-xs text-[var(--gvp-text-secondary)]">
               {{ video.description }}
             </p>
           </div>
 
           <div class="mt-3 flex flex-wrap gap-1.5">
-            <span class="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700 tabular-nums">4K 60fps</span>
-            <span class="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-700">CC Subtitles</span>
+            <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text)] tabular-nums">4K 60fps</span>
+            <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text)]">CC Subtitles</span>
             <span
               v-for="tag in video.tags"
               :key="tag"
-              class="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+              class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--gvp-brand-hover)]"
             >
               #{{ tag }}
             </span>

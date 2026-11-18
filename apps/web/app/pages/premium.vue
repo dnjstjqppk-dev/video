@@ -62,15 +62,15 @@ async function activatePremium() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl bg-white px-4 py-12 text-slate-900">
+  <div class="mx-auto max-w-5xl bg-[var(--gvp-surface)] px-4 py-12 text-[var(--gvp-text)]">
     <div class="text-center">
-      <span class="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-blue-700">
+      <span class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--gvp-brand-hover)]">
         StreamVerse Premium
       </span>
-      <h1 class="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+      <h1 class="mt-4 text-3xl font-extrabold text-[var(--gvp-text)] sm:text-4xl">
         {{ appStore.locale === 'ko' ? '광고 없는 4K HDR 스트리밍과 오프라인 저장' : 'Ad-Free 4K HDR, Offline Downloads & Background Play' }}
       </h1>
-      <p class="mx-auto mt-3 max-w-2xl text-sm text-slate-600 tabular-nums">
+      <p class="mx-auto mt-3 max-w-2xl text-sm text-[var(--gvp-text-secondary)] tabular-nums">
         55% of your Premium subscription revenue goes directly to the creators you watch, tracked transparently on our double-entry ledger.
       </p>
     </div>
@@ -80,14 +80,14 @@ async function activatePremium() {
       <!-- Individual Plan -->
       <div
         class="cursor-pointer rounded-lg border p-6 transition"
-        :class="selectedPlan === 'individual' ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-white hover:bg-slate-50'"
+        :class="selectedPlan === 'individual' ? 'border-[var(--gvp-focus)] bg-[var(--gvp-canvas)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] hover:bg-[var(--gvp-canvas)]'"
         @click="selectedPlan = 'individual'"
       >
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold text-slate-900">Individual Premium</h2>
-          <span class="text-2xl font-extrabold text-blue-700 tabular-nums">{{ appStore.formatCurrency(14900) }} / mo</span>
+          <h2 class="text-xl font-bold text-[var(--gvp-text)]">Individual Premium</h2>
+          <span class="text-2xl font-extrabold text-[var(--gvp-brand-hover)] tabular-nums">{{ appStore.formatCurrency(14900) }} / mo</span>
         </div>
-        <ul class="mt-5 space-y-2.5 text-xs text-slate-600">
+        <ul class="mt-5 space-y-2.5 text-xs text-[var(--gvp-text-secondary)]">
           <li>• Zero pre-roll, mid-roll, or feed video ads</li>
           <li>• 4K 2160p 60fps High Bitrate & Spatial Audio</li>
           <li>• Offline encrypted video downloads on Web & Mobile</li>
@@ -98,14 +98,14 @@ async function activatePremium() {
       <!-- Family Plan -->
       <div
         class="cursor-pointer rounded-lg border p-6 transition"
-        :class="selectedPlan === 'family' ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-white hover:bg-slate-50'"
+        :class="selectedPlan === 'family' ? 'border-[var(--gvp-focus)] bg-[var(--gvp-canvas)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] hover:bg-[var(--gvp-canvas)]'"
         @click="selectedPlan = 'family'"
       >
         <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold text-slate-900 tabular-nums">Premium Family (Up to 5 Members)</h2>
-          <span class="text-2xl font-extrabold text-blue-700 tabular-nums">{{ appStore.formatCurrency(23900) }} / mo</span>
+          <h2 class="text-xl font-bold text-[var(--gvp-text)] tabular-nums">Premium Family (Up to 5 Members)</h2>
+          <span class="text-2xl font-extrabold text-[var(--gvp-brand-hover)] tabular-nums">{{ appStore.formatCurrency(23900) }} / mo</span>
         </div>
-        <ul class="mt-5 space-y-2.5 text-xs text-slate-600">
+        <ul class="mt-5 space-y-2.5 text-xs text-[var(--gvp-text-secondary)]">
           <li>• Share with up to 5 household members</li>
           <li>• Independent watch histories & recommendations</li>
           <li>• Simultaneous 4K streams across 5 devices</li>
@@ -115,13 +115,13 @@ async function activatePremium() {
     </div>
 
     <!-- Checkout Action -->
-    <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6 text-center">
-      <div v-if="checkoutComplete" class="text-green-700">
+    <div class="mt-8 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center">
+      <div v-if="checkoutComplete" class="text-[var(--gvp-success)]">
         <p class="text-lg font-bold">Welcome to StreamVerse Premium</p>
-        <p class="mt-1 text-xs text-slate-600">
+        <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           Your account tier is now <strong>{{ appStore.currentUser?.subscriptionTier?.toUpperCase() }}</strong>. Ad-free 4K playback is active immediately.
         </p>
-        <p v-if="transactionId" class="mt-2 font-mono text-[11px] text-slate-500 tabular-nums">
+        <p v-if="transactionId" class="mt-2 font-mono text-[11px] text-[var(--gvp-text-secondary)] tabular-nums">
           Receipt ID: {{ transactionId }} · Provider: {{ selectedProvider.toUpperCase() }} · Double-Entry Ledger Verified
         </p>
       </div>
@@ -130,7 +130,7 @@ async function activatePremium() {
           <button
             type="button"
             class="rounded-md border px-4 py-2 text-xs font-semibold transition"
-            :class="selectedProvider === 'toss' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+            :class="selectedProvider === 'toss' ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
             @click="selectedProvider = 'toss'"
           >
             KR · TossPayments (토스페이먼츠 간편결제)
@@ -138,23 +138,23 @@ async function activatePremium() {
           <button
             type="button"
             class="rounded-md border px-4 py-2 text-xs font-semibold transition"
-            :class="selectedProvider === 'stripe' ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+            :class="selectedProvider === 'stripe' ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
             @click="selectedProvider = 'stripe'"
           >
             GLOBAL · Stripe Global (Visa / Mastercard)
           </button>
         </div>
 
-        <div v-if="paymentError || checkoutError" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+        <div v-if="paymentError || checkoutError" class="mb-4 rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-4 text-xs text-[var(--gvp-live)]">
           <p class="font-bold">결제 승인 실패 (Fail-Closed)</p>
-          <p class="mt-1 text-[11px] text-red-600">{{ paymentError || checkoutError }}</p>
+          <p class="mt-1 text-[11px] text-[var(--gvp-live)]">{{ paymentError || checkoutError }}</p>
         </div>
 
         <div class="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             :disabled="processing"
-            class="rounded-md bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 tabular-nums"
+            class="rounded-md bg-[var(--gvp-brand)] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)] disabled:cursor-not-allowed disabled:bg-[var(--gvp-elevated)] disabled:text-[var(--gvp-text-secondary)] tabular-nums"
             @click="activatePremium"
           >
             {{ processing
@@ -165,12 +165,12 @@ async function activatePremium() {
           <button
             type="button"
             disabled
-            class="cursor-not-allowed rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-700 opacity-90"
+            class="cursor-not-allowed rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-4 py-2.5 text-xs font-semibold text-[var(--gvp-warning)] opacity-90"
           >
             결제 연동 준비 중 (Fail-Closed: 안전 검증 진행 중)
           </button>
         </div>
-        <p class="mt-3 text-xs text-slate-500">서버 승인 없이 등급이 변경되지 않습니다 (Fail-Closed) · {{ selectedProvider === 'toss' ? 'TossPayments' : 'Stripe' }} 안전결제</p>
+        <p class="mt-3 text-xs text-[var(--gvp-text-secondary)]">서버 승인 없이 등급이 변경되지 않습니다 (Fail-Closed) · {{ selectedProvider === 'toss' ? 'TossPayments' : 'Stripe' }} 안전결제</p>
       </div>
     </div>
   </div>
