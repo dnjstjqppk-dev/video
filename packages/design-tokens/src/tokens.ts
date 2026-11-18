@@ -1,109 +1,23 @@
+import { brand, semantic } from './palette'
+import { darkTheme } from './themes'
+import { motion, radius, shadow } from './motion'
+import { typography, spacing } from './typography'
+
+/** Backward-compatible aggregate for existing @gvp/ui primitives. */
 export const tokens = {
   colors: {
-    primary: {
-      50: '#f8fafc',
-      100: '#f1f5f9',
-      200: '#e2e8f0',
-      300: '#cbd5e1',
-      400: '#94a3b8',
-      500: '#64748b',
-      600: '#475569',
-      700: '#334155',
-      800: '#1e293b',
-      900: '#0f172a',
-      950: '#020617',
-    },
-    neutral: {
-      50: '#f8fafc',
-      100: '#f1f5f9',
-      200: '#e2e8f0',
-      300: '#cbd5e1',
-      400: '#94a3b8',
-      500: '#64748b',
-      600: '#475569',
-      700: '#334155',
-      800: '#1e293b',
-      900: '#0f172a',
-      950: '#020617',
-    },
-    accent: {
-      blue: '#2563eb',
-      green: '#15803d',
-      amber: '#b45309',
-      red: '#b91c1c',
-    },
-    brand: {
-      DEFAULT: '#0F172A',
-      hover: '#1E293B',
-      active: '#334155',
-      soft: '#F1F5F9',
-      contrast: '#FFFFFF',
-    },
-    link: {
-      DEFAULT: '#2563EB',
-      hover: '#1D4ED8',
-      soft: '#EFF6FF',
-    },
-    semantic: {
-      success: '#15803D',
-      successSoft: '#F0FDF4',
-      warning: '#B45309',
-      warningSoft: '#FFFBEB',
-      danger: '#B91C1C',
-      dangerSoft: '#FEF2F2',
-      info: '#2563EB',
-      infoSoft: '#EFF6FF',
-    },
+    brand: { DEFAULT: brand.primary, hover: brand.primaryHover, soft: brand.primarySoft, contrast: '#FFFFFF' },
+    link: { DEFAULT: brand.primary, hover: brand.primaryHover, soft: brand.primarySoft },
+    semantic: { success: semantic.success, warning: semantic.warning, danger: semantic.danger, info: semantic.info },
+    live: brand.live,
   },
   surfaces: {
-    canvas: '#FFFFFF',
-    s1: '#F8FAFC',
-    s2: '#F1F5F9',
-    s3: '#E2E8F0',
-    overlay: 'rgba(15, 23, 42, 0.45)',
-    border: '#E2E8F0',
-    borderStrong: '#CBD5E1',
+    canvas: darkTheme.canvas, s1: darkTheme.surface, s2: darkTheme.elevated,
+    overlay: darkTheme.overlay, border: darkTheme.borderSubtle, borderStrong: darkTheme.borderStrong,
   },
-  text: {
-    primary: '#0F172A',
-    secondary: '#475569',
-    muted: '#64748B',
-    faint: '#94A3B8',
-    inverse: '#FFFFFF',
-  },
-  spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '1rem',
-    lg: '1.5rem',
-    xl: '2rem',
-    '2xl': '2.5rem',
-    '3xl': '3rem',
-  },
-  radius: {
-    sm: '0.25rem',
-    md: '0.375rem',
-    lg: '0.5rem',
-    xl: '0.75rem',
-    pill: '9999px',
-  },
-  shadow: {
-    sm: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
-    md: '0 4px 6px -1px rgba(15, 23, 42, 0.08)',
-    lg: '0 10px 15px -3px rgba(15, 23, 42, 0.10)',
-  },
-  motion: {
-    fast: '120ms',
-    base: '180ms',
-    slow: '280ms',
-    ease: 'cubic-bezier(0.2, 0, 0, 1)',
-  },
-  typography: {
-    fontSans:
-      "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Inter', sans-serif",
-    fontMono:
-      "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  },
+  text: { primary: darkTheme.textPrimary, secondary: darkTheme.textSecondary, muted: darkTheme.textMuted, inverse: '#FFFFFF' },
+  spacing, radius, shadow, motion,
+  typography: { fontSans: typography.fontSans, fontMono: typography.fontMono },
 } as const
 
 export type DesignTokens = typeof tokens

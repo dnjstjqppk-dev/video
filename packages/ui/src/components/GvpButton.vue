@@ -41,16 +41,16 @@ withDefaults(
 .gvp-btn--md { font-size: 0.875rem; height: 2.25rem; padding: 0 1rem; }
 .gvp-btn--lg { font-size: 0.875rem; height: 2.5rem; padding: 0 1.25rem; }
 .gvp-btn--block { width: 100%; }
-.gvp-btn--primary { background: #0F172A; color: #FFFFFF; border-color: #0F172A; }
-.gvp-btn--primary:hover:not(:disabled) { background: #1E293B; border-color: #1E293B; }
-.gvp-btn--secondary { background: #FFFFFF; color: #334155; border-color: #CBD5E1; }
-.gvp-btn--secondary:hover:not(:disabled) { background: #F8FAFC; color: #0F172A; }
-.gvp-btn--link { background: #2563EB; color: #FFFFFF; border-color: #2563EB; }
-.gvp-btn--link:hover:not(:disabled) { background: #1D4ED8; border-color: #1D4ED8; }
-.gvp-btn--danger { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; }
-.gvp-btn--danger:hover:not(:disabled) { background: #FEE2E2; }
-.gvp-btn--ghost { background: transparent; color: #475569; }
-.gvp-btn--ghost:hover:not(:disabled) { background: #F1F5F9; color: #0F172A; }
+.gvp-btn--primary { background: var(--gvp-brand); color: #FFFFFF; border-color: var(--gvp-brand); }
+.gvp-btn--primary:hover:not(:disabled) { background: var(--gvp-brand-hover); border-color: var(--gvp-brand-hover); }
+.gvp-btn--secondary { background: var(--gvp-surface); color: var(--gvp-text); border-color: var(--gvp-border-strong); }
+.gvp-btn--secondary:hover:not(:disabled) { background: var(--gvp-elevated); }
+.gvp-btn--link { background: var(--gvp-brand); color: #FFFFFF; border-color: var(--gvp-brand); }
+.gvp-btn--link:hover:not(:disabled) { background: var(--gvp-brand-hover); border-color: var(--gvp-brand-hover); }
+.gvp-btn--danger { background: var(--gvp-live-soft); color: var(--gvp-live); border-color: transparent; }
+.gvp-btn--danger:hover:not(:disabled) { background: var(--gvp-live); color: #fff; }
+.gvp-btn--ghost { background: transparent; color: var(--gvp-text-secondary); }
+.gvp-btn--ghost:hover:not(:disabled) { background: var(--gvp-elevated); color: var(--gvp-text); }
 .gvp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .gvp-btn__spinner {
   width: 0.875rem; height: 0.875rem;

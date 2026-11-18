@@ -1,109 +1,32 @@
-/* StreamVerse (GVP) design tokens — Commercial Grade Light/White Base Editorial & Utility UI.
-   Mirror of packages/design-tokens/src/tokens.ts. */
+/* StreamVerse (GVP) Next-Gen Media Platform — entry stylesheet. */
+@import './gvp-themes.css';
+@import './gvp-utilities.css';
 
-:root {
-  --gvp-brand: #0F172A;
-  --gvp-brand-hover: #1E293B;
-  --gvp-brand-active: #334155;
-  --gvp-brand-soft: #F1F5F9;
-  --gvp-brand-contrast: #FFFFFF;
-
-  --gvp-link: #2563EB;
-  --gvp-link-hover: #1D4ED8;
-  --gvp-link-soft: #EFF6FF;
-
-  --gvp-success: #15803D;
-  --gvp-success-soft: #F0FDF4;
-  --gvp-warning: #B45309;
-  --gvp-warning-soft: #FFFBEB;
-  --gvp-danger: #B91C1C;
-  --gvp-danger-soft: #FEF2F2;
-  --gvp-info: #2563EB;
-  --gvp-info-soft: #EFF6FF;
-
-  --gvp-canvas: #FFFFFF;
-  --gvp-surface-1: #F8FAFC;
-  --gvp-surface-2: #F1F5F9;
-  --gvp-surface-3: #E2E8F0;
-  --gvp-overlay: rgba(15, 23, 42, 0.45);
-  --gvp-border: #E2E8F0;
-  --gvp-border-strong: #CBD5E1;
-
-  --gvp-text: #0F172A;
-  --gvp-text-secondary: #475569;
-  --gvp-text-muted: #64748B;
-  --gvp-text-faint: #94A3B8;
-
-  --gvp-font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Inter', sans-serif;
-  --gvp-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-  --gvp-radius-sm: 0.25rem;
-  --gvp-radius-md: 0.375rem;
-  --gvp-radius-lg: 0.5rem;
-  --gvp-radius-xl: 0.75rem;
-  --gvp-radius-pill: 9999px;
-
-  --gvp-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
-  --gvp-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08);
-  --gvp-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.10);
-
-  --gvp-motion-fast: 120ms;
-  --gvp-motion-base: 180ms;
-  --gvp-motion-slow: 280ms;
-  --gvp-ease: cubic-bezier(0.2, 0, 0, 1);
-
-  --gvp-focus-ring: 0 0 0 2px var(--gvp-canvas), 0 0 0 4px var(--gvp-brand);
-}
-
-html {
-  background-color: var(--gvp-canvas);
-  color-scheme: light;
-}
-
+html { background-color: var(--gvp-canvas); }
 body {
-  font-family: var(--gvp-font-sans);
+  font-family: 'Pretendard Variable', Pretendard, Inter, -apple-system,
+    BlinkMacSystemFont, system-ui, sans-serif;
   background-color: var(--gvp-canvas);
   color: var(--gvp-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-.tabular-nums,
-td,
-th,
-code,
-time {
+.tabular-nums, td, th, code, time, [data-metric] {
   font-variant-numeric: tabular-nums;
 }
 
-/* Visible keyboard focus everywhere (WCAG 2.4.7). */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--gvp-brand);
+  outline: 2px solid var(--gvp-focus);
   outline-offset: 2px;
-  border-radius: var(--gvp-radius-sm);
+  border-radius: 6px;
 }
 
-::selection {
-  background: #0F172A;
-  color: #FFFFFF;
-}
-
-/* Thin subtle scrollbars for rails and drawers. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #CBD5E1 transparent;
-}
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-*::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: var(--gvp-radius-pill);
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
+::selection { background: var(--gvp-brand); color: #fff; }
+* { scrollbar-width: thin; scrollbar-color: var(--gvp-border-strong) transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-thumb { background: var(--gvp-border-strong); border-radius: 9999px; }
+*::-webkit-scrollbar-track { background: transparent; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
