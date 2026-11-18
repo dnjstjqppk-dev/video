@@ -6,6 +6,8 @@
 - **분류 기준:** `IMPLEMENTED / PARTIAL / MOCK / BROKEN / MISSING / UNVERIFIED` (Master Directive ARTICLE 1)
 - **2026-11-17 remediated:** P0-1(코어 4종 영속화) · P0-2(실측/실인코딩/게시) · P0-3(결제 fail-closed) · P0-4(재생 서명·가시성) · P0-5(소재 파이프라인·연동검증·빈도제한) · P0-7(MFA 재인증) · P0-8(광고 인증·격리).
   P0-6은 코드 완료, ZITADEL 실테넌트 발급(사용자 작업) 대기. 상세 §4·§5의 `FIXED/DONE 2026-11-17` 표기 및 §6 참조.
+- **2026-11-18 UI/UX 상용화(Release 2.0.0):** 듀얼 테마 디자인 시스템(Deep Obsidian Dark 기본·Pure Crisp Light 콘솔) + 모듈화 앱 셸(50~80라인) +
+  시청자/스튜디오/관리자 spec 정합 + 전수 문서 최신화. 상세 `CHANGELOG.md` · `docs/DESIGN_SYSTEM.md` · `docs/ARCHITECTURE.md` · `docs/API_SPEC.md` · `docs/USER_GUIDE.md`.
 
 ---
 

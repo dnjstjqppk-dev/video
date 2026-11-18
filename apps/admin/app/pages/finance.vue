@@ -46,6 +46,7 @@ function exportSettlementsCsv() {
   const body = rows.map(s =>
     [s.id, s.channelId, s.status, s.periodStart, s.periodEnd, s.amount, s.taxWithheld, s.netAmount, s.currency].join(',')
   ).join('\n')
+  // cspell:disable-next-line -- unicode BOM escape for Excel CSV
   const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

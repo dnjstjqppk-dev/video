@@ -7,18 +7,13 @@ const emit = defineEmits<{ (e: 'toast', msg: string): void }>()
 const appStore = useAppStore()
 const library = useLibraryStore()
 const api = useApi()
-const ko = computed(() => appStore.locale === 'ko')
-const menuOpen = ref(false)
-const hovering = ref(false)
+const ko = computed(() => appStore.locale === 'ko'); const menuOpen = ref(false); const hovering = ref(false)
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 const progress = computed(() => {
-  const p = appStore.getWatchProgress(props.video.id)
-  return props.video.durationSeconds > 0 ? Math.min(100, (p / props.video.durationSeconds) * 100) : 0
+  const p = appStore.getWatchProgress(props.video.id); const d = props.video.durationSeconds
+  return d > 0 ? Math.min(100, (p / d) * 100) : 0
 })
-function onEnter() {
-  if (hoverTimer) clearTimeout(hoverTimer)
-  hoverTimer = setTimeout(() => { hovering.value = true }, 400)
-}
+function onEnter() { if (hoverTimer) clearTimeout(hoverTimer); hoverTimer = setTimeout(() => { hovering.value = true }, 400) }
 function onLeave() { if (hoverTimer) clearTimeout(hoverTimer); hovering.value = false }
 async function feedback(action: 'not_interested' | 'dont_recommend_channel') {
   menuOpen.value = false
