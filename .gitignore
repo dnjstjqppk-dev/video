@@ -36,6 +36,8 @@ vendor/
 *.log
 tmp/
 .temp/
+tests/test-results/
+playwright-report/
 .DS_Store
 Thumbs.db
 .env
