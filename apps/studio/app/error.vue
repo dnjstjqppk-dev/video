@@ -25,7 +25,7 @@ const handleError = () => clearError({ redirect: '/' })
       <div class="mt-6">
         <button
           type="button"
-          class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)]"
+          class="inline-flex h-9 items-center justify-center rounded-full bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)]"
           @click="handleError"
         >
           대시보드로 이동

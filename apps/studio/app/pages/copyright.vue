@@ -218,7 +218,7 @@ async function submitDispute() {
           <select
             id="dispute-reason"
             v-model="disputeReason"
-            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-2.5 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+            class="mt-1 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-2.5 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           >
             <option value="fair_use">공정 이용 (비평, 교육, 패러디 등 저작권법상 인정된 이용)</option>
             <option value="public_domain">공유 저작물 / 퍼블릭 도메인 음원</option>
@@ -233,7 +233,7 @@ async function submitDispute() {
             id="dispute-explain"
             v-model="disputeExplanation"
             rows="4"
-            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-3 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+            class="mt-1 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-3 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
             placeholder="해당 저작물을 적법하게 사용한 근거 및 라이선스 번호, 사용 목적을 구체적으로 기재해주세요."
           />
         </div>

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
+import { BRAND } from '@gvp/design-tokens/src/brand'
 import { useAppStore } from '~/stores/app'
 
 const appStore = useAppStore()
 const api = useApi()
 
 useSeoMeta({
-  title: '로그인 — vravra 계정'
+  title: `로그인 — ${BRAND.name} ${BRAND.nameKo} 계정`
 })
 
 const devToken = ref('')
@@ -48,7 +49,7 @@ async function loginWithDevToken() {
 <template>
   <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center bg-[var(--gvp-surface)] px-4 py-8 text-[var(--gvp-text)]">
     <div class="w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8">
-      <VravraLogo :size="32" />
+      <VravraLogo size="md" animate show-tagline />
       <h1 class="mt-4 text-xl font-bold text-[var(--gvp-text)]">로그인</h1>
       <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
         OIDC 싱글사인온으로 안전하게 로그인하세요.
@@ -58,7 +59,7 @@ async function loginWithDevToken() {
         href="/auth/login"
         class="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-[var(--gvp-brand)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
       >
-        vravra 계정으로 계속하기
+        {{ BRAND.name }} 계정으로 계속하기
       </a>
 
       <div v-if="isLocalhost" class="mt-6 border-t border-[var(--gvp-border)] pt-5">

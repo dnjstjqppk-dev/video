@@ -95,13 +95,13 @@ async function save() {
             v-model="scheduledLocal"
             type="datetime-local"
             aria-label="예약 공개 시각"
-            class="tabular-nums mt-2 h-9 w-full max-w-xs rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+            class="tabular-nums mt-2 h-9 w-full max-w-xs rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
             @click.stop
           />
         </span>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button type="button" :disabled="busy" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="save">
+        <button type="button" :disabled="busy" class="inline-flex h-9 items-center rounded-full bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="save">
           {{ busy ? '저장 중…' : '공개 상태 저장' }}
         </button>
         <p v-if="notice" role="status" class="text-xs font-medium text-[var(--gvp-success)]">{{ notice }}</p>

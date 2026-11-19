@@ -13,8 +13,8 @@ const paymentError = ref('')
 const checkoutError = paymentError
 
 useSeoMeta({
-  title: 'vravra Premium — Ad-Free 4K HDR, Offline & Background Play',
-  description: 'Upgrade to vravra Premium for uninterrupted 4K HDR streaming, offline downloads, and spatial audio.'
+  title: 'vravra 브라브라 Premium — Ad-Free 4K HDR, Offline & Background Play',
+  description: '너의 바이브를 플레이하다, 너의 목소리를 공유하다. Upgrade to vravra Premium for uninterrupted 4K HDR streaming, offline downloads, and spatial audio.'
 })
 
 // Fail-Closed 결제 핸들러: 서버의 공식 검증 및 승인이 없을 경우 절대 티어를 승격하지 않음 (GV-01)

@@ -7,10 +7,10 @@ function resolveSystem(): 'light' | 'dark' {
 }
 
 export function useConsoleTheme() {
-  const preference = useState<ConsoleThemePreference>('console-theme', () => 'light')
+  const preference = useState<ConsoleThemePreference>('console-theme', () => 'dark')
   const mode = computed<'light' | 'dark'>(() =>
     preference.value === 'system'
-      ? (import.meta.client ? resolveSystem() : 'light')
+      ? (import.meta.client ? resolveSystem() : 'dark')
       : preference.value,
   )
 
@@ -30,8 +30,8 @@ export function useConsoleTheme() {
   onMounted(() => {
     try {
       const saved = localStorage.getItem(KEY)
-      apply(saved === 'dark' || saved === 'system' ? saved : 'light')
-    } catch { apply('light') }
+      apply(saved === 'light' || saved === 'system' ? saved : 'dark')
+    } catch { apply('dark') }
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (preference.value === 'system') apply('system')
     })

@@ -24,7 +24,7 @@ useSeoMeta({
       <div class="mt-6">
         <NuxtLink
           to="/"
-          class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)]"
+          class="inline-flex h-9 items-center justify-center rounded-full bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)]"
         >
           대시보드로 돌아가기
         </NuxtLink>

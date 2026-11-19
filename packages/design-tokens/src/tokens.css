@@ -1,0 +1,55 @@
+/* vravra design tokens (SSOT). Brand accents are shared; surfaces flip
+   with [data-theme]. Apps default to dark (cinema); light is daytime. */
+:root {
+  --color-brand-crimson: #ff2e4c;
+  --color-brand-crimson-hover: #e0223e;
+  --color-brand-crimson-glow: rgba(255, 46, 76, 0.38);
+  --color-studio-cobalt: #2563eb;
+  --color-studio-cobalt-hover: #1d4ed8;
+  --color-studio-cobalt-glow: rgba(37, 99, 235, 0.35);
+  --color-live-signal: #ff3b30;
+  --color-premiere-amber: #ff9f1c;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --bg-canvas: #ffffff;
+  --bg-surface: #f4f4f6;
+  --bg-elevated: #eaecef;
+  --border-hairline: #e5e7eb;
+  --border-strong: #d4d4d8;
+  --text-primary: #0f0f0f;
+  --text-secondary: #606060;
+  --text-muted: #909090;
+  --focus-ring: #e0223e;
+  --overlay-scrim: rgba(15, 15, 16, 0.45);
+  --font-sans: 'Plus Jakarta Sans', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+:root[data-theme='dark'], .dark {
+  color-scheme: dark;
+  --bg-canvas: #0a0a0c;
+  --bg-surface: #141418;
+  --bg-elevated: #1f1f26;
+  --border-hairline: #26262e;
+  --border-strong: #3a3a44;
+  --text-primary: #f4f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --focus-ring: #ff6b81;
+  --overlay-scrim: rgba(0, 0, 0, 0.62);
+}
+
+:root[data-theme='light'], .light {
+  color-scheme: light;
+}
+
+/* Type scale (spec §2.2). */
+.vravra-display { font-size: 2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
+.vravra-watch-title { font-size: 1.25rem; font-weight: 700; line-height: 1.35; letter-spacing: -0.015em; }
+.vravra-section-title { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+.vravra-card-title { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; }
+.vravra-body { font-size: 0.875rem; font-weight: 400; line-height: 1.5; }
+.vravra-meta { font-size: 0.75rem; font-weight: 500; line-height: 1.3; }
+.vravra-data { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

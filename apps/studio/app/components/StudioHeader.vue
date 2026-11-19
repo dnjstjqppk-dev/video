@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UserProfile } from '@gvp/shared-types'
-import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
+import VravraStudioLogo from '@gvp/ui/src/components/VravraStudioLogo.vue'
 
 defineProps<{ sessionUser: UserProfile | null }>()
 defineEmits<{ (e: 'toggle-drawer'): void; (e: 'toggle-collapse'): void; (e: 'logout'): void }>()
@@ -23,7 +23,7 @@ function submitSearch() {
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
     </button>
     <NuxtLink to="/" class="flex shrink-0 items-center gap-2" aria-label="스튜디오 홈">
-      <VravraLogo :size="26" suffix="studio" suffix-tone="studio" />
+      <VravraStudioLogo size="sm" animate />
     </NuxtLink>
     <form class="mx-auto hidden w-full max-w-xl items-center md:flex" role="search" @submit.prevent="submitSearch">
       <input v-model="searchTerm" type="search" placeholder="내 콘텐츠 검색" aria-label="내 콘텐츠 검색" class="h-9 w-full rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-4 text-sm text-[var(--gvp-text)] outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]" />

@@ -84,22 +84,22 @@ watch(() => props.videoId, load, { immediate: true })
             {{ el.title }}
             <span class="tabular-nums text-[var(--gvp-text-secondary)]">· {{ el.startSec }}초–{{ el.endSec }}초 → {{ el.target }}</span>
           </span>
-          <button type="button" class="shrink-0 rounded-md border border-[var(--gvp-border-strong)] px-2 py-1 font-medium hover:bg-[var(--gvp-canvas)]" @click="remove(el.id)">삭제</button>
+          <button type="button" class="shrink-0 rounded-lg border border-[var(--gvp-border-strong)] px-2 py-1 font-medium hover:bg-[var(--gvp-canvas)]" @click="remove(el.id)">삭제</button>
         </li>
       </ul>
       <p v-else class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center text-xs text-[var(--gvp-text-secondary)]">등록된 최종 화면·카드가 없습니다.</p>
       <div class="grid grid-cols-2 gap-2 rounded-lg border border-[var(--gvp-border)] p-3 sm:grid-cols-3">
         <label class="text-xs font-medium text-[var(--gvp-text-secondary)]">종류
-          <select v-model="kind" class="mt-1 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]">
+          <select v-model="kind" class="mt-1 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]">
             <option value="card">카드</option>
             <option value="end_screen">최종 화면</option>
           </select>
         </label>
         <label class="col-span-2 text-xs font-medium text-[var(--gvp-text-secondary)]">제목
-          <input v-model="title" type="text" placeholder="예: 다음 영상 보기" class="mt-1 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
+          <input v-model="title" type="text" placeholder="예: 다음 영상 보기" class="mt-1 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
         </label>
         <label class="text-xs font-medium text-[var(--gvp-text-secondary)]">대상 종류
-          <select v-model="targetType" class="mt-1 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]">
+          <select v-model="targetType" class="mt-1 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]">
             <option value="video">동영상</option>
             <option value="playlist">재생목록</option>
             <option value="channel">채널</option>
@@ -107,16 +107,16 @@ watch(() => props.videoId, load, { immediate: true })
           </select>
         </label>
         <label class="col-span-2 text-xs font-medium text-[var(--gvp-text-secondary)]">대상 (ID 또는 URL)
-          <input v-model="target" type="text" placeholder="동영상 ID 또는 https://…" class="mt-1 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs outline-none focus:border-[var(--gvp-focus)]" />
+          <input v-model="target" type="text" placeholder="동영상 ID 또는 https://…" class="mt-1 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs outline-none focus:border-[var(--gvp-focus)]" />
         </label>
         <label class="text-xs font-medium text-[var(--gvp-text-secondary)]">시작 (초)
-          <input v-model.number="startSec" type="number" min="0" class="tabular-nums mt-1 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
+          <input v-model.number="startSec" type="number" min="0" class="tabular-nums mt-1 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
         </label>
         <label class="text-xs font-medium text-[var(--gvp-text-secondary)]">종료 (초)
-          <input v-model.number="endSec" type="number" min="1" class="tabular-nums mt-1 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
+          <input v-model.number="endSec" type="number" min="1" class="tabular-nums mt-1 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
         </label>
         <span class="col-span-2 flex items-end sm:col-span-1">
-          <button type="button" :disabled="busy || !title.trim() || !target.trim()" class="h-9 w-full rounded-md bg-[var(--gvp-studio)] px-4 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="add">요소 추가</button>
+          <button type="button" :disabled="busy || !title.trim() || !target.trim()" class="h-9 w-full rounded-full bg-[var(--gvp-studio)] px-4 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="add">요소 추가</button>
         </span>
       </div>
       <p v-if="durationSeconds > 0" class="tabular-nums text-[11px] text-[var(--gvp-text-secondary)]">영상 길이: {{ durationSeconds }}초 (종료 시각은 길이 이내여야 합니다)</p>

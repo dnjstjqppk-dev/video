@@ -28,6 +28,30 @@ func SanitizeUserText(input string, maxRunes int) string {
 	return stripped
 }
 
+// MaxVideoTags bounds the tag list stored per video.
+const MaxVideoTags = 12
+
+// SanitizeTags trims, dedupes, and caps a user-supplied tag list.
+func SanitizeTags(tags []string) []string {
+	out := make([]string, 0, len(tags))
+	seen := make(map[string]bool, len(tags))
+	for _, t := range tags {
+		clean := SanitizeUserText(t, 32)
+		if clean == "" || seen[clean] {
+			continue
+		}
+		seen[clean] = true
+		out = append(out, clean)
+		if len(out) >= MaxVideoTags {
+			break
+		}
+	}
+	if out == nil {
+		return []string{}
+	}
+	return out
+}
+
 // stripTags removes <...> sequences. A '<' without a closing '>' on the same
 // logical tag is emitted literally so plain-text comparisons (a < b) survive,
 // while well-formed tags (including script/style/iframe/img with handlers)

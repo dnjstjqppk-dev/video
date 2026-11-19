@@ -161,7 +161,7 @@ async function saveCustomization() {
             id="ch-desc"
             v-model="description"
             rows="4"
-            class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+            class="w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
       </div>

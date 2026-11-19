@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useAppStore } from '~/stores/app'
+import { BRAND } from '@gvp/design-tokens/src/brand'
 
 const appStore = useAppStore()
 const config = useRuntimeConfig()
 const step = ref(0)
 
 useSeoMeta({
-  title: '시작하기',
-  description: 'vravra 시작 가이드: 시청, 구독, 업로드, Premium까지 3단계로 안내합니다.'
+  title: `시작하기 | ${BRAND.name} ${BRAND.nameKo}`,
+  description: `${BRAND.name} ${BRAND.nameKo} 시작 가이드: 시청, 구독, 업로드, Premium까지 3단계로 안내합니다. ${BRAND.sloganKo}`,
+  ogSiteName: `${BRAND.name} ${BRAND.nameKo}`,
 })
 
 const steps = computed(() => [

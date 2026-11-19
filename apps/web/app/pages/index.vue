@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAppStore } from '~/stores/app'
+import { BRAND } from '@gvp/design-tokens/src/brand'
 
 const appStore = useAppStore()
 const api = useApi()
@@ -7,11 +8,11 @@ const api = useApi()
 useSeoMeta({
   title: computed(() =>
     appStore.locale === 'ko'
-      ? '홈 — 맞춤형 4K 비디오, 쇼츠 & 실시간 스트리밍'
-      : 'Home — Personalized 4K Videos, Shorts & Live Streams'
+      ? `홈 — 맞춤형 4K 비디오, 쇼츠 & 실시간 스트리밍 | ${BRAND.name} ${BRAND.nameKo}`
+      : `Home — Personalized 4K Videos, Shorts & Live Streams | ${BRAND.name}`
   ),
-  description:
-    'Discover personalized 4K HDR videos, Shorts, and real-time live streams on vravra.'
+  description: BRAND.sloganKo,
+  ogSiteName: `${BRAND.name} ${BRAND.nameKo}`,
 })
 
 const categories = [
@@ -145,7 +146,7 @@ function formatViews(count: number): string {
 <template>
   <div class="mx-auto max-w-[1720px] bg-[var(--gvp-surface)] px-4 py-4 text-[var(--gvp-text)] sm:px-6">
     <!-- Category Filter Chips -->
-    <div class="sticky top-14 z-30 -mx-4 mb-6 flex items-center gap-1 border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-3 sm:-mx-6 sm:px-4">
+    <div class="sticky top-14 z-10 -mx-4 mb-6 flex items-center gap-1 border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-3 sm:-mx-6 sm:px-4">
       <button type="button" aria-label="카테고리 왼쪽으로 스크롤" class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] sm:inline-flex" @click="scrollChips(-1)">‹</button>
       <div ref="chipRail" class="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto" style="mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);">
         <button

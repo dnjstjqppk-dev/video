@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserProfile } from '@gvp/shared-types'
+import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
 
 defineProps<{ sessionUser: UserProfile | null; orgName: string }>()
 defineEmits<{ (e: 'toggle-drawer'): void; (e: 'toggle-collapse'): void; (e: 'logout'): void }>()
@@ -15,8 +16,7 @@ const theme = useConsoleTheme()
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
     </button>
     <NuxtLink to="/" class="flex shrink-0 items-center gap-2" aria-label="파트너 홈">
-      <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--gvp-brand)] text-xs font-bold text-white">P</span>
-      <span class="hidden text-sm font-bold tracking-tight text-[var(--gvp-text)] min-[420px]:inline">파트너</span>
+      <VravraLogo size="sm" />
     </NuxtLink>
     <span v-if="orgName" class="hidden min-w-0 truncate rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-brand-hover)] sm:inline" :title="orgName">{{ orgName }}</span>
     <div class="ml-auto flex shrink-0 items-center gap-1.5">

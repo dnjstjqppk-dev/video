@@ -1,4 +1,4 @@
-# vravra — vravra (Enterprise Multi-Surface Ecosystem)
+# vravra (브라브라) — Enterprise Multi-Surface Ecosystem
 
 vravra is a next-generation video content platform: **4 independently
 deployed Vue 3 / Nuxt 4 consoles** (viewer web, vravra studio, partners,
@@ -6,23 +6,24 @@ admin), a **Flutter mobile app**, and a **Go modular monolith API + workers**
 backed by **PostgreSQL 18, Valkey 8, NATS JetStream, OpenSearch, ClickHouse,
 and Cloudflare R2 / Stream**.
 
-> **Release 3.0.0 (2026-11-19):** vravra rebrand is complete — Vivid
-> Electric Coral-Crimson (`#FF2E4C`) + Studio Cobalt (`#2563EB`) dual theme
-> (daytime Light + True OLED Dark), YouTube-grade viewer/studio UX, real
-> API-backed flows, and full docs. See [CHANGELOG.md](CHANGELOG.md)
-> and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for scope
-> and remaining backend backlog.
+> **Release 3.2.0 (2026-11-19):** full vravra identity system —
+> `tokens.css` + `brand.ts` single sources, custom SVG wordmark logos
+> with left-to-right wipe transition, Play Your Vibe slogans (브라브라),
+> dark-default OLED cinema theme, and YouTube-grade viewer/studio UX.
+> See [CHANGELOG.md](CHANGELOG.md) and
+> [docs/BRAND_GUIDELINES.md](docs/BRAND_GUIDELINES.md).
 
 ---
 
 ## 1. Design system (summary)
 
-- **Brand:** Vivid Electric Coral-Crimson `#FF2E4C` primary,
-  Signal Amber-Red `#FF3B30` reserved for live, Studio Cobalt `#2563EB`
-  for vravra studio data. Full spec: [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md).
-- **Themes:** every surface defaults to daytime Light with a True OLED Dark
-  mode and a persisted light/dark/system toggle; colors are CSS variables,
-  never hard-coded in components.
+- **Brand:** `vravra` (브라브라) — Vivid Crimson `#FF2E4C` primary,
+  Signal `#FF3B30` reserved for live, Studio Cobalt `#2563EB` for
+  vravra studio. Sources: `tokens.css`, `brand.ts`.
+  Full spec: [docs/BRAND_GUIDELINES.md](docs/BRAND_GUIDELINES.md).
+- **Themes:** every surface defaults to True OLED Dark cinema with a
+  daytime Light mode and a persisted light/dark/system toggle; colors
+  are CSS variables, never hard-coded in components.
 - **Shell:** glass sticky header, autocomplete search, `+ Create` menu, tabbed
   notification center, workspace switcher, 240px/72px drawer, mobile bottom tabs.
 - **Modules:** every new or touched component stays within 50-80 lines and

@@ -43,14 +43,16 @@ apps/web/app/
 ```
 
 Studio, partners and admin share the same pattern with `useStudioApi`,
-`usePartnerApi`, `useAdminApi` and `useConsoleTheme` (light default).
+`usePartnerApi`, `useAdminApi` and `useConsoleTheme` (dark default,
+light/dark/system toggle).
 
 ## 3. State management
 
 - `app.ts` (web): session user, sidebar, locale, currency, watch progress map,
   hidden videos and blocked channels.
-- `library.ts` (web): history, saved, liked, subscriptions persisted to
-  `localStorage` (`gvp_library_v1`, capped at 200 entries each).
+- `library.ts` (web): history, saved, liked, queue, subscriptions
+  persisted to `localStorage` (`gvp_library_v1`, capped at 200 entries
+  each). The queue feeds watch-page autoplay-next.
 - Consoles: per-app session state plus `console-theme` preference.
 - Server state uses `useAsyncData` with refresh on user action; failures render
   empty or error states, never seed fallbacks.

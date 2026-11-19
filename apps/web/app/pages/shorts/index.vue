@@ -6,8 +6,8 @@ const appStore = useAppStore()
 const api = useApi()
 
 useSeoMeta({
-  title: 'Shorts — Vertical Fullscreen Feed',
-  description: 'Swipe through high-energy vertical Shorts with instant preloading on vravra.'
+  title: 'Shorts — Vertical Fullscreen Feed | vravra 브라브라',
+  description: '너의 바이브를 플레이하다. Swipe through high-energy vertical Shorts with instant preloading on vravra.'
 })
 
 interface ShortClip {
@@ -48,7 +48,7 @@ function toClip(v: Video): ShortClip {
   }
 }
 
-const { data: shortsFeed } = await useAsyncData('shorts-feed', async () => {
+const { data: shortsFeed, pending: shortsPending } = await useAsyncData('shorts-feed', async () => {
   try {
     const res = await api.getShortsFeed(1, 20)
     return res.items || []
@@ -291,7 +291,13 @@ onUnmounted(() => {
       <link v-if="nextShort" rel="preload" as="image" :href="nextShort.posterUrl" />
     </Head>
 
-    <div v-if="currentShort" class="relative flex w-full max-w-3xl flex-col items-center gap-4 sm:w-auto sm:flex-row">
+    <div v-if="shortsPending" class="flex w-full max-w-3xl flex-col items-center gap-4 sm:w-auto sm:flex-row" role="status" aria-label="불러오는 중">
+      <div class="h-[56vh] max-h-[640px] w-full max-w-[420px] animate-pulse rounded-lg bg-[var(--gvp-elevated)] sm:h-[82vh] sm:w-[46vh]" />
+      <div class="flex flex-row gap-3 sm:flex-col">
+        <div v-for="n in 5" :key="n" class="h-12 w-12 animate-pulse rounded-full bg-[var(--gvp-elevated)]" />
+      </div>
+    </div>
+    <div v-else-if="currentShort" class="relative flex w-full max-w-3xl flex-col items-center gap-4 sm:w-auto sm:flex-row">
       <!-- Vertical 9:16 Viewport Container -->
       <div
         class="relative flex h-[56vh] max-h-[640px] w-full max-w-[420px] cursor-pointer select-none flex-col overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] sm:h-[82vh] sm:w-[46vh]"
@@ -533,7 +539,7 @@ onUnmounted(() => {
       <!-- Interactive Shorts Comments Drawer (Side Sheet) -->
       <div
         v-if="showCommentsDrawer"
-        class="fixed inset-x-0 bottom-0 z-50 flex max-h-[72vh] flex-col rounded-t-2xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-[var(--gvp-text)] lg:static lg:z-auto lg:h-[82vh] lg:max-h-none lg:w-80 lg:rounded-lg"
+        class="fixed inset-x-0 bottom-0 z-[60] flex max-h-[72vh] flex-col rounded-t-2xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-[var(--gvp-text)] lg:static lg:z-auto lg:h-[82vh] lg:max-h-none lg:w-80 lg:rounded-lg"
       >
         <div class="flex items-center justify-between border-b border-[var(--gvp-border)] pb-3">
           <h3 class="text-sm font-bold text-[var(--gvp-text)] tabular-nums">Shorts Comments ({{ currentShort.comments }})</h3>
@@ -594,7 +600,7 @@ onUnmounted(() => {
       <!-- Sound Attribution / Remix Sheet Modal -->
       <div
         v-if="showSoundModal"
-        class="fixed inset-x-0 bottom-0 z-50 flex max-h-[72vh] flex-col overflow-y-auto rounded-t-2xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 text-[var(--gvp-text)] lg:static lg:z-auto lg:h-[82vh] lg:max-h-none lg:w-80 lg:rounded-lg"
+        class="fixed inset-x-0 bottom-0 z-[60] flex max-h-[72vh] flex-col overflow-y-auto rounded-t-2xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 text-[var(--gvp-text)] lg:static lg:z-auto lg:h-[82vh] lg:max-h-none lg:w-80 lg:rounded-lg"
       >
         <div class="flex items-center justify-between border-b border-[var(--gvp-border)] pb-3">
           <h3 class="text-sm font-bold text-[var(--gvp-text)]">{{ appStore.locale === 'ko' ? '오디오 상세' : 'Audio Details' }}</h3>

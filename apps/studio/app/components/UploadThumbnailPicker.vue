@@ -97,7 +97,7 @@ watch(() => [props.videoId, props.status], load, { immediate: true })
         자동 추출 프레임은 인코딩이 끝나면 표시됩니다. 커스텀 썸네일은 지금 바로 올릴 수 있습니다.
       </p>
       <div class="flex flex-wrap items-center gap-2">
-        <label class="inline-flex h-9 cursor-pointer items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-xs font-medium hover:bg-[var(--gvp-canvas)]">
+        <label class="inline-flex h-9 cursor-pointer items-center rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-xs font-medium hover:bg-[var(--gvp-canvas)]">
           커스텀 썸네일 업로드
           <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="upload(($event.target as HTMLInputElement).files?.[0])" />
         </label>

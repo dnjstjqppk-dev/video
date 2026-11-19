@@ -191,7 +191,7 @@ async function toggleBroadcast() {
           <input
             v-model="streamTitle"
             type="text"
-            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+            class="mt-1 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           />
         </div>
 
@@ -277,7 +277,7 @@ async function toggleBroadcast() {
             <span class="text-[var(--gvp-text-secondary)]">Latency Profile:</span>
             <select
               v-model="lowLatencyMode"
-              class="rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--gvp-text)] tabular-nums"
+              class="rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--gvp-text)] tabular-nums"
             >
               <option value="ultra_low">Ultra-Low Latency (LL-HLS ~1.5s)</option>
               <option value="normal">Standard ABR (4K60 High Buffer)</option>

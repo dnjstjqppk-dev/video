@@ -37,7 +37,7 @@ onMounted(() => {
 <template>
   <aside :aria-label="ko ? '탐색 메뉴' : 'Navigation'"
     :class="mini ? 'w-[72px] px-2' : 'w-60 px-3'"
-    class="sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-[var(--gvp-border)] bg-[var(--gvp-surface)] transition-all md:block">
+    class="sticky top-14 z-30 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-[var(--gvp-border)] bg-[var(--gvp-surface)] transition-all md:block">
     <nav class="mt-3 flex flex-col gap-0.5">
       <NuxtLink v-for="it in main" :key="it.path" :to="it.path" :title="mini ? it.label : undefined"
         :class="[route.path === it.path ? 'bg-[var(--gvp-elevated)] font-semibold text-[var(--gvp-text)]' : 'text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]', mini ? 'flex-col gap-1 px-1 py-2.5 text-[10px]' : 'gap-3 px-3 py-2 text-sm']"

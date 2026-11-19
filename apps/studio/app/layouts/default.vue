@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserProfile } from '@gvp/shared-types'
+import BrandSplash from '@gvp/ui/src/components/BrandSplash.vue'
 
 const route = useRoute()
 const api = useStudioApi()
@@ -35,6 +36,7 @@ async function logout() {
 
 <template>
   <div class="flex min-h-screen flex-col bg-[var(--gvp-surface)] text-[var(--gvp-text)]">
+    <BrandSplash variant="studio" />
     <StudioHeader :session-user="sessionUser" @toggle-drawer="mobileNavOpen = !mobileNavOpen" @toggle-collapse="collapsed = !collapsed" @logout="logout" />
     <div v-if="mobileNavOpen" class="fixed inset-0 z-40 bg-[var(--gvp-scrim)] md:hidden" aria-hidden="true" @click="mobileNavOpen = false" />
     <div class="flex flex-1">

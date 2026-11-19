@@ -55,15 +55,15 @@ watch(() => props.videoId, load, { immediate: true })
       <ul v-else-if="captions.length" class="divide-y divide-[var(--gvp-border)] rounded-lg border border-[var(--gvp-border)]">
         <li v-for="c in captions" :key="c.id" class="flex items-center justify-between gap-3 px-3 py-2 text-xs">
           <span class="min-w-0 truncate text-[var(--gvp-text)]"><strong>{{ c.language }}</strong> · {{ c.label || c.vttUrl }}</span>
-          <button type="button" class="shrink-0 rounded-md border border-[var(--gvp-border-strong)] px-2 py-1 font-medium hover:bg-[var(--gvp-canvas)]" @click="remove(c.id)">삭제</button>
+          <button type="button" class="shrink-0 rounded-lg border border-[var(--gvp-border-strong)] px-2 py-1 font-medium hover:bg-[var(--gvp-canvas)]" @click="remove(c.id)">삭제</button>
         </li>
       </ul>
       <p v-else class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center text-xs text-[var(--gvp-text-secondary)]">등록된 자막이 없습니다.</p>
       <div class="grid grid-cols-1 gap-2 rounded-lg border border-[var(--gvp-border)] p-3 sm:grid-cols-[88px_1fr_2fr_auto]">
-        <input v-model="lang" type="text" aria-label="자막 언어 코드" placeholder="ko" class="h-9 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs outline-none focus:border-[var(--gvp-focus)]" />
-        <input v-model="label" type="text" aria-label="자막 라벨" placeholder="라벨 (선택)" class="h-9 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
-        <input v-model="vttUrl" type="url" aria-label="VTT 파일 URL" placeholder="https://…/captions.vtt" class="h-9 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs outline-none focus:border-[var(--gvp-focus)]" />
-        <button type="button" :disabled="busy || !vttUrl.trim()" class="h-9 rounded-md bg-[var(--gvp-studio)] px-4 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="add">추가</button>
+        <input v-model="lang" type="text" aria-label="자막 언어 코드" placeholder="ko" class="h-9 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs outline-none focus:border-[var(--gvp-focus)]" />
+        <input v-model="label" type="text" aria-label="자막 라벨" placeholder="라벨 (선택)" class="h-9 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none focus:border-[var(--gvp-focus)]" />
+        <input v-model="vttUrl" type="url" aria-label="VTT 파일 URL" placeholder="https://…/captions.vtt" class="h-9 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs outline-none focus:border-[var(--gvp-focus)]" />
+        <button type="button" :disabled="busy || !vttUrl.trim()" class="h-9 rounded-full bg-[var(--gvp-studio)] px-4 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="add">추가</button>
       </div>
       <p v-if="notice" role="status" class="text-xs text-[var(--gvp-text-secondary)]">{{ notice }}</p>
     </template>

@@ -2,6 +2,37 @@
 
 All notable product changes. Dates are UTC.
 
+## [3.2.0] — 2026-11-19 — Full vravra identity system & brand SSOT
+
+### Added
+
+- `tokens.css` + `brand.ts` single sources: spec color/type tokens,
+  vravra/브라브라 names and EN/KO slogans, shared Tailwind preset.
+- Custom SVG wordmark logos (`VravraLogo`, `VravraStudioLogo`) with
+  left-to-right wipe transition, hover wave rhythm, and first-session
+  `BrandSplash` overlay (reduced-motion safe).
+- New favicon/icon set + `site.webmanifest` for all four consoles.
+- Watch-next queue: card kebab add-to-queue feeds autoplay-next.
+- Video tags end to end (upload session + update APIs, wizard input).
+
+### Changed
+
+- Dark OLED cinema is now the default theme on every console
+  (light/dark/system toggle retained).
+- Spec-exact palette (`#E0223E` hover, `#F4F4F6`/`#EAECEF` light
+  surfaces, `#10B981` success) and radius/z-index/type rules.
+- Card hover: 350ms preview, 12px→4px corner shift; `↳ 답글 N개`
+  reply toggle; shorts skeleton; SEO/OG carry 브라브라 + slogans.
+
+### Verification
+
+- `pnpm -r --filter "./apps/*" build`: all pass.
+- `pnpm -r typecheck`: all packages and consoles pass.
+- `cspell` over the repo: 0 issues.
+- Go API suites pass (tags sanitize/store tests included).
+- Browser pass over 37 page/viewport combos: zero overflow, AAA
+  contrast both themes, zero hydration mismatches.
+
 ## [3.1.0] — 2026-11-19 — vravra spec completion (studio depth + SSR integrity)
 
 ### Added

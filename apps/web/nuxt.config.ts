@@ -38,8 +38,8 @@ export default defineNuxtConfig({
   },
   colorMode: {
     classSuffix: '',
-    preference: 'system',
-    fallback: 'light'
+    preference: 'dark',
+    fallback: 'dark'
   },
   i18n: {
     locales: [
@@ -60,7 +60,7 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
-          content: 'vravra — Watch 4K HDR videos, Shorts, and ultra-low latency Live streams from global creators.'
+          content: 'vravra 브라브라 — Play Your Vibe. Share Your Voice. Watch 4K HDR videos, Shorts, and ultra-low latency Live streams.'
         },
         { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#FFFFFF' },
         { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#0A0A0C' },
@@ -70,6 +70,7 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'manifest', href: '/site.webmanifest' },
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },

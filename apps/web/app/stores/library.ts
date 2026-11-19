@@ -5,6 +5,7 @@ export const useLibraryStore = defineStore('viewer-library', () => {
   const history = ref<Video[]>([])
   const saved = ref<Video[]>([])
   const liked = ref<Video[]>([])
+  const queue = ref<Video[]>([])
   const subscriptions = ref<string[]>([])
   const paused = ref(false)
   const ready = ref(false)
@@ -18,6 +19,7 @@ export const useLibraryStore = defineStore('viewer-library', () => {
       history.value = videos(data.history)
       saved.value = videos(data.saved)
       liked.value = videos(data.liked)
+      queue.value = videos(data.queue)
       subscriptions.value = Array.isArray(data.subscriptions) ? data.subscriptions.filter((v: unknown) => typeof v === 'string') : []
       paused.value = data.paused === true
     } catch { storageError.value = true }
@@ -26,7 +28,7 @@ export const useLibraryStore = defineStore('viewer-library', () => {
   function persist() {
     if (!import.meta.client) return
     try {
-      localStorage.setItem('gvp_library_v1', JSON.stringify({ history: history.value, saved: saved.value, liked: liked.value, subscriptions: subscriptions.value, paused: paused.value }))
+      localStorage.setItem('gvp_library_v1', JSON.stringify({ history: history.value, saved: saved.value, liked: liked.value, queue: queue.value, subscriptions: subscriptions.value, paused: paused.value }))
       storageError.value = false
     } catch { storageError.value = true }
   }
@@ -40,6 +42,25 @@ export const useLibraryStore = defineStore('viewer-library', () => {
     hydrate()
     saved.value = saved.value.some(v => v.id === video.id) ? saved.value.filter(v => v.id !== video.id) : [video, ...saved.value].slice(0, 200)
     persist()
+  }
+  function enqueue(video: Video) {
+    hydrate()
+    if (queue.value.some(v => v.id === video.id)) return false
+    queue.value = [...queue.value, video].slice(0, 200)
+    persist()
+    return true
+  }
+  function dequeue(id: string) {
+    hydrate()
+    queue.value = queue.value.filter(v => v.id !== id)
+    persist()
+  }
+  function shiftQueue(): Video | undefined {
+    hydrate()
+    const next = queue.value[0]
+    queue.value = queue.value.slice(1)
+    persist()
+    return next
   }
   function setLiked(video: Video, value: boolean) {
     hydrate()
@@ -62,5 +83,5 @@ export const useLibraryStore = defineStore('viewer-library', () => {
   }
   function clearHistory() { hydrate(); history.value = []; persist() }
   function togglePaused() { hydrate(); paused.value = !paused.value; persist() }
-  return { history, saved, liked, subscriptions, paused, ready, storageError, hydrate, record, toggleSaved, setLiked, setSubscribed, remove, clearHistory, togglePaused }
+  return { history, saved, liked, queue, subscriptions, paused, ready, storageError, hydrate, record, toggleSaved, enqueue, dequeue, shiftQueue, setLiked, setSubscribed, remove, clearHistory, togglePaused }
 })

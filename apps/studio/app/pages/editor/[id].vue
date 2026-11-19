@@ -236,7 +236,7 @@ function splitLeft(point: number): string {
                 v-for="sp in splitPoints"
                 :key="sp"
                 type="button"
-                class="absolute top-0 h-full w-1 -ml-0.5 cursor-pointer rounded-md bg-[var(--gvp-brand)] hover:bg-[var(--gvp-elevated)]"
+                class="absolute top-0 h-full w-1 -ml-0.5 cursor-pointer rounded-full bg-[var(--gvp-brand)] hover:bg-[var(--gvp-elevated)]"
                 :style="{ left: splitLeft(sp) }"
                 :title="`Split at ${sp}s — activate to remove`"
                 :aria-label="`Remove split at ${sp} seconds`"
@@ -251,7 +251,7 @@ function splitLeft(point: number): string {
                 v-for="box in blurRegions"
                 :key="box.id"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]"
+                class="inline-flex items-center gap-1 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]"
                 :title="`Remove ${box.label}`"
                 @click="removeBlurRegion(box.id)"
               >
@@ -283,7 +283,7 @@ function splitLeft(point: number): string {
                 type="number"
                 min="0"
                 :max="duration"
-                class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
+                class="w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
               />
             </div>
             <div class="flex flex-col gap-1.5">
@@ -294,7 +294,7 @@ function splitLeft(point: number): string {
                 type="number"
                 min="0"
                 :max="duration"
-                class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
+                class="w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
               />
             </div>
           </div>
@@ -307,7 +307,7 @@ function splitLeft(point: number): string {
             <select
               id="editor-audio"
               v-model="replacementAudio"
-              class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+              class="w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
             >
               <option>Royalty-Free Synthwave Ambient #04 (vravra Audio Library)</option>
               <option>Lo-Fi Chill Coding Beats #12 (Cleared Global License)</option>

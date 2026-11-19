@@ -1,4 +1,4 @@
-/** Light-first theme mode: light / dark / system, syncs color-mode + data-theme. */
+/** Dark-first theme mode: light / dark / system, syncs color-mode + data-theme. */
 export type ThemePreference = 'light' | 'dark' | 'system'
 
 export function useThemeMode() {

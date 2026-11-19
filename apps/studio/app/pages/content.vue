@@ -187,12 +187,12 @@ function formatDate(iso: string) {
       </div>
       <div v-if="selectedCount > 0" class="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs">
         <span class="font-semibold text-[var(--gvp-text)] tabular-nums">{{ selectedCount }}개 선택됨</span>
-        <button type="button" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PUBLIC)">공개로 설정</button>
-        <button type="button" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PRIVATE)">비공개로 설정</button>
-        <button type="button" :disabled="bulkBusy" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-surface)] px-3 text-xs font-medium text-[var(--gvp-live)] hover:bg-[var(--gvp-live-soft)] disabled:opacity-50" @click="applyBulkDelete">삭제</button>
+        <button type="button" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PUBLIC)">공개로 설정</button>
+        <button type="button" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PRIVATE)">비공개로 설정</button>
+        <button type="button" :disabled="bulkBusy" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-live)] bg-[var(--gvp-surface)] px-3 text-xs font-medium text-[var(--gvp-live)] hover:bg-[var(--gvp-live-soft)] disabled:opacity-50" @click="applyBulkDelete">삭제</button>
         <span class="flex items-center gap-1.5">
-          <input v-model="bulkPlaylistTitle" type="text" placeholder="새 재생목록 이름" aria-label="새 재생목록 이름" class="h-8 w-36 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]" @keydown.enter="applyBulkPlaylist" />
-          <button type="button" :disabled="bulkBusy || !bulkPlaylistTitle.trim()" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-studio)] px-3 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50" @click="applyBulkPlaylist">재생목록에 추가</button>
+          <input v-model="bulkPlaylistTitle" type="text" placeholder="새 재생목록 이름" aria-label="새 재생목록 이름" class="h-8 w-36 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]" @keydown.enter="applyBulkPlaylist" />
+          <button type="button" :disabled="bulkBusy || !bulkPlaylistTitle.trim()" class="inline-flex h-8 items-center rounded-full bg-[var(--gvp-studio)] px-3 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50" @click="applyBulkPlaylist">재생목록에 추가</button>
         </span>
       </div>
     </div>
@@ -222,11 +222,11 @@ function formatDate(iso: string) {
           type="search"
           placeholder="제목으로 필터"
           aria-label="제목으로 필터"
-          class="h-8 w-44 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs text-[var(--gvp-text)] outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]"
+          class="h-8 w-44 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs text-[var(--gvp-text)] outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]"
         />
         <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
           처리 상태
-          <select v-model="statusFilter" class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="처리 상태 필터">
+          <select v-model="statusFilter" class="h-8 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="처리 상태 필터">
             <option value="all">전체</option>
             <option :value="VideoProcessingStatus.READY">READY</option>
             <option :value="VideoProcessingStatus.PROCESSING">PROCESSING</option>
@@ -236,7 +236,7 @@ function formatDate(iso: string) {
         </label>
         <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
           공개 상태
-          <select v-model="visibilityFilter" class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="공개 상태 필터">
+          <select v-model="visibilityFilter" class="h-8 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="공개 상태 필터">
             <option value="all">전체</option>
             <option :value="VideoVisibility.PUBLIC">공개</option>
             <option :value="VideoVisibility.UNLISTED">일부 공개</option>
@@ -247,7 +247,7 @@ function formatDate(iso: string) {
         </label>
         <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
           조회수
-          <select v-model.number="viewsFilter" class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="조회수 조건">
+          <select v-model.number="viewsFilter" class="h-8 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="조회수 조건">
             <option :value="0">전체</option>
             <option :value="1000">1천 이상</option>
             <option :value="10000">1만 이상</option>
@@ -310,7 +310,7 @@ function formatDate(iso: string) {
                 :value="row.visibility"
                 :disabled="savingIds.has(row.id)"
                 :aria-label="`${row.title} 공개 범위`"
-                class="rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 py-1.5 text-xs font-medium text-[var(--gvp-text)] disabled:opacity-50"
+                class="rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 py-1.5 text-xs font-medium text-[var(--gvp-text)] disabled:opacity-50"
                 @change="setRowVisibility(row, ($event.target as HTMLSelectElement).value as VideoVisibility)"
               >
                 <option :value="VideoVisibility.PUBLIC">공개</option>
@@ -330,10 +330,10 @@ function formatDate(iso: string) {
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums" :title="`좋아요 ${row.likes.toLocaleString()} / 싫어요 ${row.dislikes.toLocaleString()}`">{{ likePct(row) }}</td>
             <td class="px-4 py-3 text-right">
               <div class="inline-flex items-center gap-1.5">
-                <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
-                <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
-                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
-                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="vravra에서 보기" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-studio)] px-2.5 text-xs font-medium text-white hover:opacity-90">보기↗</a>
+                <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
+                <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
+                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
+                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="vravra에서 보기" class="inline-flex h-8 items-center rounded-full bg-[var(--gvp-studio)] px-2.5 text-xs font-medium text-white hover:opacity-90">보기↗</a>
               </div>
             </td>
           </tr>
@@ -342,9 +342,9 @@ function formatDate(iso: string) {
     </div>
 
     <div v-if="!pending && !error && totalPages > 1" class="flex items-center justify-center gap-3 text-xs">
-      <button type="button" :disabled="page <= 1" class="inline-flex h-9 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="page -= 1">이전</button>
+      <button type="button" :disabled="page <= 1" class="inline-flex h-9 items-center rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="page -= 1">이전</button>
       <span class="text-[var(--gvp-text-secondary)] tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
-      <button type="button" :disabled="page >= totalPages" class="inline-flex h-9 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="page += 1">다음</button>
+      <button type="button" :disabled="page >= totalPages" class="inline-flex h-9 items-center rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="page += 1">다음</button>
     </div>
   </div>
 </template>

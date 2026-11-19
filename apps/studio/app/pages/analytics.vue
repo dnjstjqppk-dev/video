@@ -161,14 +161,14 @@ function exportCsvReport() {
         <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">일별 조회수 · 시청 시간 · 구독자 · 수익 추이 및 CSV 내보내기</p>
       </div>
       <div class="flex items-center gap-2">
-        <select v-model="selectedRange" class="h-9 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium tabular-nums outline-none focus:border-[var(--gvp-focus)]">
+        <select v-model="selectedRange" class="h-9 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium tabular-nums outline-none focus:border-[var(--gvp-focus)]">
           <option value="7d">지난 7일</option>
           <option value="28d">지난 28일</option>
           <option value="90d">지난 90일</option>
           <option value="365d">지난 365일</option>
           <option value="all">전체 기간</option>
         </select>
-        <button type="button" class="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90" @click="exportCsvReport">
+        <button type="button" class="inline-flex h-9 items-center gap-2 rounded-full bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90" @click="exportCsvReport">
           <span>CSV 내보내기</span>
         </button>
       </div>

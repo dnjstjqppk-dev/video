@@ -33,7 +33,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      htmlAttrs: { lang: 'ko', 'data-theme': 'light', class: 'light' },
+      htmlAttrs: { lang: 'ko', 'data-theme': 'dark', class: 'dark' },
       titleTemplate: '%s — vravra Super Admin Governance Console',
       meta: [
         { charset: 'utf-8' },
@@ -42,6 +42,7 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'manifest', href: '/site.webmanifest' },
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },

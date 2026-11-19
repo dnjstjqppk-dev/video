@@ -1,57 +1,65 @@
 # vravra Design System — Vibe · Voice · Vivid
 
-Single source of truth: `packages/design-tokens` (tokens + CSS) and `packages/ui`
-(Vue primitives). All four consoles import `@gvp/design-tokens/src/gvp.css`.
+Implementation companion to [BRAND_GUIDELINES.md](BRAND_GUIDELINES.md).
+Single source of truth: `packages/design-tokens/src/tokens.css` (spec
+variables), `brand.ts` (names, slogans, hex), `brand-motion.css` (logo
+wipe), and `packages/ui` (Vue primitives). All four consoles import
+`@gvp/design-tokens/src/gvp.css` and extend the shared Tailwind preset.
 
-**Brand concept:** *Vibe* (raw creator energy) · *Voice* (realtime talk and
-reaction) · *Vivid* (crisp video immersion).
-**Philosophy (Content-First Canvas):** UI chrome stays extremely restrained so
-thumbnails and the player own the screen; brand color is spent only on key
-actions (subscribe, live, upload, hero metrics).
+**Brand concept:** *Vibe* (raw creator energy) · *Voice* (realtime talk
+and reaction) · *Vivid* (crisp video immersion).
+**Philosophy (Content-First Canvas):** UI chrome stays extremely
+restrained so thumbnails and the player own the screen; brand color is
+spent only on key actions (subscribe, live, upload, hero metrics).
 
 ## 1. Color tokens (dual theme)
 
-Default theme is **Light (daytime)** on every console, with a persisted
-light/dark/system toggle. **Dark** is the True OLED cinema/night mode.
+Default theme is **Dark (True OLED cinema)** on every console, with a
+persisted light/dark/system toggle and a daytime Light theme.
 
-| Token | Light | Dark |
+| Token | Dark | Light |
 | :--- | :--- | :--- |
-| `bg-canvas` | `#FFFFFF` | `#0A0A0C` |
-| `bg-surface` | `#F8F9FA` | `#141418` |
-| `bg-elevated` / hover & pill | `#F2F4F7` | `#1F1F26` |
-| `border-subtle` | `#E5E7EB` | `#26262E` |
-| `text-primary` | `#0F0F0F` | `#F4F4F6` |
-| `text-secondary` | `#606060` | `#9CA3AF` |
-| `brand-primary` | `#FF2E4C` Vivid Electric Coral-Crimson (hover `#E02643`) | same |
-| `semantic-live` | `#FF3B30` Signal Amber-Red (premiere gradient to `#FF9F1C`) | same |
-| `studio-accent` | `#2563EB` Studio Cobalt (vravra studio charts, analytics, upload progress) | same |
+| `bg-canvas` | `#0A0A0C` | `#FFFFFF` |
+| `bg-surface` | `#141418` | `#F4F4F6` |
+| `bg-elevated` | `#1F1F26` | `#EAECEF` |
+| `border-hairline` | `#26262E` | `#E5E7EB` |
+| `text-primary` | `#F4F4F6` | `#0F0F0F` |
+| `text-secondary` | `#9CA3AF` | `#606060` |
+| `text-muted` | `#6B7280` | `#909090` |
+| `brand-crimson` | `#FF2E4C` (hover `#E0223E`) | same |
+| `studio-cobalt` | `#2563EB` (hover `#1D4ED8`) | same |
+| `live-signal` | `#FF3B30` (streaming badge + avatar rings) | same |
+| `premiere-amber` | `#FF9F1C` | same |
 
-CSS variables (`--gvp-*`) are defined in `gvp-themes.css`. TypeScript mirrors live
-in `palette.ts` + `themes.ts`. Never hard-code hex values in components; use the
-variables so both themes keep working.
+TypeScript mirrors live in `palette.ts` + `themes.ts`; legacy
+`--gvp-*` variables alias the spec tokens. Never hard-code hex values
+in components.
 
-## 2. Typography
+## 2. Typography & media
 
-- Sans: `Pretendard` (Korean) + `Plus Jakarta Sans` / `Inter` (Latin), system fallback.
-- Mono: `JetBrains Mono` (view counts, timestamps, CTR, revenue, IDs).
-- View counts, durations, CTR, revenue and time codes always use `tabular-nums`.
-- Titles clamp to 2 lines (`.clamp-2`); meta lines are single-line truncated.
+- Sans: `Plus Jakarta Sans`, `Pretendard`, system fallback.
+- Mono: `JetBrains Mono` + `tabular-nums` (counts, durations,
+  timestamps, CTR, revenue).
+- Type scale (`.vravra-*` classes): Display 32/700/1.2/-0.02em ·
+  Watch title 20/700/1.35/-0.015em · Section 18/600/1.4 · Card
+  15/600/1.4 (2-line clamp) · Body 14/400/1.5 · Meta 12/500/1.3.
+- Standard thumbnails `aspect-video (16:9)`; Shorts `aspect-[9/16]`
+  (CLS = 0). Card radius `12px` → `4px` on hover preview.
+- Spacing in `4px` multiples; pills `9999px`; studio inputs `8px`;
+  time/LIVE badges `4px`.
 
-## 3. Media ratios and layout
+## 3. Brand motion & layers
 
-- Standard video thumbnails are always `aspect-video (16:9)`; Shorts are always
-  `aspect-[9/16]`, fixed before images load so **CLS = 0**.
-- Viewer header is `56px` sticky with `backdrop-blur-md`; sidebar is `240px`
-  expanded / `72px` mini rail / `56px` mobile bottom tabs.
-
-## 4. Elevation and motion
-
-- Sticky headers and dropdowns use glass treatment: `blur(16px)` + subtle border
-  (`.gvp-glass`, `.gvp-elevated`).
+- Logo wipe (850ms, left → right) + `BrandSplash` first-session
+  overlay + hover wave rhythm; `prefers-reduced-motion` disables all.
+  See [BRAND_GUIDELINES.md](BRAND_GUIDELINES.md) §5.
+- Z-order: chips `z-10`, LNB `z-30`, GNB `z-40`, dropdowns `z-50`,
+  modals + splash `z-60`.
 - Dropdown, drawer and hover motion: `180ms cubic-bezier(0.2, 0, 0, 1)`.
-- Hover preview starts after `400ms`. All motion honors `prefers-reduced-motion`.
+- Hover preview starts after `350ms`. All motion honors
+  `prefers-reduced-motion`.
 
-## 5. Dropdown and popover standard
+## 4. Dropdown and popover standard
 
 Every dropdown across viewer, studio and admin follows the same contract:
 
@@ -63,19 +71,21 @@ Every dropdown across viewer, studio and admin follows the same contract:
 Reference implementation: `GvpDropdown.vue` + `dropdown.ts` helpers, and the
 `v-click-outside` directive in the web console.
 
-## 6. Lists, grids and cards
+## 5. Lists, grids and cards
 
 - Home grid: `repeat(auto-fill, minmax(310px, 1fr))`, `gap: 24px 16px`.
-- Video cards: `16:9` rounded (`12px`) thumbnail, bottom-right duration or `LIVE`
-  badge, `3px` brand progress bar, hover quick actions, avatar + 2-line title +
-  channel + verified mark + views and relative time.
-- Loading uses shimmer skeletons (`.gvp-shimmer`); errors show a retry banner;
-  empty results show an empty state, never fake data.
+- Video cards: `16:9` rounded (`12px`) thumbnail, bottom-right duration
+  or `LIVE` badge, crimson hover scrub bar, hover quick actions, avatar
+  + 2-line title + channel + verified mark + views and relative time.
+- Loading uses shimmer skeletons (`.gvp-shimmer`); errors show a retry
+  banner; empty results show an empty state, never fake data.
 
-## 7. Usage rules
+## 6. Usage rules
 
 1. New or touched components stay within 50-80 lines; split larger ones.
-2. Consoles default to light with a light/dark/system toggle.
-3. Status colors: success `#22C55E`, warning `#F59E0B`, danger `#EF4444`,
-   info/studio `#2563EB`, live `#FF3B30`, brand `#FF2E4C`.
+2. Consoles default to dark with a light/dark/system toggle.
+3. Status colors: success `#10B981`, warning `#F59E0B`, danger
+   `#EF4444`, info/studio `#2563EB`, live `#FF3B30`, brand `#FF2E4C`.
 4. Icons are inline SVG; emoji is never used as iconography.
+5. No hard-coded brand strings, colors, or slogans — import from
+   `brand.ts` and `tokens.css`.

@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/policies"
+	"globalvideoplatform/services/api/internal/security"
 	"globalvideoplatform/services/api/internal/store"
 )
 
@@ -74,11 +75,12 @@ func (h *Handler) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var payload struct {
-		Title         string `json:"title"`
-		Description   string `json:"description"`
-		FileSizeBytes int64  `json:"fileSizeBytes"`
-		MimeType      string `json:"mimeType"`
-		VideoType     string `json:"videoType"` // standard, shorts
+		Title         string   `json:"title"`
+		Description   string   `json:"description"`
+		FileSizeBytes int64    `json:"fileSizeBytes"`
+		MimeType      string   `json:"mimeType"`
+		VideoType     string   `json:"videoType"` // standard, shorts
+		Tags          []string `json:"tags"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -162,7 +164,7 @@ func (h *Handler) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
 		Visibility:      "private",
 		Status:          "CREATED",
 		DurationSeconds: 0,
-		Tags:            []string{"upload"},
+		Tags:            security.SanitizeTags(payload.Tags),
 		Category:        "General",
 		CreatedAt:       now,
 	}

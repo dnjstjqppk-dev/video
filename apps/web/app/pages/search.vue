@@ -14,8 +14,8 @@ const selectedType = ref<'all' | 'video' | 'shorts' | 'live' | 'channel' | 'play
 const selectedSort = ref<'relevance' | 'views' | 'date'>('relevance')
 
 useSeoMeta({
-  title: () => `"${query.value}" 검색 결과 — vravra`,
-  description: () => `OpenSearch hybrid Korean Nori & English search results for ${query.value}.`
+  title: () => `"${query.value}" 검색 결과 — vravra 브라브라`,
+  description: () => `OpenSearch hybrid Korean Nori & English search results for ${query.value} on vravra.`
 })
 
 const typoCorrection = computed(() => {

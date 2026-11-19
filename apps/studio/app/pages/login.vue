@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { UserProfile } from '@gvp/shared-types'
-import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
+import VravraStudioLogo from '@gvp/ui/src/components/VravraStudioLogo.vue'
+import { BRAND } from '@gvp/design-tokens/src/brand'
 
 const api = useStudioApi()
 const sessionUser = useState<UserProfile | null>('studio-session', () => null)
 
 useSeoMeta({
-  title: '로그인 — vravra studio'
+  title: `로그인 — ${BRAND.studio.name} | ${BRAND.studio.sloganKo}`
 })
 
 const devToken = ref('')
@@ -44,7 +45,7 @@ async function loginWithDevToken() {
 <template>
   <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4">
     <div class="w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8">
-      <VravraLogo :size="28" suffix="studio" suffix-tone="studio" />
+      <VravraStudioLogo size="md" animate show-tagline />
       <h1 class="mt-5 text-xl font-semibold tracking-tight text-[var(--gvp-text)]">크리에이터 로그인</h1>
       <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
         OIDC 싱글사인온으로 안전하게 로그인하세요.
@@ -54,7 +55,7 @@ async function loginWithDevToken() {
         href="/auth/login"
         class="mt-6 w-full inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
       >
-        vravra 계정으로 계속하기
+        {{ BRAND.name }} 계정으로 계속하기
       </a>
 
       <div v-if="isLocalhost" class="mt-6 border-t border-[var(--gvp-border)] pt-5">
@@ -67,7 +68,7 @@ async function loginWithDevToken() {
             v-model="devToken"
             type="text"
             placeholder="dev token"
-            class="h-9 flex-1 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 font-mono text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)]"
+            class="h-9 flex-1 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 font-mono text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)]"
             @keyup.enter="loginWithDevToken"
           />
           <button

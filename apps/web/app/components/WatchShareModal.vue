@@ -23,7 +23,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--gvp-scrim)] p-4" @mousedown.self="emit('close')">
+  <div class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--gvp-scrim)] p-4" @mousedown.self="emit('close')">
     <div class="w-full max-w-md rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 text-[var(--gvp-text)]" role="dialog" aria-modal="true" aria-label="공유">
       <div class="flex items-center justify-between">
         <h3 class="text-base font-bold">공유</h3>

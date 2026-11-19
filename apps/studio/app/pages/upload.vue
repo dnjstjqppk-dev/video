@@ -13,6 +13,11 @@ const step = ref(0)
 const title = ref('')
 const description = ref('')
 const category = ref('일반')
+const tagsText = ref('')
+
+function parseTags(): string[] {
+  return tagsText.value.split(',').map(t => t.trim()).filter(t => t !== '')
+}
 const videoType = ref<'standard' | 'shorts'>(route.query.type === 'shorts' ? 'shorts' : 'standard')
 const visibility = ref<VideoVisibility>(VideoVisibility.PRIVATE)
 const detailsNotice = ref<string | null>(null)
@@ -94,7 +99,7 @@ async function saveDetails() {
   detailsNotice.value = null
   detailsFailed.value = null
   try {
-    await api.updateVideo(videoId.value, { title: title.value, description: description.value, category: category.value } as never)
+    await api.updateVideo(videoId.value, { title: title.value, description: description.value, category: category.value, tags: parseTags() } as never)
     detailsNotice.value = '세부정보가 저장되었습니다.'
   } catch { detailsFailed.value = '세부정보 저장에 실패했습니다.' } finally { detailsBusy.value = false }
 }
@@ -121,7 +126,8 @@ async function startMultipartUpload() {
       description: description.value,
       fileSizeBytes: selectedFile.value.size,
       mimeType: selectedFile.value.type || 'video/mp4',
-      videoType: videoType.value
+      videoType: videoType.value,
+      tags: parseTags()
     })
     uploadId.value = session.uploadId
     videoId.value = session.videoId
@@ -308,7 +314,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <label class="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]">
+          <label class="inline-flex h-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]">
             파일 선택
             <input type="file" accept="video/*" class="hidden" @change="onFileSelected" />
           </label>
@@ -316,7 +322,7 @@ onBeforeUnmount(() => {
           <button
             v-if="!isUploading && uploadedParts === 0"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
+            class="inline-flex h-9 items-center justify-center rounded-full bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.97]"
             @click="startMultipartUpload"
           >
             업로드 시작
@@ -325,7 +331,7 @@ onBeforeUnmount(() => {
           <button
             v-if="isUploading"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]"
+            class="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]"
             @click="togglePauseResume"
           >
             {{ isPaused ? '이어서 업로드' : '일시중지' }}
@@ -334,7 +340,7 @@ onBeforeUnmount(() => {
           <button
             v-if="uploadError"
             type="button"
-            class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
+            class="inline-flex h-9 items-center justify-center rounded-full bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
             @click="retryUpload"
           >
             실패한 파트 재시도
@@ -411,10 +417,15 @@ onBeforeUnmount(() => {
             v-model:description="description"
             v-model:video-type="videoType"
             v-model:category="category"
+            v-model:tags-text="tagsText"
             :type-locked="!!uploadId"
           />
+          <section aria-label="재생목록" class="mt-6 border-t border-[var(--gvp-border)] pt-4">
+            <h3 class="mb-2 text-sm font-semibold text-[var(--gvp-text)]">재생목록</h3>
+            <UploadPlaylistAdd :video-id="videoId" />
+          </section>
           <div class="mt-4 flex items-center gap-2">
-            <button v-if="videoId" type="button" :disabled="detailsBusy" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="saveDetails">
+            <button v-if="videoId" type="button" :disabled="detailsBusy" class="inline-flex h-9 items-center rounded-full bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="saveDetails">
               {{ detailsBusy ? '저장 중…' : '세부정보 저장' }}
             </button>
             <p v-if="detailsNotice" role="status" class="text-xs font-medium text-[var(--gvp-success)]">{{ detailsNotice }}</p>
@@ -443,9 +454,9 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="mt-6 flex items-center justify-between border-t border-[var(--gvp-border)] pt-4">
-          <button type="button" :disabled="step === 0" class="inline-flex h-9 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-xs font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="step -= 1">이전 단계</button>
-          <button v-if="step < 3" type="button" :disabled="!videoId" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40" @click="step += 1">다음 단계</button>
-          <NuxtLink v-else-if="videoId" to="/content" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90">콘텐츠에서 확인</NuxtLink>
+          <button type="button" :disabled="step === 0" class="inline-flex h-9 items-center rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-xs font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="step -= 1">이전 단계</button>
+          <button v-if="step < 3" type="button" :disabled="!videoId" class="inline-flex h-9 items-center rounded-full bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40" @click="step += 1">다음 단계</button>
+          <NuxtLink v-else-if="videoId" to="/content" class="inline-flex h-9 items-center rounded-full bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90">콘텐츠에서 확인</NuxtLink>
         </div>
       </div>
     </div>

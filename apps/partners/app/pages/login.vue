@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserProfile } from '@gvp/shared-types'
+import { BRAND } from '@gvp/design-tokens/src/brand'
 
 const api = usePartnerApi()
 const sessionUser = useState<UserProfile | null>('partner-session', () => null)
@@ -58,7 +59,7 @@ async function loginWithDevToken() {
         href="/auth/login"
         class="mt-6 inline-flex w-full items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
       >
-        vravra 계정으로 계속하기
+        {{ BRAND.name }} 계정으로 계속하기
       </a>
 
       <div v-if="isLocalhost" class="mt-6 border-t border-[var(--gvp-border)] pt-5">

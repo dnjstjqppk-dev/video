@@ -1,0 +1,1 @@
+{"name":"vravra admin","short_name":"vravra admin","description":"vravra 관리자 콘솔","start_url":"/","scope":"/","display":"standalone","background_color":"#0A0A0C","theme_color":"#0A0A0C","icons":[{"src":"/favicon.svg","sizes":"any","type":"image/svg+xml"},{"src":"/icon-512.svg","sizes":"512x512","type":"image/svg+xml"}]}

@@ -46,7 +46,7 @@ async function createAndAdd() {
       </svg>
       <span>{{ savedHere ? '저장됨' : '저장' }}</span>
     </button>
-    <div v-if="open" role="menu" class="gvp-dropdown gvp-elevated absolute right-0 top-full z-30 mt-2 w-64 rounded-xl p-2">
+    <div v-if="open" role="menu" class="gvp-dropdown gvp-elevated absolute right-0 top-full z-50 mt-2 w-64 rounded-xl p-2">
       <button type="button" role="menuitemcheckbox" :aria-checked="savedHere" class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="toggleWatchLater">
         <span class="flex h-4 w-4 items-center justify-center rounded border border-[var(--gvp-border-strong)] text-[10px]" :class="savedHere ? 'bg-[var(--gvp-brand)] text-white' : ''">{{ savedHere ? '✓' : '' }}</span>
         나중에 볼 동영상

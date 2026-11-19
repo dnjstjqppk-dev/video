@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { BRAND } from '@gvp/design-tokens/src/brand'
+
 const api = useStudioApi()
 const currency = useState<'KRW' | 'USD'>('studio-currency', () => 'KRW')
 
 useSeoMeta({
-  title: 'Creator Dashboard'
+  title: `채널 대시보드 — ${BRAND.studio.name}`
 })
 
 const { data: dashboard, pending: dashPending, error: dashError } = await useAsyncData('studio-dashboard', async () => {
@@ -87,7 +89,7 @@ const recentComments = computed(() => dashboard.value?.recentComments || [])
                 <span class="inline-flex items-center rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-success)]">{{ vid.status }}</span>
               </td>
               <td class="px-4 py-3 text-right">
-                <NuxtLink :to="`/editor/${vid.id}`" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
+                <NuxtLink :to="`/editor/${vid.id}`" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
               </td>
             </tr>
           </tbody>

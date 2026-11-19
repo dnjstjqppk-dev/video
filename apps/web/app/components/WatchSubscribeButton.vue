@@ -70,7 +70,7 @@ onMounted(sync)
     <button
       v-if="!subscribed"
       type="button"
-      class="rounded-full bg-[var(--gvp-brand)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]"
+      class="rounded-full bg-[var(--gvp-brand)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)] active:scale-[0.97]"
       @click="subscribe"
     >
       {{ ko ? '구독' : 'Subscribe' }}
@@ -84,7 +84,7 @@ onMounted(sync)
     >
       {{ ko ? '구독중 ▾' : 'Subscribed ▾' }}
     </button>
-    <div v-if="open && subscribed" role="menu" aria-label="구독 알림 설정" class="gvp-dropdown gvp-elevated absolute left-0 top-full z-30 mt-2 w-60 rounded-xl p-1.5">
+    <div v-if="open && subscribed" role="menu" aria-label="구독 알림 설정" class="gvp-dropdown gvp-elevated absolute left-0 top-full z-50 mt-2 w-60 rounded-xl p-1.5">
       <p class="px-3 pb-1 pt-1.5 text-[11px] font-semibold text-[var(--gvp-text-muted)]">{{ ko ? '알림 설정' : 'Notifications' }}</p>
       <button
         v-for="o in notifyOpts" :key="o.id" type="button" role="menuitemradio" :aria-checked="notifyLevel === o.id"

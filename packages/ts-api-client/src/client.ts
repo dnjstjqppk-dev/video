@@ -238,6 +238,7 @@ export class ApiClient {
     fileSizeBytes: number;
     mimeType: string;
     videoType?: string;
+    tags?: string[];
   }): Promise<{
     uploadId: string;
     videoId: string;

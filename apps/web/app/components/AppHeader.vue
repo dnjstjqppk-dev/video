@@ -16,7 +16,7 @@ onMounted(() => {
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
       <NuxtLink to="/" class="flex items-center gap-2" aria-label="vravra 홈">
-        <VravraLogo :size="28" />
+        <VravraLogo size="sm" animate />
         <span class="tabular-nums hidden rounded border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text-secondary)] min-[420px]:inline">{{ store.locale === 'ko' ? 'KR' : 'GL' }}</span>
       </NuxtLink>
     </div>

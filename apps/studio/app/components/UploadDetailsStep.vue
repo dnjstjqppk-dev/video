@@ -4,6 +4,7 @@ defineProps<{
   description: string
   videoType: 'standard' | 'shorts'
   category: string
+  tagsText: string
   typeLocked?: boolean
 }>()
 defineEmits<{
@@ -11,6 +12,7 @@ defineEmits<{
   (e: 'update:description', v: string): void
   (e: 'update:videoType', v: 'standard' | 'shorts'): void
   (e: 'update:category', v: string): void
+  (e: 'update:tagsText', v: string): void
 }>()
 const categories = ['일반', '음악', '게임', '테크/개발', '팟캐스트', '뉴스', '교육', '엔터테인먼트']
 </script>
@@ -21,7 +23,7 @@ const categories = ['일반', '음악', '게임', '테크/개발', '팟캐스트
       <label class="block text-xs font-medium text-[var(--gvp-text)]" for="up-title">동영상 제목</label>
       <input
         id="up-title" :value="title" type="text" maxlength="100"
-        class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+        class="mt-1.5 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
         @input="$emit('update:title', ($event.target as HTMLInputElement).value)"
       />
     </div>
@@ -29,8 +31,16 @@ const categories = ['일반', '음악', '게임', '테크/개발', '팟캐스트
       <label class="block text-xs font-medium text-[var(--gvp-text)]" for="up-desc">설명</label>
       <textarea
         id="up-desc" :value="description" rows="4"
-        class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-3 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+        class="mt-1.5 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-3 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
         @input="$emit('update:description', ($event.target as HTMLTextAreaElement).value)"
+      />
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-[var(--gvp-text)]" for="up-tags">태그 (쉼표 구분, 최대 12개)</label>
+      <input
+        id="up-tags" :value="tagsText" type="text" placeholder="예: hls, ffmpeg, 자막"
+        class="mt-1.5 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+        @input="$emit('update:tagsText', ($event.target as HTMLInputElement).value)"
       />
     </div>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -51,7 +61,7 @@ const categories = ['일반', '음악', '게임', '테크/개발', '팟캐스트
         <label class="block text-xs font-medium text-[var(--gvp-text)]" for="up-cat">카테고리</label>
         <select
           id="up-cat" :value="category"
-          class="mt-1.5 h-9 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs font-medium text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+          class="mt-1.5 h-9 w-full rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs font-medium text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
           @change="$emit('update:category', ($event.target as HTMLSelectElement).value)"
         >
           <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>

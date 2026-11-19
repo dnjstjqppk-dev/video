@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { UserRole } from '@gvp/shared-types'
+import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
 
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -23,9 +24,7 @@ const navLinks = [
     <!-- High-Security Super Admin Top Bar -->
     <header class="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 sm:px-6">
       <div class="flex items-center gap-2.5">
-        <span class="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--gvp-brand)] text-xs font-bold text-white">
-          A
-        </span>
+        <VravraLogo size="sm" />
         <div class="flex items-center gap-2">
           <span class="text-sm font-bold tracking-tight text-[var(--gvp-text)]">Super Admin Governance Console</span>
           <span class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[var(--gvp-warning)]">

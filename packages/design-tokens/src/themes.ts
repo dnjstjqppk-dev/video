@@ -1,5 +1,5 @@
-/** Daytime Light (default) + True OLED Dark cinema themes.
- * Keys map 1:1 to CSS vars in gvp-themes.css. */
+/** True OLED Dark cinema (default) + daytime Light themes.
+ * Keys map 1:1 to spec vars in tokens.css. */
 export interface SurfaceTheme {
   canvas: string
   surface: string
@@ -12,20 +12,6 @@ export interface SurfaceTheme {
   textMuted: string
   textInverse: string
   focusRing: string
-}
-
-export const lightTheme: SurfaceTheme = {
-  canvas: '#FFFFFF',
-  surface: '#F8F9FA',
-  elevated: '#F2F4F7',
-  overlay: 'rgba(15, 15, 16, 0.45)',
-  borderSubtle: '#E5E7EB',
-  borderStrong: '#D4D4D8',
-  textPrimary: '#0F0F0F',
-  textSecondary: '#606060',
-  textMuted: '#9AA0A6',
-  textInverse: '#FFFFFF',
-  focusRing: '#E02643',
 }
 
 export const darkTheme: SurfaceTheme = {
@@ -42,5 +28,19 @@ export const darkTheme: SurfaceTheme = {
   focusRing: '#FF6B81',
 }
 
-export const themes = { light: lightTheme, dark: darkTheme } as const
+export const lightTheme: SurfaceTheme = {
+  canvas: '#FFFFFF',
+  surface: '#F4F4F6',
+  elevated: '#EAECEF',
+  overlay: 'rgba(15, 15, 16, 0.45)',
+  borderSubtle: '#E5E7EB',
+  borderStrong: '#D4D4D8',
+  textPrimary: '#0F0F0F',
+  textSecondary: '#606060',
+  textMuted: '#909090',
+  textInverse: '#FFFFFF',
+  focusRing: '#E0223E',
+}
+
+export const themes = { dark: darkTheme, light: lightTheme } as const
 export type ThemeName = keyof typeof themes

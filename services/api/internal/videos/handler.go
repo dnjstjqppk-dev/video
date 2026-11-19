@@ -138,12 +138,13 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Title          string `json:"title"`
-		Description    string `json:"description"`
-		Visibility     string `json:"visibility"`
-		Category       string `json:"category"`
-		ScheduledAt    string `json:"scheduled_at"`
-		ScheduledAtAlt string `json:"scheduledAt"`
+		Title          string    `json:"title"`
+		Description    string    `json:"description"`
+		Visibility     string    `json:"visibility"`
+		Category       string    `json:"category"`
+		Tags           *[]string `json:"tags"`
+		ScheduledAt    string    `json:"scheduled_at"`
+		ScheduledAtAlt string    `json:"scheduledAt"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -193,6 +194,9 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 	}
 	if payload.Category != "" {
 		video.Category = payload.Category
+	}
+	if payload.Tags != nil {
+		video.Tags = security.SanitizeTags(*payload.Tags)
 	}
 	if scheduled != nil {
 		video.ScheduledAt = scheduled

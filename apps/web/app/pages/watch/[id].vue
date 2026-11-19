@@ -210,7 +210,11 @@ const { data: relatedData } = await useAsyncData(`related-${videoId.value}`, asy
   }
 })
 const relatedVideos = computed(() => relatedData.value || [])
-const upNext = computed(() => relatedVideos.value[0] || null)
+const library = useLibraryStore()
+const upNext = computed(() => {
+  library.hydrate()
+  return library.queue[0] || relatedVideos.value[0] || null
+})
 
 function openShare() {
   shareStartSeconds.value = playerRef.value?.getCurrentTimeSeconds() || 0
@@ -218,7 +222,8 @@ function openShare() {
 }
 
 function playNext() {
-  if (upNext.value) navigateTo(`/watch/${upNext.value.id}`)
+  const next = library.shiftQueue() || upNext.value
+  if (next) navigateTo(`/watch/${next.id}`)
 }
 
 function onPlayerEnded() {
@@ -367,7 +372,7 @@ async function removeComment(commentId: string, parentId?: string) {
         </ClientOnly>
 
         <!-- Video Title -->
-        <h1 class="mt-4 text-lg font-bold leading-snug text-[var(--gvp-text)] sm:text-xl">
+        <h1 class="vravra-watch-title mt-4 text-[var(--gvp-text)]">
           {{ activeVideo.title }}
         </h1>
         <p v-if="actionError" class="mt-2 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
@@ -695,9 +700,9 @@ async function removeComment(commentId: string, parentId?: string) {
                     class="flex items-center gap-1.5 text-xs font-bold text-[var(--gvp-brand-hover)] transition hover:underline tabular-nums"
                     @click="toggleExpandReplies(cmt.id)"
                   >
-                    <span>{{ expandedReplies[cmt.id] ? '▲' : '▼' }}</span>
+                    <span>{{ expandedReplies[cmt.id] ? '▲' : '↳' }}</span>
                     <span>
-                      {{ cmt.replies.length }} {{ appStore.locale === 'ko' ? '개의 답글' : (cmt.replies.length === 1 ? 'reply' : 'replies') }}
+                      {{ appStore.locale === 'ko' ? `답글 ${cmt.replies.length}개` : `${cmt.replies.length} ${cmt.replies.length === 1 ? 'reply' : 'replies'}` }}
                     </span>
                   </button>
 
@@ -785,7 +790,7 @@ async function removeComment(commentId: string, parentId?: string) {
     <!-- Report Modal -->
     <div
       v-if="showReportModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--gvp-scrim)] p-4"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--gvp-scrim)] p-4"
       @mousedown.self="closeReportModal"
       @keydown="onReportModalKeydown"
     >

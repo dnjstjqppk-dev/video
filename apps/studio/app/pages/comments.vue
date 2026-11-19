@@ -110,7 +110,7 @@ async function removeComment(cmt: Comment) {
           v-model="searchQuery"
           type="search"
           placeholder="댓글 내용 또는 작성자..."
-          class="h-9 w-64 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)]"
+          class="h-9 w-64 rounded-lg border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)]"
         />
       </label>
     </div>

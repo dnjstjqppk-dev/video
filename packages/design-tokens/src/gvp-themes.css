@@ -1,58 +1,40 @@
-/* vravra dual theme. Light = daytime default; Dark = True OLED cinema. */
-:root, :root[data-theme='light'], .light {
-  color-scheme: light;
-  --gvp-canvas: #ffffff;
-  --gvp-surface: #f8f9fa;
-  --gvp-elevated: #f2f4f7;
-  --gvp-overlay: rgba(15, 15, 16, 0.45);
-  --gvp-border: #e5e7eb;
-  --gvp-border-strong: #d4d4d8;
-  --gvp-text: #0f0f0f;
-  --gvp-text-secondary: #606060;
-  --gvp-text-muted: #9aa0a6;
-  --gvp-focus: #e02643;
-  --gvp-scrim: rgba(15, 15, 16, 0.45);
-}
-
-:root[data-theme='dark'], .dark {
-  color-scheme: dark;
-  --gvp-canvas: #0a0a0c;
-  --gvp-surface: #141418;
-  --gvp-elevated: #1f1f26;
-  --gvp-overlay: rgba(0, 0, 0, 0.62);
-  --gvp-border: #26262e;
-  --gvp-border-strong: #3a3a44;
-  --gvp-text: #f4f4f6;
-  --gvp-text-secondary: #9ca3af;
-  --gvp-text-muted: #6b7280;
-  --gvp-focus: #ff6b81;
-  --gvp-scrim: rgba(0, 0, 0, 0.62);
-}
-
+/* Legacy --gvp-* aliases. Single source lives in tokens.css; every alias
+   below resolves to a spec variable so both themes keep working. */
 :root {
-  --gvp-brand: #ff2e4c;
-  --gvp-brand-hover: #e02643;
+  --gvp-canvas: var(--bg-canvas);
+  --gvp-surface: var(--bg-surface);
+  --gvp-elevated: var(--bg-elevated);
+  --gvp-overlay: var(--overlay-scrim);
+  --gvp-border: var(--border-hairline);
+  --gvp-border-strong: var(--border-strong);
+  --gvp-text: var(--text-primary);
+  --gvp-text-secondary: var(--text-secondary);
+  --gvp-text-muted: var(--text-muted);
+  --gvp-focus: var(--focus-ring);
+  --gvp-scrim: var(--overlay-scrim);
+
+  --gvp-brand: var(--color-brand-crimson);
+  --gvp-brand-hover: var(--color-brand-crimson-hover);
   --gvp-brand-active: #c81e3a;
   --gvp-brand-soft: rgba(255, 46, 76, 0.12);
-  --gvp-accent: #2563eb;
+  --gvp-accent: var(--color-studio-cobalt);
   --gvp-accent-soft: rgba(37, 99, 235, 0.12);
-  --gvp-studio: #2563eb;
+  --gvp-studio: var(--color-studio-cobalt);
   --gvp-studio-soft: rgba(37, 99, 235, 0.12);
-  --gvp-live: #ff3b30;
+  --gvp-live: var(--color-live-signal);
   --gvp-live-soft: rgba(255, 59, 48, 0.14);
-  --gvp-premiere: #ff9f1c;
-  --gvp-success: #22c55e;
-  --gvp-success-soft: rgba(34, 197, 94, 0.12);
-  --gvp-warning: #f59e0b;
+  --gvp-premiere: var(--color-premiere-amber);
+  --gvp-success: var(--color-success);
+  --gvp-success-soft: rgba(16, 185, 129, 0.12);
+  --gvp-warning: var(--color-warning);
   --gvp-warning-soft: rgba(245, 158, 11, 0.12);
-  --gvp-danger: #ef4444;
+  --gvp-danger: var(--color-danger);
   --gvp-danger-soft: rgba(239, 68, 68, 0.12);
   --gvp-info-soft: rgba(37, 99, 235, 0.12);
   --gvp-ease: cubic-bezier(0.2, 0, 0, 1);
   --gvp-motion: 180ms;
-  /* Compat aliases for existing @gvp/ui primitives. */
-  --gvp-font-sans: 'Pretendard Variable', Pretendard, 'Plus Jakarta Sans', Inter, -apple-system, sans-serif;
-  --gvp-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --gvp-font-sans: var(--font-sans);
+  --gvp-font-mono: var(--font-mono);
   --gvp-brand-contrast: #ffffff;
   --gvp-surface-1: var(--gvp-surface);
   --gvp-surface-2: var(--gvp-elevated);

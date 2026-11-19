@@ -13,7 +13,7 @@ const progress = computed(() => {
   const p = appStore.getWatchProgress(props.video.id); const d = props.video.durationSeconds
   return d > 0 ? Math.min(100, (p / d) * 100) : 0
 })
-function onEnter() { if (hoverTimer) clearTimeout(hoverTimer); hoverTimer = setTimeout(() => { hovering.value = true }, 400) }
+function onEnter() { if (hoverTimer) clearTimeout(hoverTimer); hoverTimer = setTimeout(() => { hovering.value = true }, 350) }
 function onLeave() { if (hoverTimer) clearTimeout(hoverTimer); hovering.value = false }
 async function feedback(action: 'not_interested' | 'dont_recommend_channel') {
   menuOpen.value = false
@@ -26,6 +26,13 @@ function save() {
   menuOpen.value = false
   library.toggleSaved(props.video)
   emit('toast', ko.value ? '나중에 볼 동영상에 저장했습니다.' : 'Saved to Watch Later.')
+}
+function addToQueue() {
+  menuOpen.value = false
+  const added = library.enqueue(props.video)
+  emit('toast', added
+    ? (ko.value ? '현재 재생목록에 추가했습니다.' : 'Added to queue.')
+    : (ko.value ? '이미 재생목록에 있습니다.' : 'Already in queue.'))
 }
 async function share() {
   menuOpen.value = false
@@ -46,7 +53,7 @@ async function report() {
 
 <template>
   <article class="group relative flex flex-col">
-    <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full overflow-hidden rounded-xl bg-[var(--gvp-elevated)]" @mouseenter="onEnter" @mouseleave="onLeave" @focus="onEnter" @blur="onLeave">
+    <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full overflow-hidden bg-[var(--gvp-elevated)] transition-[border-radius]" :class="hovering ? 'rounded' : 'rounded-xl'" @mouseenter="onEnter" @mouseleave="onLeave" @focus="onEnter" @blur="onLeave">
       <video v-if="hovering && video.previewUrl" :src="video.previewUrl" muted loop autoplay playsinline class="h-full w-full object-cover" />
       <img v-else :src="video.thumbnailUrl" :alt="video.title" class="h-full w-full object-cover" loading="lazy" />
       <span class="absolute bottom-2 right-2 rounded bg-black/80 px-1 py-0.5 text-xs font-medium text-white tabular-nums">{{ formatTimecode(video.durationSeconds) }}</span>
@@ -57,7 +64,7 @@ async function report() {
         <img :src="video.channel?.avatarUrl || `https://api.dicebear.com/9.x/initials/svg?seed=${video.channelId}`" :alt="video.channel?.name" class="h-9 w-9 rounded-full object-cover" loading="lazy" />
       </NuxtLink>
       <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/watch/${video.id}`" class="line-clamp-2 text-[15px] font-semibold leading-[1.4] text-[var(--gvp-text)]">{{ video.title }}</NuxtLink>
+        <NuxtLink :to="`/watch/${video.id}`" class="vravra-card-title line-clamp-2 text-[var(--gvp-text)]">{{ video.title }}</NuxtLink>
         <NuxtLink :to="`/channels/${video.channelId}`" class="mt-1 flex items-center gap-1 text-xs text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]">
           <span class="truncate">{{ video.channel?.name || 'vravra 크리에이터' }}</span>
           <svg v-if="video.channel?.isVerified" class="h-3.5 w-3.5 shrink-0 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
@@ -66,7 +73,8 @@ async function report() {
       </div>
       <div v-click-outside="() => (menuOpen = false)" class="relative shrink-0">
         <button type="button" aria-label="동영상 옵션" :aria-expanded="menuOpen" class="rounded-full p-1.5 text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]" @click="menuOpen = !menuOpen">⋮</button>
-        <div v-if="menuOpen" role="menu" class="gvp-dropdown gvp-elevated absolute right-0 top-8 z-30 w-52 rounded-xl p-1.5 text-xs">
+        <div v-if="menuOpen" role="menu" class="gvp-dropdown gvp-elevated absolute right-0 top-8 z-50 w-52 rounded-xl p-1.5 text-xs">
+          <button type="button" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="addToQueue()">{{ ko ? '현재 재생목록에 추가' : 'Add to queue' }}</button>
           <button type="button" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="save()">{{ ko ? '나중에 볼 동영상에 저장' : 'Save to Watch Later' }}</button>
           <button type="button" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="share()">{{ ko ? '공유' : 'Share' }}</button>
           <button type="button" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="feedback('not_interested')">{{ ko ? '관심 없음' : 'Not interested' }}</button>
