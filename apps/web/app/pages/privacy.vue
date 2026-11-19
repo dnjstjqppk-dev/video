@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useSeoMeta({
   title: '개인정보처리방침',
-  description: 'StreamVerse 개인정보처리방침: 수집 항목, 보관 기간, 파기 절차, 이용자 권리와 보호 조치를 안내합니다.'
+  description: 'vravra 개인정보처리방침: 수집 항목, 보관 기간, 파기 절차, 이용자 권리와 보호 조치를 안내합니다.'
 })
 </script>
 

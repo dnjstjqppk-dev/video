@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
+
 const store = useAppStore()
 const api = useApi()
 onMounted(() => {
@@ -13,11 +15,8 @@ onMounted(() => {
         class="hidden h-9 w-9 items-center justify-center rounded-full text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)] md:inline-flex">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
       </button>
-      <NuxtLink to="/" class="flex items-center gap-2" aria-label="StreamVerse 홈">
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--gvp-brand)] text-white">
-          <svg class="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-        </span>
-        <span class="hidden text-base font-bold tracking-tight text-[var(--gvp-text)] min-[420px]:inline">StreamVerse</span>
+      <NuxtLink to="/" class="flex items-center gap-2" aria-label="vravra 홈">
+        <VravraLogo :size="28" />
         <span class="tabular-nums hidden rounded border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text-secondary)] min-[420px]:inline">{{ store.locale === 'ko' ? 'KR' : 'GL' }}</span>
       </NuxtLink>
     </div>

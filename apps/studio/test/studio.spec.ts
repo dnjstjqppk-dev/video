@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-describe('Creator Studio Utilities', () => {
+describe('vravra studio Utilities', () => {
   it('calculates creator revenue split according to 55/45 platform rule', () => {
     const calculateCreatorRevenue = (grossAdRevenue: number, splitRatio = 0.55): number => {
       return Math.round(grossAdRevenue * splitRatio * 100) / 100

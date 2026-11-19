@@ -10,7 +10,11 @@ const appStore = useAppStore()
 const api = useApi()
 const config = useRuntimeConfig()
 
-const playerRef = ref<{ seekToSeconds: (sec: number) => void } | null>(null)
+const playerRef = ref<{ seekToSeconds: (sec: number) => void; getCurrentTimeSeconds: () => number } | null>(null)
+const theater = ref(false)
+const showShareModal = ref(false)
+const shareStartSeconds = ref(0)
+const autoplayNext = ref(true)
 
 const { data: video, pending: videoPending, error: videoError } = await useAsyncData(`video-${videoId.value}`, async () => {
   return await api.getVideo(videoId.value)
@@ -21,15 +25,15 @@ const activeVideo = computed(() => video.value as Video)
 
 // SSR SEO Meta + Open Graph + Twitter Card
 useSeoMeta({
-  title: () => activeVideo.value?.title || 'StreamVerse',
+  title: () => activeVideo.value?.title || 'vravra',
   description: () => (activeVideo.value?.description || '').slice(0, 160),
-  ogTitle: () => activeVideo.value?.title || 'StreamVerse',
+  ogTitle: () => activeVideo.value?.title || 'vravra',
   ogDescription: () => (activeVideo.value?.description || '').slice(0, 160),
   ogImage: () => activeVideo.value?.thumbnailUrl,
   ogType: 'video.other',
   ogUrl: () => `${config.public.siteUrl}/watch/${videoId.value}`,
   twitterCard: 'summary_large_image',
-  twitterTitle: () => activeVideo.value?.title || 'StreamVerse',
+  twitterTitle: () => activeVideo.value?.title || 'vravra',
   twitterDescription: () => (activeVideo.value?.description || '').slice(0, 160),
   twitterImage: () => activeVideo.value?.thumbnailUrl
 })
@@ -48,7 +52,7 @@ useHead({
           return JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'WebPage',
-            name: 'StreamVerse',
+            name: 'vravra',
             url: `${config.public.siteUrl}/watch/${videoId.value}`
           })
         }
@@ -69,7 +73,7 @@ useHead({
           },
           author: {
             '@type': 'Person',
-            name: v.channel?.name || 'GVP Creator'
+            name: v.channel?.name || 'vravra 크리에이터'
           }
         })
       })
@@ -77,7 +81,6 @@ useHead({
   ]
 })
 
-const isSubscribed = ref(false)
 const subscriberCount = ref(0)
 const isLiked = ref(false)
 const likeCount = ref(0)
@@ -87,7 +90,6 @@ watch(video, (v) => {
   subscriberCount.value = v.channel?.subscriberCount || 0
   likeCount.value = v.likeCount || 0
 }, { immediate: true })
-const isSaved = ref(false)
 const descriptionExpanded = ref(false)
 const showReportModal = ref(false)
 const reportReason = ref('copyright_or_policy')
@@ -95,7 +97,6 @@ const reportSubmitted = ref(false)
 const reportSubmitting = ref(false)
 const reportError = ref<string | null>(null)
 const reportCaseId = ref<string | null>(null)
-const shareCopied = ref(false)
 
 function closeReportModal() {
   showReportModal.value = false
@@ -173,20 +174,8 @@ const sortedComments = computed(() => {
   })
 })
 
-async function toggleSubscribe() {
-  try {
-    if (isSubscribed.value) {
-      const res = await api.unsubscribeChannel(activeVideo.value.channelId)
-      isSubscribed.value = res.subscribed
-      subscriberCount.value = res.subscriberCount
-    } else {
-      const res = await api.subscribeChannel(activeVideo.value.channelId)
-      isSubscribed.value = res.subscribed
-      subscriberCount.value = res.subscriberCount
-    }
-  } catch (e: unknown) {
-    actionError.value = e instanceof Error ? e.message : 'Subscription update failed'
-  }
+function onSubscribeChange(v: { subscribed: boolean; count: number }) {
+  subscriberCount.value = v.count
 }
 
 async function toggleLike() {
@@ -215,14 +204,35 @@ const { data: relatedData } = await useAsyncData(`related-${videoId.value}`, asy
   }
 })
 const relatedVideos = computed(() => relatedData.value || [])
+const upNext = computed(() => relatedVideos.value[0] || null)
 
-function shareVideo() {
-  if (import.meta.client && navigator.clipboard) {
-    navigator.clipboard.writeText(window.location.href)
-  }
-  shareCopied.value = true
-  setTimeout(() => (shareCopied.value = false), 2500)
+function openShare() {
+  shareStartSeconds.value = playerRef.value?.getCurrentTimeSeconds() || 0
+  showShareModal.value = true
 }
+
+function playNext() {
+  if (upNext.value) navigateTo(`/watch/${upNext.value.id}`)
+}
+
+function onPlayerEnded() {
+  if (autoplayNext.value && upNext.value) navigateTo(`/watch/${upNext.value.id}`)
+}
+
+function toggleAutoplayNext() {
+  autoplayNext.value = !autoplayNext.value
+  try { localStorage.setItem('vravra_autoplay_next', autoplayNext.value ? '1' : '0') } catch { /* quota */ }
+}
+
+onMounted(() => {
+  try {
+    autoplayNext.value = localStorage.getItem('vravra_autoplay_next') !== '0'
+  } catch { /* default on */ }
+  const t = Number(route.query.t)
+  if (Number.isFinite(t) && t > 0) {
+    setTimeout(() => playerRef.value?.seekToSeconds(t), 800)
+  }
+})
 
 async function submitComment() {
   const text = newCommentText.value.trim()
@@ -321,9 +331,9 @@ async function removeComment(commentId: string, parentId?: string) {
       </p>
       <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">{{ videoId }}</p>
     </div>
-    <div v-else class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <div v-else class="grid grid-cols-1 gap-6" :class="theater ? '' : 'xl:grid-cols-[minmax(0,1fr)_402px]'">
       <!-- Primary Column: Video Player, Metadata, Chapters, Comments -->
-      <div class="xl:col-span-8">
+      <div class="min-w-0" :class="theater ? 'max-w-none' : 'max-w-[1280px]'">
         <ClientOnly>
           <VideoPlayer
             ref="playerRef"
@@ -336,6 +346,12 @@ async function removeComment(commentId: string, parentId?: string) {
             :chapters="activeVideo.chapters"
             :captions="activeVideo.captions"
             :sources="activeVideo.sources"
+            :autoplay-next="autoplayNext"
+            :has-next="!!upNext"
+            @ended="onPlayerEnded"
+            @request-next="playNext"
+            @toggle-autoplay-next="toggleAutoplayNext"
+            @toggle-theater="theater = !theater"
           />
           <template #fallback>
             <div class="flex aspect-video w-full items-center justify-center rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-sm text-[var(--gvp-text-secondary)]">
@@ -364,7 +380,7 @@ async function removeComment(commentId: string, parentId?: string) {
             </NuxtLink>
             <div>
               <NuxtLink :to="`/channels/${activeVideo.channelId}`" class="flex items-center gap-1 font-bold text-[var(--gvp-text)] hover:text-[var(--gvp-brand)]">
-                <span>{{ activeVideo.channel?.name || 'GVP Tech Engineering' }}</span>
+                <span>{{ activeVideo.channel?.name || 'vravra 크리에이터' }}</span>
                 <svg class="h-4 w-4 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
@@ -374,18 +390,11 @@ async function removeComment(commentId: string, parentId?: string) {
               </p>
             </div>
 
-            <button
-              type="button"
-              class="ml-3 rounded-full px-4 py-2 text-xs font-semibold transition"
-              :class="
-                isSubscribed
-                  ? 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'
-                  : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'
-              "
-              @click="toggleSubscribe"
-            >
-              {{ isSubscribed ? (appStore.locale === 'ko' ? '구독중' : 'Subscribed') : (appStore.locale === 'ko' ? '구독 (Subscribe)' : 'Subscribe') }}
-            </button>
+            <WatchSubscribeButton
+              :channel-id="activeVideo.channelId"
+              :initial-count="activeVideo.channel?.subscriberCount || 0"
+              @change="onSubscribeChange"
+            />
           </div>
 
           <!-- Action Pills: Like/Dislike, Share, Save, Report -->
@@ -394,11 +403,11 @@ async function removeComment(commentId: string, parentId?: string) {
             <div class="flex items-center overflow-hidden rounded-full bg-[var(--gvp-elevated)]">
               <button
                 type="button"
-                class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition tabular-nums"
+                class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition tabular-nums active:scale-95"
                 :class="isLiked ? 'bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
                 @click="toggleLike"
               >
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg :key="String(isLiked)" class="h-4 w-4 transition-transform duration-150" :class="isLiked ? 'scale-125' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                 </svg>
                 <span>{{ likeCount.toLocaleString() }}</span>
@@ -420,25 +429,15 @@ async function removeComment(commentId: string, parentId?: string) {
             <button
               type="button"
               class="flex items-center gap-1.5 rounded-full bg-[var(--gvp-elevated)] px-3.5 py-1.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
-              @click="shareVideo"
+              @click="openShare"
             >
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              <span>{{ shareCopied ? 'Copied URL!' : (appStore.locale === 'ko' ? '공유' : 'Share') }}</span>
+              <span>{{ appStore.locale === 'ko' ? '공유' : 'Share' }}</span>
             </button>
 
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition"
-              :class="isSaved ? 'bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]' : 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
-              @click="isSaved = !isSaved"
-            >
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <span>{{ isSaved ? 'Saved' : (appStore.locale === 'ko' ? '재생목록 저장' : 'Save') }}</span>
-            </button>
+            <WatchSavePopover :video="activeVideo" />
 
             <button
               type="button"
@@ -601,7 +600,7 @@ async function removeComment(commentId: string, parentId?: string) {
                 </div>
 
                 <!-- Body -->
-                <p class="mt-1 text-[var(--gvp-text)]">{{ cmt.content }}</p>
+                <p class="mt-1 text-[var(--gvp-text)]"><CommentText :text="cmt.content" @seek="(s) => playerRef?.seekToSeconds(s)" /></p>
 
                 <!-- Actions: Like, Heart, Pin, Reply, Delete -->
                 <div class="mt-2 flex flex-wrap items-center gap-4 text-xs text-[var(--gvp-text-secondary)]">
@@ -716,7 +715,7 @@ async function removeComment(commentId: string, parentId?: string) {
                             {{ new Date(reply.createdAt).toLocaleDateString() }}
                           </span>
                         </div>
-                        <p class="mt-0.5 text-[var(--gvp-text)]">{{ reply.content }}</p>
+                        <p class="mt-0.5 text-[var(--gvp-text)]"><CommentText :text="reply.content" @seek="(s) => playerRef?.seekToSeconds(s)" /></p>
                         <div class="mt-1 flex items-center gap-3 text-[var(--gvp-text-secondary)]">
                           <button
                             type="button"
@@ -748,7 +747,7 @@ async function removeComment(commentId: string, parentId?: string) {
       </div>
 
       <!-- Right Sidebar: Related & Up Next Videos -->
-      <aside v-if="relatedVideos.length" class="xl:col-span-4">
+      <aside v-if="!theater && relatedVideos.length">
         <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
           {{ appStore.locale === 'ko' ? '같은 채널의 다른 동영상' : 'More from this channel' }}
         </h2>
@@ -835,5 +834,13 @@ async function removeComment(commentId: string, parentId?: string) {
         </div>
       </div>
     </div>
+
+    <!-- Share Modal -->
+    <WatchShareModal
+      v-if="showShareModal"
+      :video-id="videoId"
+      :start-seconds="shareStartSeconds"
+      @close="showShareModal = false"
+    />
   </div>
 </template>

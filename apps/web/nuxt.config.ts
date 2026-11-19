@@ -33,13 +33,13 @@ export default defineNuxtConfig({
       studioUrl: process.env.NUXT_PUBLIC_STUDIO_URL || 'https://global-video-platform-studio.dnjstjq0824.workers.dev',
       partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjq0824.workers.dev',
       adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjq0824.workers.dev',
-      brandName: 'StreamVerse'
+      brandName: 'vravra'
     }
   },
   colorMode: {
     classSuffix: '',
-    preference: 'dark',
-    fallback: 'dark'
+    preference: 'system',
+    fallback: 'light'
   },
   i18n: {
     locales: [
@@ -54,16 +54,17 @@ export default defineNuxtConfig({
       htmlAttrs: {
         lang: 'ko'
       },
-      titleTemplate: '%s — StreamVerse Global Video Platform',
+      titleTemplate: '%s — vravra',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
-          content: 'StreamVerse — Watch 4K HDR videos, Shorts, and ultra-low latency Live streams from global creators.'
+          content: 'vravra — Watch 4K HDR videos, Shorts, and ultra-low latency Live streams from global creators.'
         },
-        { name: 'theme-color', content: '#0B0D12' },
-        { property: 'og:site_name', content: 'StreamVerse' },
+        { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#FFFFFF' },
+        { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#0A0A0C' },
+        { property: 'og:site_name', content: 'vravra' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' }
       ],
@@ -73,7 +74,8 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap' }
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap' }
       ]
     }
   },

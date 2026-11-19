@@ -1,4 +1,4 @@
-/** Deep Obsidian Dark (default) + Pure Crisp Light themes.
+/** Daytime Light (default) + True OLED Dark cinema themes.
  * Keys map 1:1 to CSS vars in gvp-themes.css. */
 export interface SurfaceTheme {
   canvas: string
@@ -14,33 +14,33 @@ export interface SurfaceTheme {
   focusRing: string
 }
 
-export const darkTheme: SurfaceTheme = {
-  canvas: '#0B0D12',
-  surface: '#131722',
-  elevated: '#1C2232',
-  overlay: 'rgba(3, 5, 10, 0.62)',
-  borderSubtle: 'rgba(255, 255, 255, 0.08)',
-  borderStrong: 'rgba(255, 255, 255, 0.16)',
-  textPrimary: '#F8FAFC',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
-  textInverse: '#0F172A',
-  focusRing: '#818CF8',
-}
-
 export const lightTheme: SurfaceTheme = {
-  canvas: '#F8FAFC',
-  surface: '#FFFFFF',
-  elevated: '#F1F5F9',
-  overlay: 'rgba(15, 23, 42, 0.45)',
-  borderSubtle: '#E2E8F0',
-  borderStrong: '#CBD5E1',
-  textPrimary: '#0F172A',
-  textSecondary: '#475569',
-  textMuted: '#94A3B8',
+  canvas: '#FFFFFF',
+  surface: '#F8F9FA',
+  elevated: '#F2F4F7',
+  overlay: 'rgba(15, 15, 16, 0.45)',
+  borderSubtle: '#E5E7EB',
+  borderStrong: '#D4D4D8',
+  textPrimary: '#0F0F0F',
+  textSecondary: '#606060',
+  textMuted: '#9AA0A6',
   textInverse: '#FFFFFF',
-  focusRing: '#4F46E5',
+  focusRing: '#E02643',
 }
 
-export const themes = { dark: darkTheme, light: lightTheme } as const
+export const darkTheme: SurfaceTheme = {
+  canvas: '#0A0A0C',
+  surface: '#141418',
+  elevated: '#1F1F26',
+  overlay: 'rgba(0, 0, 0, 0.62)',
+  borderSubtle: '#26262E',
+  borderStrong: '#3A3A44',
+  textPrimary: '#F4F4F6',
+  textSecondary: '#9CA3AF',
+  textMuted: '#6B7280',
+  textInverse: '#0F0F0F',
+  focusRing: '#FF6B81',
+}
+
+export const themes = { light: lightTheme, dark: darkTheme } as const
 export type ThemeName = keyof typeof themes

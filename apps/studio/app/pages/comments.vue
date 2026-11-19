@@ -5,7 +5,7 @@ import GvpBanner from '@gvp/ui/src/components/GvpBanner.vue'
 import { useStudioApi } from '~/composables/useStudioApi'
 
 useSeoMeta({
-  title: 'Channel Comments & Moderation — Creator Studio'
+  title: 'Channel Comments & Moderation — vravra studio'
 })
 
 const api = useStudioApi()

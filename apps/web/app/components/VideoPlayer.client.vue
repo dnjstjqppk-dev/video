@@ -15,6 +15,8 @@ const props = withDefaults(
     sources?: VideoPlaybackSource[]
     autoplay?: boolean
     isLive?: boolean
+    autoplayNext?: boolean
+    hasNext?: boolean
   }>(),
   {
     hlsMasterUrl: '',
@@ -24,7 +26,9 @@ const props = withDefaults(
     captions: () => [],
     sources: () => [],
     autoplay: false,
-    isLive: false
+    isLive: false,
+    autoplayNext: true,
+    hasNext: false
   }
 )
 
@@ -32,6 +36,8 @@ const emit = defineEmits<{
   (e: 'timeupdate', currentTime: number): void
   (e: 'ended'): void
   (e: 'toggle-theater'): void
+  (e: 'request-next'): void
+  (e: 'toggle-autoplay-next'): void
 }>()
 
 const appStore = useAppStore()
@@ -713,8 +719,13 @@ onBeforeUnmount(() => {
   }
 })
 
+function getCurrentTimeSeconds() {
+  return Math.floor(currentTime.value || 0)
+}
+
 defineExpose({
   seekToSeconds,
+  getCurrentTimeSeconds,
   togglePlay,
   toggleStableVolume,
   isStableVolumeEnabled
@@ -1038,6 +1049,28 @@ defineExpose({
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
               <span class="text-[11px]">{{ isStableVolumeEnabled ? 'Stable Vol' : 'Vol Normal' }}</span>
+            </button>
+
+            <!-- Next video + autoplay-next toggle -->
+            <button
+              v-if="hasNext"
+              type="button"
+              title="다음 영상"
+              aria-label="다음 영상"
+              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
+              @click="emit('request-next')"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6l8.5 6L6 18V6zm9 0h2v12h-2V6z" /></svg>
+            </button>
+            <button
+              type="button"
+              :title="autoplayNext ? '자동재생 켜짐' : '자동재생 꺼짐'"
+              :aria-pressed="autoplayNext"
+              class="rounded-md border px-2 py-1 text-[11px] font-bold transition"
+              :class="autoplayNext ? 'border-[var(--gvp-brand)] bg-[var(--gvp-brand)] text-white' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)]'"
+              @click="emit('toggle-autoplay-next')"
+            >
+              {{ autoplayNext ? '자동재생 ON' : '자동재생 OFF' }}
             </button>
 
             <!-- Subtitle Toggle -->

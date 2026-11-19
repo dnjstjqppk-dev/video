@@ -13,7 +13,7 @@ const items = [
   <div class="relative">
     <button
       type="button"
-      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--gvp-brand)] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--gvp-brand-hover)]"
+      class="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--gvp-studio)] px-3.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
       :aria-expanded="open"
       aria-haspopup="menu"
       @click="open = !open"

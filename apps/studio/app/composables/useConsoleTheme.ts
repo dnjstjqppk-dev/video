@@ -1,15 +1,26 @@
-/** Console theme: Pure Crisp Light default, persisted toggle. */
+/** vravra studio theme: light default + dark + system, persisted toggle. */
+export type ConsoleThemePreference = 'light' | 'dark' | 'system'
 const KEY = 'gvp_console_theme'
 
-export function useConsoleTheme() {
-  const mode = useState<'light' | 'dark'>('console-theme', () => 'light')
+function resolveSystem(): 'light' | 'dark' {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
-  function apply(next: 'light' | 'dark') {
-    mode.value = next
+export function useConsoleTheme() {
+  const preference = useState<ConsoleThemePreference>('console-theme', () => 'light')
+  const mode = computed<'light' | 'dark'>(() =>
+    preference.value === 'system'
+      ? (import.meta.client ? resolveSystem() : 'light')
+      : preference.value,
+  )
+
+  function apply(next: ConsoleThemePreference) {
+    preference.value = next
     if (import.meta.client) {
-      document.documentElement.dataset.theme = next
-      document.documentElement.classList.toggle('dark', next === 'dark')
-      document.documentElement.classList.toggle('light', next === 'light')
+      const resolved = next === 'system' ? resolveSystem() : next
+      document.documentElement.dataset.theme = resolved
+      document.documentElement.classList.toggle('dark', resolved === 'dark')
+      document.documentElement.classList.toggle('light', resolved === 'light')
       try { localStorage.setItem(KEY, next) } catch { /* quota */ }
     }
   }
@@ -19,9 +30,12 @@ export function useConsoleTheme() {
   onMounted(() => {
     try {
       const saved = localStorage.getItem(KEY)
-      apply(saved === 'dark' ? 'dark' : 'light')
+      apply(saved === 'dark' || saved === 'system' ? saved : 'light')
     } catch { apply('light') }
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (preference.value === 'system') apply('system')
+    })
   })
 
-  return { mode, apply, toggle }
+  return { mode, preference, apply, toggle }
 }

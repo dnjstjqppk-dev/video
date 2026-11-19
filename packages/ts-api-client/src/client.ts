@@ -251,6 +251,11 @@ export class ApiClient {
     return toCamelDeep(raw) as { videoId: string; status: string };
   }
 
+  async getUploadStatus(uploadId: string): Promise<{ uploadId: string; jobId: string; videoId: string; status: string; progressPct: number; error: string }> {
+    const raw = await this.request<unknown>(`/v1/uploads/${uploadId}/status`);
+    return toCamelDeep(raw) as { uploadId: string; jobId: string; videoId: string; status: string; progressPct: number; error: string };
+  }
+
   // --- Videos & Playback ---
   async getVideo(id: string): Promise<Video> {
     const raw = await this.request<unknown>(`/v1/videos/${id}`);

@@ -1,7 +1,7 @@
-/** Typography: Pretendard Variable + Inter, tabular-nums metrics. */
+/** Typography: Pretendard + Plus Jakarta Sans / Inter, tabular-nums metrics. */
 export const typography = {
   fontSans:
-    "'Pretendard Variable', Pretendard, Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+    "'Pretendard Variable', Pretendard, 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
   fontMono:
     "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   scale: {

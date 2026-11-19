@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { UserProfile } from '@gvp/shared-types'
+import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
 
 const api = useStudioApi()
 const sessionUser = useState<UserProfile | null>('studio-session', () => null)
 
 useSeoMeta({
-  title: '로그인 — Creator Studio'
+  title: '로그인 — vravra studio'
 })
 
 const devToken = ref('')
@@ -43,12 +44,7 @@ async function loginWithDevToken() {
 <template>
   <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4">
     <div class="w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8">
-      <div class="flex items-center gap-2.5">
-        <span class="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--gvp-brand)] text-sm font-semibold text-white">
-          S
-        </span>
-        <span class="text-base font-semibold tracking-tight text-[var(--gvp-text)]">Creator Studio</span>
-      </div>
+      <VravraLogo :size="28" suffix="studio" suffix-tone="studio" />
       <h1 class="mt-5 text-xl font-semibold tracking-tight text-[var(--gvp-text)]">크리에이터 로그인</h1>
       <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
         OIDC 싱글사인온으로 안전하게 로그인하세요.
@@ -58,7 +54,7 @@ async function loginWithDevToken() {
         href="/auth/login"
         class="mt-6 w-full inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
       >
-        StreamVerse 계정으로 계속하기
+        vravra 계정으로 계속하기
       </a>
 
       <div v-if="isLocalhost" class="mt-6 border-t border-[var(--gvp-border)] pt-5">

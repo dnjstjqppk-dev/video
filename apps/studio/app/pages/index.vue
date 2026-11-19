@@ -31,7 +31,7 @@ const recentComments = computed(() => dashboard.value?.recentComments || [])
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <NuxtLink to="/upload" class="inline-flex h-9 items-center gap-2 rounded-full bg-[var(--gvp-brand)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--gvp-brand-hover)]">
+        <NuxtLink to="/upload" class="inline-flex h-9 items-center gap-2 rounded-full bg-[var(--gvp-studio)] px-4 text-xs font-semibold text-white transition-colors hover:opacity-90">
           <span class="text-base leading-none" aria-hidden="true">+</span>
           <span>동영상 업로드</span>
         </NuxtLink>
@@ -58,7 +58,7 @@ const recentComments = computed(() => dashboard.value?.recentComments || [])
         <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">아직 업로드한 동영상이 없습니다.</p>
         <NuxtLink to="/upload" class="mt-2 inline-block text-xs font-medium underline">첫 동영상 업로드하기</NuxtLink>
       </div>
-      <div v-else class="overflow-hidden rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] lg:col-span-2">
+      <div v-else class="overflow-x-auto rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] lg:col-span-2">
         <div class="flex items-center justify-between border-b border-[var(--gvp-border)] px-5 py-4">
           <h2 class="text-sm font-semibold text-[var(--gvp-text)]">최근 업로드</h2>
           <NuxtLink to="/content" class="text-xs font-medium text-[var(--gvp-brand-hover)] hover:underline">콘텐츠 전체 관리</NuxtLink>

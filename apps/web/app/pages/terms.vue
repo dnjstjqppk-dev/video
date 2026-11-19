@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useSeoMeta({
   title: '이용약관',
-  description: 'StreamVerse Global Video Platform 이용약관: 계정, 콘텐츠, 유료 결제, 저작권, 분쟁 해결 규정을 안내합니다.'
+  description: 'vravra 이용약관: 계정, 콘텐츠, 유료 결제, 저작권, 분쟁 해결 규정을 안내합니다.'
 })
 </script>
 
@@ -14,7 +14,7 @@ useSeoMeta({
     <div class="mt-8 space-y-6 text-sm leading-relaxed text-[var(--gvp-text-secondary)] tabular-nums">
       <section class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-5">
         <h2 class="text-base font-bold text-[var(--gvp-text)]">제1조 (목적)</h2>
-        <p class="mt-2">이 약관은 StreamVerse Global Video Platform(이하 “서비스”)이 제공하는 동영상 스트리밍, 라이브 방송, 크리에이터 스튜디오, 파트너 광고 및 정산 서비스의 이용 조건과 회사·이용자의 권리·의무를 정합니다.</p>
+        <p class="mt-2">이 약관은 vravra(이하 “서비스”)이 제공하는 동영상 스트리밍, 라이브 방송, vravra studio, 파트너 광고 및 정산 서비스의 이용 조건과 회사·이용자의 권리·의무를 정합니다.</p>
       </section>
       <section class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-5">
         <h2 class="text-base font-bold text-[var(--gvp-text)]">제2조 (계정과 인증)</h2>

@@ -7,7 +7,7 @@ import GvpTextInput from '@gvp/ui/src/components/GvpTextInput.vue'
 import { useStudioApi } from '~/composables/useStudioApi'
 
 useSeoMeta({
-  title: 'Video Subtitles & Captions — Creator Studio'
+  title: 'Video Subtitles & Captions — vravra studio'
 })
 
 const api = useStudioApi()

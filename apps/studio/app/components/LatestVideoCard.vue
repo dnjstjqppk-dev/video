@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Video } from '@gvp/shared-types'
-import { formatViewCount } from '@gvp/ui'
+import { formatRelativeTime, formatViewCount } from '@gvp/ui'
 
 const props = defineProps<{ videos: Video[] }>()
 const latest = computed(() => [...props.videos].sort((a, b) => +new Date(b.publishedAt || b.createdAt) - +new Date(a.publishedAt || a.createdAt))[0])
@@ -27,7 +27,10 @@ const deltaPct = computed(() => {
         <span>댓글 {{ latest.commentCount.toLocaleString() }}</span>
         <span>좋아요 {{ latest.likeCount.toLocaleString() }}</span>
       </div>
-      <p class="mt-2 rounded-lg bg-[var(--gvp-canvas)] px-3 py-2 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
+      <p class="mt-2 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
+        게시 {{ formatRelativeTime(latest.publishedAt || latest.createdAt, 'ko') }}
+      </p>
+      <p class="mt-1.5 rounded-lg bg-[var(--gvp-canvas)] px-3 py-2 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
         최근 {{ videos.length }}개 중 {{ rank }}위 · 채널 평균 대비 {{ deltaPct >= 0 ? '+' : '' }}{{ deltaPct }}%
       </p>
       <div class="mt-3 flex gap-2 text-xs font-medium">

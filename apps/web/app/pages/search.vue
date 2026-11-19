@@ -14,7 +14,7 @@ const selectedType = ref<'all' | 'video' | 'shorts' | 'live' | 'channel' | 'play
 const selectedSort = ref<'relevance' | 'views' | 'date'>('relevance')
 
 useSeoMeta({
-  title: () => `"${query.value}" 검색 결과 — StreamVerse OpenSearch`,
+  title: () => `"${query.value}" 검색 결과 — vravra`,
   description: () => `OpenSearch hybrid Korean Nori & English search results for ${query.value}.`
 })
 

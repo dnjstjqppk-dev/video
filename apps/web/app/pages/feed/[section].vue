@@ -5,25 +5,40 @@ const library = useLibraryStore()
 const route = useRoute()
 const api = useApi()
 const section = computed(() => String(route.params.section))
-const titles: Record<string, string> = { history: '시청 기록', saved: '나중에 볼 동영상', liked: '좋아요 표시한 동영상', subscriptions: '구독' }
+const titles: Record<string, string> = {
+  history: '시청 기록', saved: '나중에 볼 동영상', liked: '좋아요 표시한 동영상', subscriptions: '구독',
+  trending: '인기 급상승', music: '음악', gaming: '게임', tech: '테크/개발',
+}
 if (!titles[section.value]) throw createError({ statusCode: 404, statusMessage: 'Page not found' })
+const apiSections = new Set(['subscriptions', 'trending', 'music', 'gaming', 'tech'])
+const isApiSection = computed(() => apiSections.has(section.value))
 const query = ref('')
 const confirmClear = ref(false)
 const feed = ref<Video[]>([])
 const loading = ref(false)
 const failed = ref(false)
-async function fetchSubscriptions() {
+async function fetchFeed() {
   loading.value = true
   failed.value = false
   try { feed.value = (await api.getHomeFeed(1, 100, 'all')).items || [] }
   catch { failed.value = true }
   finally { loading.value = false }
 }
-onMounted(() => { library.hydrate(); if (section.value === 'subscriptions') fetchSubscriptions() })
-watch(section, value => { query.value = ''; confirmClear.value = false; if (value === 'subscriptions') fetchSubscriptions() })
+onMounted(() => { library.hydrate(); if (isApiSection.value) fetchFeed() })
+watch(section, () => { query.value = ''; confirmClear.value = false; if (isApiSection.value) fetchFeed() })
+function matchesCategory(v: Video, cat: string) {
+  const hay = `${v.category || ''} ${(v.tags || []).join(' ')}`.toLowerCase()
+  if (cat === 'tech') return hay.includes('tech') || hay.includes('개발') || hay.includes('technology')
+  return hay.includes(cat)
+}
 const videos = computed(() => {
-  const list = section.value === 'subscriptions' ? feed.value.filter(v => library.subscriptions.includes(v.channelId))
-    : section.value === 'history' ? library.history : section.value === 'saved' ? library.saved : library.liked
+  let list: Video[]
+  if (section.value === 'subscriptions') list = feed.value.filter(v => library.subscriptions.includes(v.channelId))
+  else if (section.value === 'trending') list = [...feed.value].sort((a, b) => b.viewCount - a.viewCount)
+  else if (section.value === 'music' || section.value === 'gaming' || section.value === 'tech') list = feed.value.filter(v => matchesCategory(v, section.value))
+  else if (section.value === 'history') list = library.history
+  else if (section.value === 'saved') list = library.saved
+  else list = library.liked
   return list.filter(v => `${v.title} ${v.channel?.name || ''}`.toLowerCase().includes(query.value.toLowerCase()))
 })
 function remove(id: string) {
@@ -38,7 +53,7 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
       <div>
         <h1 class="text-2xl font-bold text-[var(--gvp-text)] sm:text-3xl">{{ titles[section] }}</h1>
         <p class="mt-2 text-sm text-[var(--gvp-text-secondary)] tabular-nums">
-          {{ videos.length }}개의 동영상<span v-if="section !== 'subscriptions'"> · 이 브라우저에 저장됨</span>
+          {{ videos.length }}개의 동영상<span v-if="!isApiSection"> · 이 브라우저에 저장됨</span>
         </p>
       </div>
       <input
@@ -96,15 +111,15 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
     </div>
 
     <p v-if="loading" role="status" class="py-16 text-center text-sm text-[var(--gvp-text-secondary)]">
-      구독 동영상을 불러오는 중…
+      {{ titles[section] }} 불러오는 중…
     </p>
 
-    <div v-else-if="failed && section === 'subscriptions'" class="rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] py-16 text-center">
-      <p class="text-sm font-semibold text-[var(--gvp-live)]">구독 동영상을 불러오지 못했습니다.</p>
+    <div v-else-if="failed && isApiSection" class="rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] py-16 text-center">
+      <p class="text-sm font-semibold text-[var(--gvp-live)]">{{ titles[section] }} 불러오지 못했습니다.</p>
       <button
         type="button"
         class="mt-4 rounded-md bg-[var(--gvp-brand)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--gvp-brand-hover)]"
-        @click="fetchSubscriptions"
+        @click="fetchFeed"
       >
         다시 시도
       </button>
@@ -113,7 +128,7 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
     <div v-else-if="!videos.length" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] py-20 text-center">
       <h2 class="text-lg font-bold text-[var(--gvp-text)]">{{ query ? '검색 결과가 없습니다' : '아직 동영상이 없습니다' }}</h2>
       <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">
-        {{ section === 'saved' ? '동영상 메뉴에서 나중에 보기를 선택해 보세요.' : section === 'subscriptions' ? '좋아하는 채널을 구독하면 새로운 동영상을 모아 볼 수 있습니다.' : section === 'liked' ? '마음에 드는 동영상에 좋아요를 눌러 보세요.' : '시청한 동영상이 여기에 표시됩니다.' }}
+        {{ section === 'saved' ? '동영상 메뉴에서 나중에 보기를 선택해 보세요.' : section === 'subscriptions' ? '좋아하는 채널을 구독하면 새로운 동영상을 모아 볼 수 있습니다.' : section === 'liked' ? '마음에 드는 동영상에 좋아요를 눌러 보세요.' : section === 'trending' ? '아직 집계된 인기 동영상이 없습니다.' : '이 카테고리에 표시할 동영상이 아직 없습니다.' }}
       </p>
       <NuxtLink to="/" class="mt-6 inline-block rounded-md bg-[var(--gvp-brand)] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]">
         동영상 둘러보기
@@ -144,7 +159,7 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
           </p>
         </div>
         <button
-          v-if="section !== 'subscriptions'"
+          v-if="!isApiSection"
           type="button"
           :aria-label="`${video.title} 목록에서 삭제`"
           class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--gvp-text-secondary)] transition hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]"

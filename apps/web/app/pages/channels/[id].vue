@@ -16,7 +16,7 @@ const { data: channelData, pending: channelPending, error: channelError } = awai
 const channel = computed(() => channelData.value as Channel)
 
 useSeoMeta({
-  title: () => channel.value ? `${channel.value.name} (${channel.value.handle}) — Channel` : 'Channel — StreamVerse',
+  title: () => channel.value ? `${channel.value.name} (${channel.value.handle}) — Channel` : 'Channel — vravra',
   description: () => channel.value?.description || ''
 })
 

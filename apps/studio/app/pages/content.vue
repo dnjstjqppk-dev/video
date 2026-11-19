@@ -21,6 +21,7 @@ interface StudioContentRow {
   views: number
   comments: number
   likes: number
+  dislikes: number
   thumbnailUrl: string
   durationSeconds: number
   ageRestricted: boolean
@@ -30,6 +31,8 @@ interface StudioContentRow {
 
 const activeTab = ref<'all' | 'video' | 'shorts' | 'live'>('all')
 const statusFilter = ref<'all' | VideoProcessingStatus>('all')
+const visibilityFilter = ref<'all' | VideoVisibility>('all')
+const viewsFilter = ref(0)
 const searchQuery = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const config = useRuntimeConfig()
 const page = ref(1)
@@ -52,6 +55,7 @@ function toRow(v: Video): StudioContentRow {
     views: v.viewCount,
     comments: v.commentCount,
     likes: v.likeCount,
+    dislikes: v.dislikeCount,
     thumbnailUrl: v.thumbnailUrl,
     durationSeconds: v.durationSeconds,
     ageRestricted: v.isAgeRestricted,
@@ -75,6 +79,8 @@ const items = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   return (data.value ?? []).filter((r) => {
     if (statusFilter.value !== 'all' && r.status !== statusFilter.value) return false
+    if (visibilityFilter.value !== 'all' && r.visibility !== visibilityFilter.value) return false
+    if (r.views < viewsFilter.value) return false
     if (q && !r.title.toLowerCase().includes(q)) return false
     return true
   })
@@ -105,6 +111,50 @@ async function applyBulkVisibility(vis: VideoVisibility) {
   }
 }
 
+const bulkBusy = ref(false)
+const bulkPlaylistTitle = ref('')
+
+async function applyBulkDelete() {
+  rowError.value = null
+  bulkBusy.value = true
+  try {
+    const targets = items.value.filter(i => i.selected)
+    for (const row of targets) {
+      await api.deleteVideo(row.id)
+    }
+    await refresh()
+  } catch (e: unknown) {
+    rowError.value = e instanceof Error ? e.message : '일괄 삭제에 실패했습니다.'
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
+async function applyBulkPlaylist() {
+  const title = bulkPlaylistTitle.value.trim()
+  if (!title || bulkBusy.value) return
+  rowError.value = null
+  bulkBusy.value = true
+  try {
+    const pl = await api.createPlaylist({ title, visibility: 'private' })
+    const targets = items.value.filter(i => i.selected)
+    for (const row of targets) {
+      await api.addPlaylistItem(pl.id, row.id)
+    }
+    bulkPlaylistTitle.value = ''
+  } catch (e: unknown) {
+    rowError.value = e instanceof Error ? e.message : '재생목록 추가에 실패했습니다.'
+  } finally {
+    bulkBusy.value = false
+  }
+}
+
+function likePct(row: StudioContentRow): string {
+  const total = row.likes + row.dislikes
+  if (total <= 0) return '-'
+  return `${Math.round((row.likes / total) * 100)}%`
+}
+
 function restrictionOf(row: StudioContentRow): string | null {
   if (row.status === VideoProcessingStatus.FAILED) return '처리 실패'
   if (row.status === VideoProcessingStatus.PROCESSING) return '처리 중'
@@ -128,10 +178,15 @@ function formatDate(iso: string) {
           동영상 · Shorts · 라이브 VOD의 공개 상태와 실적을 관리하세요
         </p>
       </div>
-      <div v-if="selectedCount > 0" class="flex items-center gap-2 rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs">
+      <div v-if="selectedCount > 0" class="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs">
         <span class="font-semibold text-[var(--gvp-text)] tabular-nums">{{ selectedCount }}개 선택됨</span>
         <button type="button" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PUBLIC)">공개로 설정</button>
         <button type="button" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PRIVATE)">비공개로 설정</button>
+        <button type="button" :disabled="bulkBusy" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-surface)] px-3 text-xs font-medium text-[var(--gvp-live)] hover:bg-[var(--gvp-live-soft)] disabled:opacity-50" @click="applyBulkDelete">삭제</button>
+        <span class="flex items-center gap-1.5">
+          <input v-model="bulkPlaylistTitle" type="text" placeholder="새 재생목록 이름" aria-label="새 재생목록 이름" class="h-8 w-36 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]" @keydown.enter="applyBulkPlaylist" />
+          <button type="button" :disabled="bulkBusy || !bulkPlaylistTitle.trim()" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-studio)] px-3 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50" @click="applyBulkPlaylist">재생목록에 추가</button>
+        </span>
       </div>
     </div>
 
@@ -172,6 +227,25 @@ function formatDate(iso: string) {
             <option :value="VideoProcessingStatus.FAILED">FAILED</option>
           </select>
         </label>
+        <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
+          공개 상태
+          <select v-model="visibilityFilter" class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="공개 상태 필터">
+            <option value="all">전체</option>
+            <option :value="VideoVisibility.PUBLIC">공개</option>
+            <option :value="VideoVisibility.UNLISTED">일부 공개</option>
+            <option :value="VideoVisibility.PRIVATE">비공개</option>
+            <option :value="VideoVisibility.MEMBERS_ONLY">멤버십 전용</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
+          조회수
+          <select v-model.number="viewsFilter" class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="조회수 조건">
+            <option :value="0">전체</option>
+            <option :value="1000">1천 이상</option>
+            <option :value="10000">1만 이상</option>
+            <option :value="100000">10만 이상</option>
+          </select>
+        </label>
       </div>
     </div>
 
@@ -202,7 +276,7 @@ function formatDate(iso: string) {
             <th scope="col" class="px-4 py-2.5">날짜</th>
             <th scope="col" class="px-4 py-2.5 text-right">조회수</th>
             <th scope="col" class="px-4 py-2.5 text-right">댓글</th>
-            <th scope="col" class="px-4 py-2.5 text-right">좋아요</th>
+            <th scope="col" class="px-4 py-2.5 text-right">좋아요 비율</th>
             <th scope="col" class="px-4 py-2.5 text-right">관리</th>
           </tr>
         </thead>
@@ -244,12 +318,13 @@ function formatDate(iso: string) {
             <td class="whitespace-nowrap px-4 py-3 text-xs text-[var(--gvp-text-secondary)] tabular-nums">{{ formatDate(row.publishedAt) }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.views.toLocaleString() }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.comments.toLocaleString() }}</td>
-            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.likes.toLocaleString() }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums" :title="`좋아요 ${row.likes.toLocaleString()} / 싫어요 ${row.dislikes.toLocaleString()}`">{{ likePct(row) }}</td>
             <td class="px-4 py-3 text-right">
               <div class="inline-flex items-center gap-1.5">
                 <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
                 <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
-                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="실제 영상 보기" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-brand)] px-2.5 text-xs font-medium text-white hover:bg-[var(--gvp-brand-hover)]">보기↗</a>
+                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
+                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="vravra에서 보기" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-studio)] px-2.5 text-xs font-medium text-white hover:opacity-90">보기↗</a>
               </div>
             </td>
           </tr>

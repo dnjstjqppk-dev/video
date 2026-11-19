@@ -7,7 +7,7 @@ const step = ref(0)
 
 useSeoMeta({
   title: '시작하기',
-  description: 'StreamVerse 시작 가이드: 시청, 구독, 업로드, Premium까지 3단계로 안내합니다.'
+  description: 'vravra 시작 가이드: 시청, 구독, 업로드, Premium까지 3단계로 안내합니다.'
 })
 
 const steps = computed(() => [
@@ -32,7 +32,7 @@ const steps = computed(() => [
     body: appStore.locale === 'ko'
       ? '스튜디오에서 업로드·분석·수익 정산을 한곳에서 관리하세요. 광고 없는 감상은 Premium으로 업그레이드할 수 있습니다.'
       : 'Upload, analytics, and earnings live in Studio. Upgrade to Premium for ad-free viewing.',
-    cta: 'Creator Studio',
+    cta: 'vravra studio',
     href: config.public.studioUrl as string
   }
 ])
@@ -58,7 +58,7 @@ onMounted(() => {
   <div class="mx-auto max-w-2xl bg-[var(--gvp-surface)] px-4 py-16 text-[var(--gvp-text)] sm:px-6">
     <p class="text-xs font-bold uppercase tracking-wider text-[var(--gvp-brand-hover)]">Welcome</p>
     <h1 class="mt-2 text-3xl font-extrabold text-[var(--gvp-text)]">
-      {{ appStore.locale === 'ko' ? 'StreamVerse 시작하기' : 'Get started with StreamVerse' }}
+      {{ appStore.locale === 'ko' ? 'vravra 시작하기' : 'Get started with vravra' }}
     </h1>
 
     <ol class="mt-6 flex items-center gap-2" aria-label="진행 단계">

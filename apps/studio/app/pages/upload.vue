@@ -2,23 +2,27 @@
 import { VideoProcessingStatus, VideoVisibility } from '@gvp/shared-types'
 
 const api = useStudioApi()
+const route = useRoute()
 
 useSeoMeta({
-  title: 'Multipart R2 Video Uploader'
+  title: '동영상 업로드'
 })
 
-const title = ref('Zero-Copy HLS Transcoding Pipeline in Go 1.24 (4K 60fps Masterclass)')
-const description = ref(
-  'In this video we benchmark Cloudflare R2 multipart uploads, FFmpeg segmenting, and Shaka Player ABR adaptation.'
-)
-const visibility = ref<VideoVisibility>(VideoVisibility.PUBLIC)
-const isAgeRestricted = ref(false)
-const scheduledPublishAt = ref('')
-const chaptersInput = ref('00:00 Introduction\n03:30 Multipart S3/R2 Presigned Upload\n09:15 FFmpeg Worker Transcoding Ladder\n15:40 Summary')
+const steps = ['세부정보', '동영상 요소', '검토', '공개 상태'] as const
+const step = ref(0)
+const title = ref('')
+const description = ref('')
+const category = ref('일반')
+const videoType = ref<'standard' | 'shorts'>(route.query.type === 'shorts' ? 'shorts' : 'standard')
+const visibility = ref<VideoVisibility>(VideoVisibility.PRIVATE)
+const detailsNotice = ref<string | null>(null)
+const detailsFailed = ref<string | null>(null)
+const detailsBusy = ref(false)
 
 const selectedFile = ref<File | null>(null)
-const selectedFileName = ref('선택된 파일 없음 (Select a video file)')
+const selectedFileName = ref('동영상 파일을 선택하거나 드래그하세요')
 const selectedFileSizeBytes = ref(0)
+const dragOver = ref(false)
 const uploadId = ref<string | null>(null)
 const videoId = ref<string | null>(null)
 const partSizeBytes = ref(10 * 1024 * 1024)
@@ -38,16 +42,28 @@ const transcodeSteps: VideoProcessingStatus[] = [
   VideoProcessingStatus.READY
 ]
 const currentStatus = ref<VideoProcessingStatus>(VideoProcessingStatus.CREATED)
+const jobError = ref('')
 
 let cancelled = false
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 
 const progressPercent = computed(() =>
   totalParts.value === 0 ? 0 : Math.min(100, Math.round((uploadedParts.value / totalParts.value) * 100))
 )
+const phaseLabel = computed(() => {
+  if (isUploading.value) return `업로드 ${progressPercent.value}%`
+  switch (currentStatus.value) {
+    case VideoProcessingStatus.READY: return '검사 완료'
+    case VideoProcessingStatus.FAILED: return '처리 실패'
+    case VideoProcessingStatus.PROCESSING:
+    case VideoProcessingStatus.VALIDATING: return 'HD 화질 처리 중'
+    case VideoProcessingStatus.QUEUED:
+    case VideoProcessingStatus.UPLOADED: return '처리 대기 중'
+    default: return '준비됨'
+  }
+})
 
-function onFileSelected(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
+function pickFile(file: File | undefined) {
   if (!file) return
   selectedFile.value = file
   selectedFileName.value = file.name
@@ -58,12 +74,39 @@ function onFileSelected(event: Event) {
   uploadId.value = null
   videoId.value = null
   uploadError.value = null
+  jobError.value = ''
   currentStatus.value = VideoProcessingStatus.CREATED
+  if (!title.value) title.value = file.name.replace(/\.[^.]+$/, '')
+}
+
+function onFileSelected(event: Event) {
+  pickFile((event.target as HTMLInputElement).files?.[0])
+}
+
+function onDrop(event: DragEvent) {
+  dragOver.value = false
+  pickFile(event.dataTransfer?.files?.[0])
+}
+
+async function saveDetails() {
+  if (!videoId.value || detailsBusy.value) return
+  detailsBusy.value = true
+  detailsNotice.value = null
+  detailsFailed.value = null
+  try {
+    await api.updateVideo(videoId.value, { title: title.value, description: description.value, category: category.value } as never)
+    detailsNotice.value = '세부정보가 저장되었습니다.'
+  } catch { detailsFailed.value = '세부정보 저장에 실패했습니다.' } finally { detailsBusy.value = false }
 }
 
 async function startMultipartUpload() {
   if (!selectedFile.value) {
     uploadError.value = '먼저 업로드할 동영상 파일을 선택하세요.'
+    return
+  }
+  if (!title.value.trim()) {
+    uploadError.value = '동영상 제목을 입력하세요.'
+    step.value = 0
     return
   }
   uploadError.value = null
@@ -74,11 +117,11 @@ async function startMultipartUpload() {
 
   try {
     const session = await api.createUploadSession({
-      title: title.value,
+      title: title.value.trim(),
       description: description.value,
       fileSizeBytes: selectedFile.value.size,
       mimeType: selectedFile.value.type || 'video/mp4',
-      videoType: 'standard'
+      videoType: videoType.value
     })
     uploadId.value = session.uploadId
     videoId.value = session.videoId
@@ -88,9 +131,9 @@ async function startMultipartUpload() {
     if (!cancelled && !uploadError.value) {
       await finalizeMultipartUpload()
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     isUploading.value = false
-    uploadError.value = `Upload session initialization failed: ${err?.message || 'Server connection error'}`
+    uploadError.value = `업로드 세션 시작 실패: ${err instanceof Error ? err.message : '서버 연결 오류'}`
     currentStatus.value = VideoProcessingStatus.FAILED
   }
 }
@@ -101,8 +144,6 @@ async function putPartBytes(uploadUrl: string, blob: Blob): Promise<string> {
   const headers: Record<string, string> = {
     'Content-Type': selectedFile.value?.type || 'video/mp4'
   }
-  // Local relay chunks need the studio bearer token; S3 presigned URLs carry
-  // their own SigV4 authorization and must not receive it.
   if (!uploadUrl.includes('X-Amz-Signature') && studioToken.value) {
     headers['Authorization'] = `Bearer ${studioToken.value}`
   }
@@ -116,11 +157,11 @@ async function putPartBytes(uploadUrl: string, blob: Blob): Promise<string> {
         credentials: 'omit'
       })
       if (!res.ok) {
-        throw new Error(`Chunk PUT failed with HTTP ${res.status}`)
+        throw new Error(`청크 PUT 실패 (HTTP ${res.status})`)
       }
       const etag = (res.headers.get('etag') || '').replace(/"/g, '')
       if (!etag) {
-        throw new Error('Storage did not return a part ETag')
+        throw new Error('스토리지에서 파트 ETag을 반환하지 않았습니다')
       }
       return etag
     } catch (err) {
@@ -128,7 +169,7 @@ async function putPartBytes(uploadUrl: string, blob: Blob): Promise<string> {
       await new Promise(resolve => setTimeout(resolve, attempt * 500))
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('Chunk PUT failed')
+  throw lastError instanceof Error ? lastError : new Error('청크 PUT 실패')
 }
 
 async function uploadMissingParts() {
@@ -150,9 +191,9 @@ async function uploadMissingParts() {
       const etag = await putPartBytes(uploadUrl, chunk)
       completedEtags.value[part] = etag
       uploadedParts.value = part
-    } catch (err: any) {
+    } catch (err: unknown) {
       isUploading.value = false
-      uploadError.value = `Part ${part} upload failed: ${err?.message || 'Network error'}`
+      uploadError.value = `파트 ${part} 업로드 실패: ${err instanceof Error ? err.message : '네트워크 오류'}`
       currentStatus.value = VideoProcessingStatus.FAILED
       return
     }
@@ -181,6 +222,26 @@ function retryUpload() {
   })()
 }
 
+function stopPolling() {
+  if (pollTimer) clearTimeout(pollTimer)
+  pollTimer = null
+}
+
+async function pollStatus() {
+  if (!uploadId.value || cancelled) return
+  try {
+    const st = await api.getUploadStatus(uploadId.value)
+    currentStatus.value = (st.status as VideoProcessingStatus) || currentStatus.value
+    jobError.value = st.error || ''
+    if (st.status === 'READY' || st.status === 'FAILED') {
+      stopPolling()
+      return
+    }
+  } catch { /* keep polling */ }
+  stopPolling()
+  pollTimer = setTimeout(pollStatus, 3000)
+}
+
 async function finalizeMultipartUpload() {
   try {
     if (uploadId.value) {
@@ -192,9 +253,11 @@ async function finalizeMultipartUpload() {
       if (res.videoId) {
         videoId.value = res.videoId
       }
+      stopPolling()
+      pollTimer = setTimeout(pollStatus, 3000)
     }
-  } catch (err: any) {
-    uploadError.value = `Multipart upload finalization failed: ${err?.message || 'Media queue error'}`
+  } catch (err: unknown) {
+    uploadError.value = `업로드 완료 처리 실패: ${err instanceof Error ? err.message : '미디어 큐 오류'}`
     currentStatus.value = VideoProcessingStatus.FAILED
   } finally {
     isUploading.value = false
@@ -203,18 +266,15 @@ async function finalizeMultipartUpload() {
 
 onBeforeUnmount(() => {
   cancelled = true
+  stopPolling()
 })
 </script>
 
 <template>
   <div class="mx-auto max-w-5xl space-y-6">
     <div class="border-b border-[var(--gvp-border)] pb-5">
-      <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">
-        클라우드플레어 R2 멀티파트 업로더 (Resumable R2 Multipart Upload)
-      </h1>
-      <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
-        Presigned S3/R2 chunked upload with pause/resume/retry and real-time FFmpeg HLS ABR transcoding state machine
-      </p>
+      <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">동영상 업로드</h1>
+      <p class="tabular-nums mt-1 text-xs text-[var(--gvp-text-secondary)]">현재 단계: {{ phaseLabel }}</p>
     </div>
 
     <div
@@ -226,54 +286,58 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- File Dropzone & Chunk Controls -->
-    <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6">
+    <div
+      class="rounded-lg border bg-[var(--gvp-surface)] p-6"
+      :class="dragOver ? 'border-[var(--gvp-studio)]' : 'border-[var(--gvp-border)]'"
+      @dragover.prevent="dragOver = true" @dragleave.prevent="dragOver = false" @drop.prevent="onDrop"
+    >
       <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-start gap-3">
+        <div class="flex min-w-0 items-start gap-3">
           <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)]">
             <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.5 2H4.5a1 1 0 00-1 1v10a1 1 0 001 1h7a1 1 0 001-1V5L9.5 2z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.5 2v3h3" />
             </svg>
           </div>
-          <div>
-            <p class="text-sm font-medium text-[var(--gvp-text)]">{{ selectedFileName }}</p>
-            <p class="mt-0.5 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
-              Size: {{ (selectedFileSizeBytes / (1024 * 1024)).toFixed(1) }} MB · {{ totalParts }} Multipart Chunks · ETag Verified
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium text-[var(--gvp-text)]">{{ selectedFileName }}</p>
+            <p class="tabular-nums mt-0.5 text-xs text-[var(--gvp-text-secondary)]">
+              크기: {{ (selectedFileSizeBytes / (1024 * 1024)).toFixed(1) }} MB · {{ totalParts }}개 청크 · ETag 검증
             </p>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <label class="cursor-pointer inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors">
-            Select Video File
+          <label class="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]">
+            파일 선택
             <input type="file" accept="video/*" class="hidden" @change="onFileSelected" />
           </label>
 
           <button
             v-if="!isUploading && uploadedParts === 0"
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
+            class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
             @click="startMultipartUpload"
           >
-            Start Multipart Upload (POST /v1/uploads)
+            업로드 시작
           </button>
 
           <button
             v-if="isUploading"
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
+            class="inline-flex h-9 items-center justify-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium text-[var(--gvp-text)] transition-colors hover:bg-[var(--gvp-canvas)]"
             @click="togglePauseResume"
           >
-            {{ isPaused ? 'Resume Chunks' : 'Pause Upload' }}
+            {{ isPaused ? '이어서 업로드' : '일시중지' }}
           </button>
 
           <button
             v-if="uploadError"
             type="button"
-            class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
+            class="inline-flex h-9 items-center justify-center rounded-md bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
             @click="retryUpload"
           >
-            Retry Failed Part
+            실패한 파트 재시도
           </button>
         </div>
       </div>
@@ -282,15 +346,15 @@ onBeforeUnmount(() => {
       <div class="mt-5">
         <div class="flex justify-between text-xs font-medium">
           <span class="text-[var(--gvp-text-secondary)] tabular-nums">
-            Part {{ uploadedParts }} / {{ totalParts }} ({{ progressPercent }}%)
+            파트 {{ uploadedParts }} / {{ totalParts }} ({{ progressPercent }}%)
           </span>
           <span class="font-mono text-[var(--gvp-text-secondary)] tabular-nums">
-            {{ uploadId ? `Upload ID: ${uploadId}` : 'Ready to initialize session' }}
+            {{ uploadId ? `업로드 ID: ${uploadId}` : phaseLabel }}
           </span>
         </div>
-        <div class="mt-2 h-2 w-full overflow-hidden rounded-md bg-[var(--gvp-elevated)]">
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-md bg-[var(--gvp-elevated)]" role="progressbar" :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100">
           <div
-            class="h-full bg-[var(--gvp-brand)] transition-all"
+            class="h-full bg-[var(--gvp-studio)] transition-all"
             :style="{ width: `${progressPercent}%` }"
           />
         </div>
@@ -298,95 +362,79 @@ onBeforeUnmount(() => {
 
       <!-- Transcoding Pipeline Stepper -->
       <div class="mt-6 border-t border-[var(--gvp-border)] pt-5">
-        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)] tabular-nums">
-          Live Transcoding Pipeline Status (240p → 360p → 480p → 720p → 1080p → 1440p → 2160p HLS)
+        <p class="tabular-nums mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
+          인코딩 파이프라인 (240p → 1080p → 4K HLS)
         </p>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <div
-            v-for="step in transcodeSteps"
-            :key="step"
+            v-for="s in transcodeSteps"
+            :key="s"
             class="rounded-md border px-3 py-2 text-center text-xs font-medium transition-colors"
             :class="
-              currentStatus === step
-                ? 'border-[var(--gvp-focus)] bg-[var(--gvp-brand)] text-white'
-                : transcodeSteps.indexOf(currentStatus) > transcodeSteps.indexOf(step)
+              currentStatus === s
+                ? 'border-[var(--gvp-studio)] bg-[var(--gvp-studio)] text-white'
+                : transcodeSteps.indexOf(currentStatus) > transcodeSteps.indexOf(s)
                   ? 'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]'
                   : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)]'
             "
           >
-            {{ step }}
+            {{ s }}
           </div>
         </div>
+        <p v-if="jobError" role="alert" class="mt-2 text-xs font-medium text-[var(--gvp-live)]">{{ jobError }}</p>
       </div>
     </div>
 
-    <!-- Video Metadata Editor -->
-    <div class="grid grid-cols-1 gap-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6 lg:grid-cols-3">
-      <div class="space-y-4 lg:col-span-2">
-        <div>
-          <label class="block text-xs font-medium text-[var(--gvp-text)]">동영상 제목 (Title)</label>
-          <input
-            v-model="title"
-            type="text"
-            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-[var(--gvp-text)]">설명 (Description)</label>
-          <textarea
-            v-model="description"
-            rows="4"
-            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] p-3 text-sm text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
-          />
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-[var(--gvp-text)]">타임라인 챕터 마커 (Chapters)</label>
-          <textarea
-            v-model="chaptersInput"
-            rows="4"
-            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] p-3 font-mono text-xs text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
-          />
-        </div>
+    <!-- 4-step wizard -->
+    <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
+      <div class="flex gap-1 overflow-x-auto border-b border-[var(--gvp-border)] p-2" role="tablist" aria-label="업로드 단계">
+        <button
+          v-for="(label, i) in steps"
+          :key="label"
+          type="button"
+          role="tab"
+          :aria-selected="step === i"
+          :disabled="i > 0 && !videoId"
+          class="flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+          :class="step === i ? 'bg-[var(--gvp-text)] text-[var(--gvp-canvas)]' : 'text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]'"
+          @click="step = i"
+        >
+          <span class="tabular-nums flex h-5 w-5 items-center justify-center rounded-full text-[10px]" :class="step === i ? 'bg-[var(--gvp-canvas)] text-[var(--gvp-text)]' : 'bg-[var(--gvp-elevated)]'">{{ i + 1 }}</span>
+          {{ label }}
+        </button>
       </div>
 
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-[var(--gvp-text)]">공개 상태 (Visibility)</label>
-          <select
-            v-model="visibility"
-            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs font-medium text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
-          >
-            <option :value="VideoVisibility.PUBLIC">Public (전체 공개)</option>
-            <option :value="VideoVisibility.UNLISTED">Unlisted (일부 공개)</option>
-            <option :value="VideoVisibility.PRIVATE">Private (비공개)</option>
-            <option :value="VideoVisibility.MEMBERS_ONLY">Members Only (멤버십 전용)</option>
-            <option :value="VideoVisibility.SCHEDULED">Scheduled (예약 공개)</option>
-          </select>
+      <div class="p-6">
+        <div v-show="step === 0" role="tabpanel" aria-label="세부정보">
+          <UploadDetailsStep
+            v-model:title="title"
+            v-model:description="description"
+            v-model:video-type="videoType"
+            v-model:category="category"
+            :type-locked="!!uploadId"
+          />
+          <div class="mt-4 flex items-center gap-2">
+            <button v-if="videoId" type="button" :disabled="detailsBusy" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="saveDetails">
+              {{ detailsBusy ? '저장 중…' : '세부정보 저장' }}
+            </button>
+            <p v-if="detailsNotice" role="status" class="text-xs font-medium text-[var(--gvp-success)]">{{ detailsNotice }}</p>
+            <p v-if="detailsFailed" role="alert" class="text-xs font-medium text-[var(--gvp-live)]">{{ detailsFailed }}</p>
+          </div>
+        </div>
+        <div v-show="step === 1" role="tabpanel" aria-label="동영상 요소">
+          <UploadCaptionsStep :video-id="videoId" />
+        </div>
+        <div v-show="step === 2" role="tabpanel" aria-label="검토">
+          <UploadReviewStep :video-id="videoId" :status="currentStatus" :job-error="jobError" />
+        </div>
+        <div v-show="step === 3" role="tabpanel" aria-label="공개 상태">
+          <UploadVisibilityStep :video-id="videoId" :initial="visibility" />
         </div>
 
-        <div>
-          <label class="block text-xs font-medium text-[var(--gvp-text)]">예약 게시 일시 (Scheduled Publish)</label>
-          <input
-            v-model="scheduledPublishAt"
-            type="datetime-local"
-            class="mt-1.5 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] tabular-nums outline-none focus:border-[var(--gvp-focus)]"
-          />
-        </div>
-
-        <label class="flex items-center gap-2 pt-2 text-xs text-[var(--gvp-text)]">
-          <input v-model="isAgeRestricted" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" />
-          <span class="tabular-nums">연령 제한 콘텐츠 (19+ Age Restriction)</span>
-        </label>
-
-        <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3 text-xs">
-          <p class="font-medium text-[var(--gvp-text)]">Auto-Generated Thumbnails</p>
-          <img
-            src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80"
-            alt="Thumbnail preview"
-            class="mt-2 aspect-video w-full rounded-md border border-[var(--gvp-border)] object-cover"
-          />
+        <div class="mt-6 flex items-center justify-between border-t border-[var(--gvp-border)] pt-4">
+          <button type="button" :disabled="step === 0" class="inline-flex h-9 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-xs font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="step -= 1">이전 단계</button>
+          <button v-if="step < 3" type="button" :disabled="!videoId" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40" @click="step += 1">다음 단계</button>
+          <NuxtLink v-else-if="videoId" to="/content" class="inline-flex h-9 items-center rounded-md bg-[var(--gvp-studio)] px-5 text-xs font-semibold text-white hover:opacity-90">콘텐츠에서 확인</NuxtLink>
         </div>
       </div>
     </div>

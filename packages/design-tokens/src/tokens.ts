@@ -1,5 +1,5 @@
 import { brand, semantic } from './palette'
-import { darkTheme } from './themes'
+import { lightTheme } from './themes'
 import { motion, radius, shadow } from './motion'
 import { typography, spacing } from './typography'
 
@@ -12,10 +12,10 @@ export const tokens = {
     live: brand.live,
   },
   surfaces: {
-    canvas: darkTheme.canvas, s1: darkTheme.surface, s2: darkTheme.elevated,
-    overlay: darkTheme.overlay, border: darkTheme.borderSubtle, borderStrong: darkTheme.borderStrong,
+    canvas: lightTheme.canvas, s1: lightTheme.surface, s2: lightTheme.elevated,
+    overlay: lightTheme.overlay, border: lightTheme.borderSubtle, borderStrong: lightTheme.borderStrong,
   },
-  text: { primary: darkTheme.textPrimary, secondary: darkTheme.textSecondary, muted: darkTheme.textMuted, inverse: '#FFFFFF' },
+  text: { primary: lightTheme.textPrimary, secondary: lightTheme.textSecondary, muted: lightTheme.textMuted, inverse: '#FFFFFF' },
   spacing, radius, shadow, motion,
   typography: { fontSans: typography.fontSans, fontMono: typography.fontMono },
 } as const

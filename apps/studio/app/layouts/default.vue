@@ -53,7 +53,7 @@ async function logout() {
           </div>
           <slot />
           <footer class="mt-10 border-t border-[var(--gvp-border)] pt-4 text-center text-xs text-[var(--gvp-text-muted)]">
-            <span>StreamVerse Creator Studio</span>
+            <span>vravra studio</span>
           </footer>
         </div>
       </main>

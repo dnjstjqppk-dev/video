@@ -1,17 +1,24 @@
-/** StreamVerse brand palette — single source of truth.
- * User-spec Electric Indigo primary + Cyan pulse + Rose live.
+/** vravra brand palette — single source of truth.
+ * Vivid Electric Coral-Crimson primary + Studio Cobalt + Signal live.
  * Theme-dependent surfaces live in themes.ts. */
 export const brand = {
-  primary: '#6366F1',
-  primaryHover: '#4F46E5',
-  primaryActive: '#4338CA',
-  primarySoft: 'rgba(99, 102, 241, 0.12)',
-  accent: '#06B6D4',
-  accentHover: '#0891B2',
-  accentSoft: 'rgba(6, 182, 212, 0.12)',
-  live: '#F43F5E',
-  liveHover: '#E11D48',
-  liveSoft: 'rgba(244, 63, 94, 0.12)',
+  primary: '#FF2E4C',
+  primaryHover: '#E02643',
+  primaryActive: '#C81E3A',
+  primarySoft: 'rgba(255, 46, 76, 0.12)',
+  accent: '#2563EB',
+  accentHover: '#1D4ED8',
+  accentSoft: 'rgba(37, 99, 235, 0.12)',
+  live: '#FF3B30',
+  liveHover: '#D92D20',
+  liveSoft: 'rgba(255, 59, 48, 0.14)',
+  premiere: '#FF9F1C',
+} as const
+
+export const studio = {
+  cobalt: '#2563EB',
+  cobaltHover: '#1D4ED8',
+  cobaltSoft: 'rgba(37, 99, 235, 0.12)',
 } as const
 
 export const semantic = {
@@ -21,12 +28,12 @@ export const semantic = {
   warningSoft: 'rgba(245, 158, 11, 0.12)',
   danger: '#EF4444',
   dangerSoft: 'rgba(239, 68, 68, 0.12)',
-  info: '#06B6D4',
-  infoSoft: 'rgba(6, 182, 212, 0.12)',
+  info: '#2563EB',
+  infoSoft: 'rgba(37, 99, 235, 0.12)',
 } as const
 
 export const chart = {
-  series: ['#6366F1', '#06B6D4', '#F43F5E', '#22C55E', '#F59E0B'],
+  series: ['#FF2E4C', '#2563EB', '#FF9F1C', '#22C55E', '#9CA3AF'],
   grid: 'rgba(148, 163, 184, 0.16)',
 } as const
 

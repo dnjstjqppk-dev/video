@@ -11,7 +11,7 @@ const currency = useState<'KRW' | 'USD'>('studio-currency', () => 'KRW')
 watch(() => route.path, () => { open.value = false })
 
 const consoles = [
-  { label: '시청자 포털', href: () => config.public.webUrl as string },
+  { label: 'vravra 메인으로 이동', href: () => config.public.webUrl as string },
   { label: '파트너 콘솔', href: () => config.public.partnersUrl as string },
   { label: '관리자 콘솔', href: () => config.public.adminUrl as string }
 ]

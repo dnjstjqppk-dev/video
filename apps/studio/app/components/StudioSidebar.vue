@@ -45,7 +45,7 @@ const navLinks = [
           collapsed ? 'md:justify-center md:px-0' : ''
         ]"
       >
-        <span v-if="route.path === item.path" class="absolute left-0 top-1.5 h-6 w-1 rounded-r bg-[var(--gvp-brand)]" aria-hidden="true" />
+        <span v-if="route.path === item.path" class="absolute left-0 top-1.5 h-6 w-1 rounded-r bg-[var(--gvp-studio)]" aria-hidden="true" />
         <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
         </svg>

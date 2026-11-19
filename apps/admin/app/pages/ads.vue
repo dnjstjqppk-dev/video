@@ -2,7 +2,7 @@
 const api = useAdminApi()
 
 useSeoMeta({
-  title: 'Ad Delivery Inspector & Telemetry Diagnostics — StreamVerse Admin'
+  title: 'Ad Delivery Inspector & Telemetry Diagnostics — vravra Admin'
 })
 
 const { data: diagnosticsData, pending, error, refresh } = await useAsyncData('admin-ad-diagnostics', async () => {

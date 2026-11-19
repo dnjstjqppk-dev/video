@@ -58,7 +58,7 @@ async function logout() {
           </div>
           <slot />
           <footer class="mt-10 border-t border-[var(--gvp-border)] pt-4 text-center text-xs text-[var(--gvp-text-muted)]">
-            <span>StreamVerse Partner Console</span>
+            <span>vravra Partner Console</span>
           </footer>
         </div>
       </main>

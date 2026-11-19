@@ -11,7 +11,7 @@ const api = useStudioApi()
 const videoId = computed(() => String(route.params.id ?? ''))
 
 useSeoMeta({
-  title: () => `Video Editor (${videoId.value}) — StreamVerse Studio`
+  title: () => `Video Editor (${videoId.value}) — vravra studio`
 })
 
 const { data: video, pending: videoPending, error: videoError, refresh: refreshVideo } = await useAsyncData<Video>(
@@ -309,7 +309,7 @@ function splitLeft(point: number): string {
               v-model="replacementAudio"
               class="w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
             >
-              <option>Royalty-Free Synthwave Ambient #04 (StreamVerse Audio Library)</option>
+              <option>Royalty-Free Synthwave Ambient #04 (vravra Audio Library)</option>
               <option>Lo-Fi Chill Coding Beats #12 (Cleared Global License)</option>
               <option>Mute Claimed Segment Only (Preserve Speech via AI Stem Split)</option>
             </select>

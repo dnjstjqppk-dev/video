@@ -101,7 +101,7 @@ const navLinks = [
           </div>
           <slot />
           <footer class="mt-10 border-t border-[var(--gvp-border)] pt-4 text-center text-xs text-[var(--gvp-text-muted)]">
-            <span>StreamVerse Admin Console · Commit <span class="font-mono text-[var(--gvp-text-secondary)]">3f8c1ef</span> · Architecture Prototype</span>
+            <span>vravra Admin Console · Commit <span class="font-mono text-[var(--gvp-text-secondary)]">3f8c1ef</span> · Architecture Prototype</span>
           </footer>
         </div>
       </main>

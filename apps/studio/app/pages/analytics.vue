@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const api = useStudioApi()
-const selectedRange = ref<'7d' | '28d' | '90d' | '365d'>('28d')
-const activeTab = ref<'overview' | 'reach' | 'engagement' | 'audience' | 'revenue'>('overview')
+const selectedRange = ref<'7d' | '28d' | '90d' | '365d' | 'all'>('28d')
+const activeTab = ref<'overview' | 'content' | 'audience' | 'revenue'>('overview')
 const selectedMetric = ref<'views' | 'watch' | 'subscribers' | 'revenue'>('views')
 const chartCanvasRef = ref<HTMLElement | null>(null)
 let chart: { setOption: (o: unknown, notMerge?: boolean) => void; resize: () => void; dispose: () => void } | null = null
@@ -12,25 +12,23 @@ useSeoMeta({
 
 const tabs = [
   { id: 'overview', label: '개요' },
-  { id: 'reach', label: '도달' },
-  { id: 'engagement', label: '참여도' },
+  { id: 'content', label: '콘텐츠' },
   { id: 'audience', label: '시청자층' },
   { id: 'revenue', label: '수익' }
 ] as const
 
-const metricOfTab = { overview: null, reach: 'views', engagement: 'watch', audience: 'subscribers', revenue: 'revenue' } as const
+const metricOfTab = { overview: null, content: 'views', audience: 'subscribers', revenue: 'revenue' } as const
 const activeMetric = computed(() => metricOfTab[activeTab.value] ?? selectedMetric.value)
 
 const metricMeta = {
-  views: { label: '조회수', color: '#6366F1' },
-  watch: { label: '시청 시간(시간)', color: '#06B6D4' },
+  views: { label: '조회수', color: '#2563EB' },
+  watch: { label: '시청 시간(시간)', color: '#FF2E4C' },
   subscribers: { label: '구독자', color: '#22C55E' },
   revenue: { label: '예상 수익(원)', color: '#F59E0B' }
 } as const
 
 const tabNote: Record<string, string> = {
-  reach: '트래픽 소스·노출 클릭률 등 세부 도달 분석은 준비 중입니다.',
-  engagement: '시청 지속률·좋아요·공유 등 세부 참여 분석은 준비 중입니다.',
+  content: '동영상별 노출 클릭률·시청 지속률 등 세부 콘텐츠 분석은 준비 중입니다.',
   audience: '연령·지역·신규/재방문자 등 세부 시청자층 분석은 준비 중입니다.',
   revenue: '수익원별(광고·Premium·SuperChat) 세부 분석은 준비 중입니다.'
 }
@@ -105,6 +103,16 @@ onUnmounted(() => {
   chart = null
 })
 
+const { data: topData } = await useAsyncData('studio-top-content', async () => {
+  try {
+    const res = await api.getStudioVideos(1, 100)
+    return [...(res.items || [])].sort((a, b) => b.viewCount - a.viewCount).slice(0, 10)
+  } catch {
+    return []
+  }
+})
+const topContent = computed(() => topData.value || [])
+
 function exportCsvReport() {
   const header = 'Date,Views,WatchHours,EstimatedRevenue_KRW\n'
   const rows = seriesPoints.value.dates
@@ -115,7 +123,7 @@ function exportCsvReport() {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `gvp_studio_analytics_${selectedRange.value}.csv`
+  link.download = `vravra_studio_analytics_${selectedRange.value}.csv`
   link.click()
   URL.revokeObjectURL(url)
 }
@@ -130,12 +138,13 @@ function exportCsvReport() {
       </div>
       <div class="flex items-center gap-2">
         <select v-model="selectedRange" class="h-9 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium tabular-nums outline-none focus:border-[var(--gvp-focus)]">
-          <option value="7d">최근 7일</option>
-          <option value="28d">최근 28일</option>
-          <option value="90d">최근 90일</option>
-          <option value="365d">최근 365일</option>
+          <option value="7d">지난 7일</option>
+          <option value="28d">지난 28일</option>
+          <option value="90d">지난 90일</option>
+          <option value="365d">지난 365일</option>
+          <option value="all">전체 기간</option>
         </select>
-        <button type="button" class="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)]" @click="exportCsvReport">
+        <button type="button" class="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--gvp-studio)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90" @click="exportCsvReport">
           <span>CSV 내보내기</span>
         </button>
       </div>
@@ -188,6 +197,39 @@ function exportCsvReport() {
     <div v-if="activeTab !== 'overview'" class="rounded-xl border border-dashed border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] p-6 text-center">
       <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">{{ tabNote[activeTab] }}</p>
       <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">일별 추이는 위 차트에서 확인할 수 있습니다.</p>
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
+      <div class="border-b border-[var(--gvp-border)] px-5 py-4">
+        <h2 class="text-sm font-semibold text-[var(--gvp-text)]">인기 콘텐츠 순위</h2>
+        <p class="mt-0.5 text-xs text-[var(--gvp-text-secondary)]">조회수 기준 상위 10개</p>
+      </div>
+      <p v-if="!topContent.length" class="p-8 text-center text-sm text-[var(--gvp-text-secondary)]">아직 집계할 동영상이 없습니다.</p>
+      <table v-else class="w-full text-left">
+        <thead class="border-b border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
+          <tr>
+            <th scope="col" class="w-12 px-4 py-2.5 text-right">순위</th>
+            <th scope="col" class="px-4 py-2.5">동영상</th>
+            <th scope="col" class="px-4 py-2.5 text-right">조회수</th>
+            <th scope="col" class="px-4 py-2.5 text-right">좋아요</th>
+            <th scope="col" class="px-4 py-2.5 text-right">댓글</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--gvp-border)]">
+          <tr v-for="(v, i) in topContent" :key="v.id" class="transition-colors hover:bg-[var(--gvp-canvas)]">
+            <td class="px-4 py-3 text-right font-mono text-sm font-bold text-[var(--gvp-text)] tabular-nums">{{ i + 1 }}</td>
+            <td class="px-4 py-3">
+              <span class="flex min-w-0 items-center gap-3">
+                <img :src="v.thumbnailUrl" :alt="v.title" class="h-10 w-[72px] shrink-0 rounded-md object-cover" loading="lazy" />
+                <span class="block max-w-64 truncate text-sm font-medium text-[var(--gvp-text)]">{{ v.title }}</span>
+              </span>
+            </td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ v.viewCount.toLocaleString() }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ v.likeCount.toLocaleString() }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ v.commentCount.toLocaleString() }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>

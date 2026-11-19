@@ -5,7 +5,7 @@ import { AdFormat, CampaignStatus } from '@gvp/shared-types'
 const api = usePartnerApi()
 
 useSeoMeta({
-  title: 'Dedicated Advertiser Portal — StreamVerse Media Buying'
+  title: 'Dedicated Advertiser Portal — vravra Media Buying'
 })
 
 // 1. Fetch campaigns

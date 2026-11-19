@@ -13,8 +13,8 @@ const paymentError = ref('')
 const checkoutError = paymentError
 
 useSeoMeta({
-  title: 'StreamVerse Premium — Ad-Free 4K HDR, Offline & Background Play',
-  description: 'Upgrade to StreamVerse Premium for uninterrupted 4K HDR streaming, offline downloads, and spatial audio.'
+  title: 'vravra Premium — Ad-Free 4K HDR, Offline & Background Play',
+  description: 'Upgrade to vravra Premium for uninterrupted 4K HDR streaming, offline downloads, and spatial audio.'
 })
 
 // Fail-Closed 결제 핸들러: 서버의 공식 검증 및 승인이 없을 경우 절대 티어를 승격하지 않음 (GV-01)
@@ -65,7 +65,7 @@ async function activatePremium() {
   <div class="mx-auto max-w-5xl bg-[var(--gvp-surface)] px-4 py-12 text-[var(--gvp-text)]">
     <div class="text-center">
       <span class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--gvp-brand-hover)]">
-        StreamVerse Premium
+        vravra Premium
       </span>
       <h1 class="mt-4 text-3xl font-extrabold text-[var(--gvp-text)] sm:text-4xl">
         {{ appStore.locale === 'ko' ? '광고 없는 4K HDR 스트리밍과 오프라인 저장' : 'Ad-Free 4K HDR, Offline Downloads & Background Play' }}
@@ -109,7 +109,7 @@ async function activatePremium() {
           <li>• Share with up to 5 household members</li>
           <li>• Independent watch histories & recommendations</li>
           <li>• Simultaneous 4K streams across 5 devices</li>
-          <li>• Includes StreamVerse Music & Exclusive Live VODs</li>
+          <li>• Includes vravra Music & Exclusive Live VODs</li>
         </ul>
       </div>
     </div>
@@ -117,7 +117,7 @@ async function activatePremium() {
     <!-- Checkout Action -->
     <div class="mt-8 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center">
       <div v-if="checkoutComplete" class="text-[var(--gvp-success)]">
-        <p class="text-lg font-bold">Welcome to StreamVerse Premium</p>
+        <p class="text-lg font-bold">Welcome to vravra Premium</p>
         <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
           Your account tier is now <strong>{{ appStore.currentUser?.subscriptionTier?.toUpperCase() }}</strong>. Ad-free 4K playback is active immediately.
         </p>

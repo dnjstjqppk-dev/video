@@ -1,13 +1,22 @@
 <script setup lang="ts">
 const store = useAppStore()
 const config = useRuntimeConfig()
+const api = useApi()
 const theme = useThemeMode()
 const open = ref(false)
-const modes = computed(() => [
-  { id: 'viewer', label: '시청자 모드', href: '/', current: true },
-  { id: 'studio', label: '파트너 스튜디오', href: config.public.studioUrl as string, current: false },
-  { id: 'admin', label: '종합 관리자 콘솔', href: config.public.adminUrl as string, current: false },
-])
+const triedChannel = ref(false)
+const themeOpts = [
+  { id: 'light', label: '라이트' },
+  { id: 'dark', label: '다크' },
+  { id: 'system', label: '시스템' },
+] as const
+const isAdmin = computed(() => (store.currentUser?.role || '').includes('admin'))
+watch(open, (v) => {
+  if (v && store.currentUser && !triedChannel.value) {
+    triedChannel.value = true
+    void store.fetchMyChannel(api)
+  }
+})
 async function logout() {
   open.value = false
   try { await $fetch('/auth/logout', { method: 'POST' }) } catch { /* cleared server-side */ }
@@ -29,19 +38,20 @@ async function logout() {
         <p class="text-sm font-semibold text-[var(--gvp-text)]">{{ store.currentUser?.displayName }}</p>
         <p class="tabular-nums text-xs text-[var(--gvp-text-secondary)]">@{{ store.currentUser?.username }} · {{ store.currentUser?.subscriptionTier?.toUpperCase() }}</p>
       </div>
-      <p class="px-2.5 pb-1 pt-2 text-[11px] font-semibold text-[var(--gvp-text-muted)]">워크스페이스 전환</p>
-      <a v-for="m in modes" :key="m.id" :href="m.href" :target="m.current ? undefined : '_blank'" rel="noopener noreferrer"
-        class="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm hover:bg-[var(--gvp-elevated)]" :class="m.current ? 'font-semibold text-[var(--gvp-text)]' : 'text-[var(--gvp-text-secondary)]'" @click="open = false">
-        {{ m.label }}<span v-if="m.current" class="h-2 w-2 rounded-full bg-[var(--gvp-accent)]" />
-      </a>
+      <NuxtLink v-if="store.myChannelId" :to="`/channels/${store.myChannelId}`" class="mt-1 block rounded-lg px-2.5 py-2 text-sm font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="open = false">내 채널 보기</NuxtLink>
+      <a :href="config.public.studioUrl as string" target="_blank" rel="noopener noreferrer" class="block rounded-lg px-2.5 py-2 text-sm font-medium text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]" @click="open = false">vravra studio 바로가기 ↗</a>
+      <a v-if="isAdmin" :href="config.public.adminUrl as string" target="_blank" rel="noopener noreferrer" class="block rounded-lg px-2.5 py-2 text-sm text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]" @click="open = false">관리자 콘솔 ↗</a>
       <div class="my-1 border-t border-[var(--gvp-border)]" />
-      <button type="button" class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]" @click="theme.toggle()">
-        테마: {{ theme.isDark.value ? '다크' : '라이트' }}<span>{{ theme.isDark.value ? '◐' : '○' }}</span>
-      </button>
+      <p class="px-2.5 pb-1 pt-1 text-[11px] font-semibold text-[var(--gvp-text-muted)]">테마</p>
+      <div class="flex gap-1 px-2.5 pb-1" role="group" aria-label="테마 선택">
+        <button v-for="o in themeOpts" :key="o.id" type="button" :aria-pressed="theme.preference.value === o.id"
+          :class="theme.preference.value === o.id ? 'bg-[var(--gvp-text)] text-[var(--gvp-canvas)]' : 'bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
+          class="h-7 flex-1 rounded-md text-xs font-medium" @click="theme.apply(o.id)">{{ o.label }}</button>
+      </div>
       <button type="button" class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]" @click="store.toggleLocale(); open = false">
         언어: {{ store.locale === 'ko' ? '한국어' : 'English' }}<span>›</span>
       </button>
-      <NuxtLink to="/premium" class="block rounded-lg px-2.5 py-2 text-sm font-medium text-[var(--gvp-brand)] hover:bg-[var(--gvp-elevated)]" @click="open = false">StreamVerse Premium</NuxtLink>
+      <NuxtLink to="/premium" class="block rounded-lg px-2.5 py-2 text-sm font-medium text-[var(--gvp-brand)] hover:bg-[var(--gvp-elevated)]" @click="open = false">vravra Premium</NuxtLink>
       <button type="button" class="w-full rounded-lg px-2.5 py-2 text-left text-sm text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]" @click="logout()">로그아웃</button>
     </div>
   </div>

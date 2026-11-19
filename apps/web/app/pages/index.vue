@@ -11,25 +11,21 @@ useSeoMeta({
       : 'Home — Personalized 4K Videos, Shorts & Live Streams'
   ),
   description:
-    'Discover personalized 4K HDR videos, Shorts, and real-time live streams on StreamVerse Global Video Platform.'
+    'Discover personalized 4K HDR videos, Shorts, and real-time live streams on vravra.'
 })
 
 const categories = [
   { id: 'all', labelKo: '전체', labelEn: 'All' },
+  { id: 'live', labelKo: '실시간', labelEn: 'Live' },
   { id: 'music', labelKo: '음악', labelEn: 'Music' },
   { id: 'gaming', labelKo: '게임', labelEn: 'Gaming' },
-  { id: 'news', labelKo: '뉴스', labelEn: 'News' },
-  { id: 'live', labelKo: '라이브', labelEn: 'Live' },
-  { id: 'tech', labelKo: '테크·개발', labelEn: 'Tech & Dev' },
-  { id: 'finance', labelKo: '경제·재테크', labelEn: 'Finance' },
-  { id: 'travel', labelKo: '여행·브이로그', labelEn: 'Travel & Vlog' },
-  { id: 'recent', labelKo: '최근에 업로드된 동영상', labelEn: 'Recently uploaded' },
-  { id: 'watched', labelKo: '감상한 동영상', labelEn: 'Watched' }
+  { id: 'tech', labelKo: '테크/개발', labelEn: 'Tech & Dev' },
+  { id: 'podcast', labelKo: '팟캐스트', labelEn: 'Podcasts' },
+  { id: 'recent', labelKo: '최근 업로드된 동영상', labelEn: 'Recently uploaded' },
 ]
 
 const selectedCategory = ref('all')
 const feedbackToast = ref<string | null>(null)
-const library = useLibraryStore()
 const chipRail = ref<HTMLElement | null>(null)
 
 function scrollChips(dir: 1 | -1) {
@@ -42,12 +38,11 @@ function onCardToast(msg: string) {
 }
 
 const { data: feedData, pending, error, refresh } = await useAsyncData(
-  () => `home-feed-${selectedCategory.value}`,
+  'home-feed-all',
   async () => {
-    const res = await api.getHomeFeed(1, 24, selectedCategory.value)
+    const res = await api.getHomeFeed(1, 48, 'all')
     return res.items || []
   },
-  { watch: [selectedCategory] }
 )
 
 const { data: feedAd } = await useAsyncData('home-feed-ad', async () => {
@@ -90,16 +85,19 @@ onMounted(() => {
   }
 })
 
+function matchesHomeCategory(v: { category?: string; tags?: string[] }, cat: string) {
+  const hay = `${v.category || ''} ${(v.tags || []).join(' ')}`.toLowerCase()
+  if (cat === 'tech') return hay.includes('tech') || hay.includes('개발') || hay.includes('technology')
+  return hay.includes(cat)
+}
+
 const visibleVideos = computed(() => {
   const cat = selectedCategory.value
-  if (cat === 'watched') {
-    library.hydrate()
-    return library.history.filter(v => !appStore.hiddenVideoIds.has(v.id) && !appStore.blockedChannelIds.has(v.channelId))
-  }
+  if (cat === 'live') return []
   const list = (feedData.value || []).filter(v => {
     if (appStore.hiddenVideoIds.has(v.id)) return false
     if (appStore.blockedChannelIds.has(v.channelId)) return false
-    if (cat !== 'all' && cat !== 'live' && cat !== 'recent') return v.category === cat
+    if (cat === 'music' || cat === 'gaming' || cat === 'tech' || cat === 'podcast') return matchesHomeCategory(v, cat)
     return true
   })
   if (cat === 'recent') {
@@ -121,14 +119,16 @@ const shortsShelf = computed(() => shortsData.value || [])
 
 const { data: liveData } = await useAsyncData('home-live', async () => {
   try {
-    const res = await api.listLiveStreams(1, 4)
+    const res = await api.listLiveStreams(1, 12)
     return res.items || []
   } catch {
     return []
   }
 })
 
-const liveStreamsShelf = computed(() => liveData.value || [])
+const liveStreamsShelf = computed(() => (liveData.value || []).slice(0, 4))
+const liveNowCards = computed(() => (liveData.value || []).filter(s => s.status === 'live'))
+const firstLiveId = computed(() => liveNowCards.value[0]?.id || null)
 
 function formatViews(count: number): string {
   if (appStore.locale === 'ko') {
@@ -147,7 +147,7 @@ function formatViews(count: number): string {
     <!-- Category Filter Chips -->
     <div class="sticky top-14 z-30 -mx-4 mb-6 flex items-center gap-1 border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-3 sm:-mx-6 sm:px-4">
       <button type="button" aria-label="카테고리 왼쪽으로 스크롤" class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] sm:inline-flex" @click="scrollChips(-1)">‹</button>
-      <div ref="chipRail" class="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto">
+      <div ref="chipRail" class="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto" style="mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);">
         <button
           v-for="cat in categories"
           :key="cat.id"
@@ -228,10 +228,10 @@ function formatViews(count: number): string {
             <span class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--gvp-warning)]">
               Sponsored Ad
             </span>
-            <span class="text-xs text-[var(--gvp-text-secondary)]">StreamVerse Partner Network · CPM Verified</span>
+            <span class="text-xs text-[var(--gvp-text-secondary)]">vravra Partner Network · CPM Verified</span>
           </div>
           <h2 class="text-lg font-bold text-[var(--gvp-text)] sm:text-xl">
-            {{ appStore.locale === 'ko' ? 'StreamVerse Premium — 광고 없는 4K HDR 스트리밍 & 오프라인 저장' : 'StreamVerse Premium — Ad-Free 4K HDR & Offline Downloads' }}
+            {{ appStore.locale === 'ko' ? 'vravra Premium — 광고 없는 4K HDR 스트리밍 & 오프라인 저장' : 'vravra Premium — Ad-Free 4K HDR & Offline Downloads' }}
           </h2>
           <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] sm:text-sm">
             {{ appStore.locale === 'ko' ? '백그라운드 재생과 무손실 공간 음향을 지금 바로 경험하세요.' : 'Experience background playback, spatial audio, and zero interruptions.' }}
@@ -247,7 +247,7 @@ function formatViews(count: number): string {
     </section>
 
     <!-- Loading Skeleton State -->
-    <div v-if="pending" class="grid grid-cols-1 gap-6 md:grid-cols-2 min-[1200px]:grid-cols-3 min-[1600px]:grid-cols-4">
+    <div v-if="pending" class="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-x-4 gap-y-6">
       <div v-for="i in 8" :key="i" class="animate-pulse">
         <div class="aspect-video w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]" />
         <div class="mt-3 flex gap-3">
@@ -274,6 +274,28 @@ function formatViews(count: number): string {
       </button>
     </div>
 
+    <!-- Live grid for the 실시간 chip -->
+    <section v-else-if="selectedCategory === 'live'" class="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-x-4 gap-y-6">
+      <NuxtLink
+        v-for="stream in liveNowCards"
+        :key="stream.id"
+        :to="`/live/${stream.id}`"
+        class="group flex flex-col overflow-hidden rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)]"
+      >
+        <div class="relative aspect-video w-full overflow-hidden bg-[var(--gvp-elevated)]">
+          <img :src="stream.thumbnailUrl" :alt="stream.title" class="h-full w-full object-cover" loading="lazy" />
+          <span class="tabular-nums absolute bottom-2 right-2 rounded bg-[var(--gvp-live)] px-1.5 py-0.5 text-xs font-bold text-white">LIVE</span>
+        </div>
+        <div class="p-3">
+          <p class="line-clamp-2 text-[15px] font-semibold leading-[1.4] text-[var(--gvp-text)] group-hover:text-[var(--gvp-brand)]">{{ stream.title }}</p>
+          <p class="tabular-nums mt-1 text-xs text-[var(--gvp-text-secondary)]">시청자 {{ stream.viewerCount.toLocaleString() }}명</p>
+        </div>
+      </NuxtLink>
+      <div v-if="!liveNowCards.length" class="col-span-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+        <p class="text-base font-semibold text-[var(--gvp-text-secondary)]">지금 라이브 중인 방송이 없습니다.</p>
+      </div>
+    </section>
+
     <!-- Empty State -->
     <div v-else-if="visibleVideos.length === 0" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
       <p class="text-base font-semibold text-[var(--gvp-text-secondary)]">
@@ -289,7 +311,7 @@ function formatViews(count: number): string {
     </div>
 
     <!-- Main Video Grid -->
-    <section v-else class="grid grid-cols-1 gap-x-5 gap-y-8 md:grid-cols-2 min-[1200px]:grid-cols-3 min-[1600px]:grid-cols-4">
+    <section v-else class="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-x-4 gap-y-6">
       <FeedVideoCard
         v-for="video in visibleVideos"
         :key="video.id"
@@ -307,7 +329,7 @@ function formatViews(count: number): string {
             {{ appStore.locale === 'ko' ? '지금 라이브 중 (Live Now)' : 'Live Now — Ultra-Low Latency HLS' }}
           </h2>
         </div>
-        <NuxtLink to="/live/live_main_01" class="text-xs font-semibold text-[var(--gvp-brand-hover)] hover:underline">
+        <NuxtLink v-if="firstLiveId" :to="`/live/${firstLiveId}`" class="text-xs font-semibold text-[var(--gvp-brand-hover)] hover:underline">
           {{ appStore.locale === 'ko' ? '전체 보기 →' : 'View All Live →' }}
         </NuxtLink>
       </div>

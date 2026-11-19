@@ -11,6 +11,7 @@ export const useAppStore = defineStore('gvp-web-app', () => {
   const currentUser = ref<UserProfile | null>(null)
   const authLoading = ref(false)
   const authError = ref<string | null>(null)
+  const myChannelId = ref<string | null>(null)
 
   async function fetchSession(api: ApiClient) {
     authLoading.value = true
@@ -36,6 +37,21 @@ export const useAppStore = defineStore('gvp-web-app', () => {
 
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
+  }
+
+  function setSidebarCollapsed(v: boolean) {
+    sidebarCollapsed.value = v
+  }
+
+  async function fetchMyChannel(api: ApiClient) {
+    if (myChannelId.value || !currentUser.value) return myChannelId.value
+    try {
+      const dash = await api.getStudioDashboard()
+      myChannelId.value = dash.channel?.id || null
+    } catch {
+      myChannelId.value = null
+    }
+    return myChannelId.value
   }
 
   function toggleLocale() {
@@ -87,12 +103,15 @@ export const useAppStore = defineStore('gvp-web-app', () => {
     currentUser,
     authLoading,
     authError,
+    myChannelId,
     fetchSession,
+    fetchMyChannel,
     clearSession,
     watchProgressMap,
     hiddenVideoIds,
     blockedChannelIds,
     toggleSidebar,
+    setSidebarCollapsed,
     toggleLocale,
     toggleCurrency,
     saveWatchProgress,

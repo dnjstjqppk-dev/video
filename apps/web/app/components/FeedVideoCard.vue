@@ -57,9 +57,9 @@ async function report() {
         <img :src="video.channel?.avatarUrl || `https://api.dicebear.com/9.x/initials/svg?seed=${video.channelId}`" :alt="video.channel?.name" class="h-9 w-9 rounded-full object-cover" loading="lazy" />
       </NuxtLink>
       <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/watch/${video.id}`" class="line-clamp-2 text-sm font-semibold leading-snug text-[var(--gvp-text)]">{{ video.title }}</NuxtLink>
+        <NuxtLink :to="`/watch/${video.id}`" class="line-clamp-2 text-[15px] font-semibold leading-[1.4] text-[var(--gvp-text)]">{{ video.title }}</NuxtLink>
         <NuxtLink :to="`/channels/${video.channelId}`" class="mt-1 flex items-center gap-1 text-xs text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]">
-          <span class="truncate">{{ video.channel?.name || 'StreamVerse Creator' }}</span>
+          <span class="truncate">{{ video.channel?.name || 'vravra 크리에이터' }}</span>
           <svg v-if="video.channel?.isVerified" class="h-3.5 w-3.5 shrink-0 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
         </NuxtLink>
         <p class="tabular-nums text-xs text-[var(--gvp-text-secondary)]">{{ formatViewCount(video.viewCount, appStore.locale) }} · {{ formatRelativeTime(video.publishedAt || video.createdAt, appStore.locale) }}</p>

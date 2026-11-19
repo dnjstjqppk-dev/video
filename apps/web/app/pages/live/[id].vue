@@ -9,7 +9,7 @@ const api = useApi()
 const config = useRuntimeConfig()
 
 useSeoMeta({
-  title: () => `[LIVE] ${streamId.value} — StreamVerse`,
+  title: () => `[LIVE] ${streamId.value} — vravra`,
   description: 'Watch live in ultra-low latency HLS with real-time WebSocket chat and SuperChat support.'
 })
 

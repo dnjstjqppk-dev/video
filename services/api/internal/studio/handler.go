@@ -123,16 +123,44 @@ func (h *Handler) GetVideos(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
 }
 
-// rangeDays converts the UI range selector (7d/28d/90d) to trailing day counts.
+// rangeDays converts the UI range selector (7d/28d/90d/365d/all) to trailing
+// day counts. "all" returns -1 and is resolved from the oldest owned video.
 func rangeDays(raw string) int {
 	switch raw {
 	case "7d":
 		return 7
 	case "90d":
 		return 90
+	case "365d":
+		return 365
+	case "all":
+		return -1
 	default:
 		return 28
 	}
+}
+
+// lifetimeDays spans from the oldest owned video to today (clamped).
+func (h *Handler) lifetimeDays(channelID string) int {
+	oldest := time.Now().UTC()
+	found := false
+	for _, v := range h.ownedVideos(channelID) {
+		if !found || v.CreatedAt.Before(oldest) {
+			oldest = v.CreatedAt
+			found = true
+		}
+	}
+	if !found {
+		return 30
+	}
+	days := int(time.Since(oldest).Hours()/24) + 1
+	if days < 30 {
+		return 30
+	}
+	if days > 1825 {
+		return 1825
+	}
+	return days
 }
 
 func distributeSeries(total int64, days int) []map[string]interface{} {
@@ -164,6 +192,11 @@ func (h *Handler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 			totalViews += v.ViewCount
 		}
 		subs = channel.SubscriberCount
+		if days < 0 {
+			days = h.lifetimeDays(channel.ID)
+		}
+	} else if days < 0 {
+		days = 30
 	}
 	totalWatchHours = totalViews / 120
 

@@ -7,7 +7,7 @@ const api = useApi()
 
 useSeoMeta({
   title: 'Shorts — Vertical Fullscreen Feed',
-  description: 'Swipe through high-energy vertical Shorts with instant preloading on StreamVerse.'
+  description: 'Swipe through high-energy vertical Shorts with instant preloading on vravra.'
 })
 
 interface ShortClip {

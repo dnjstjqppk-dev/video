@@ -1,11 +1,11 @@
-/* StreamVerse (GVP) Next-Gen Media Platform — entry styles. */
+/* vravra Next-Gen Media Platform — entry styles. */
 @import './gvp-themes.css';
 @import './gvp-utilities.css';
 
 html { background-color: var(--gvp-canvas); }
 body {
-  font-family: 'Pretendard Variable', Pretendard, Inter, -apple-system,
-    BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: 'Pretendard Variable', Pretendard, 'Plus Jakarta Sans', Inter,
+    -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   background-color: var(--gvp-canvas);
   color: var(--gvp-text);
   -webkit-font-smoothing: antialiased;

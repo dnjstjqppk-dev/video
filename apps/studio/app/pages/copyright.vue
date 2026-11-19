@@ -6,7 +6,7 @@ import GvpModal from '@gvp/ui/src/components/GvpModal.vue'
 import { useStudioApi } from '~/composables/useStudioApi'
 
 useSeoMeta({
-  title: 'Channel Copyright & Claims — Creator Studio'
+  title: 'Channel Copyright & Claims — vravra studio'
 })
 
 const api = useStudioApi()
