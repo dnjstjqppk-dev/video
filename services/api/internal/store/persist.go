@@ -137,6 +137,21 @@ func (s *MemoryStore) PersistUser(u *User) {
 	}
 }
 
+// PersistHourlyView increments a channel hour bucket in PostgreSQL.
+func (s *MemoryStore) PersistHourlyView(channelID string, hour time.Time, delta int64) {
+	if !s.persistEnabled() || channelID == "" || delta == 0 {
+		return
+	}
+	if !validUUID(channelID) {
+		return
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	if err := s.DB.SaveHourlyViews(ctx, channelID, hour, delta); err != nil {
+		slog.Warn("Hourly views write-through failed", "channel_id", channelID, "error", err)
+	}
+}
+
 // PersistMediaJob writes a transcode job through to PostgreSQL (best effort).
 func (s *MemoryStore) PersistMediaJob(job *MediaJob) {
 	if !s.persistEnabled() || job == nil {

@@ -57,7 +57,7 @@ func ClassifyViewAccess(user *store.User, video *store.Video, channels map[strin
 	switch video.Visibility {
 	case "public", "unlisted":
 		return ViewAllow
-	case "private":
+	case "private", "scheduled":
 		if IsPlatformOperator(user) || IsChannelOwner(user, video, channels) {
 			return ViewAllow
 		}

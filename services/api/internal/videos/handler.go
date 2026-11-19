@@ -3,6 +3,7 @@ package videos
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -34,6 +35,12 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Get("/{id}/captions", h.ListCaptions)
 		pr.Post("/{id}/captions", h.AddCaption)
 		pr.Delete("/{id}/captions/{capId}", h.DeleteCaption)
+		pr.Post("/{id}/thumbnail", h.UploadThumbnail)
+		pr.Post("/{id}/thumbnail/select", h.SelectThumbnail)
+		pr.Get("/{id}/frames", h.GetFrames)
+		pr.Get("/{id}/elements", h.ListElements)
+		pr.Post("/{id}/elements", h.AddElement)
+		pr.Delete("/{id}/elements/{elId}", h.DeleteElement)
 	})
 
 	return r
@@ -54,7 +61,13 @@ func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	identity.WriteJSON(w, http.StatusOK, video)
+	enriched := *video
+	if ch, ok := h.Store.Channels[video.ChannelID]; ok && ch != nil {
+		enriched.ChannelSubscriberCount = ch.SubscriberCount
+		enriched.ChannelVideoCount = ch.VideoCount
+		enriched.ChannelIsVerified = ch.IsVerified
+	}
+	identity.WriteJSON(w, http.StatusOK, &enriched)
 }
 
 func (h *Handler) GetPlayback(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +103,7 @@ func (h *Handler) GetPlayback(w http.ResponseWriter, r *http.Request) {
 	if h.Store.CountView(store.ViewerKey(r, viewerID), video.ID) {
 		video.ViewCount++
 		h.Store.PersistVideo(video)
+		h.Store.NoteCountedView(video)
 	}
 
 	playback := map[string]interface{}{
@@ -124,25 +138,67 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Visibility  string `json:"visibility"`
-		Category    string `json:"category"`
+		Title          string `json:"title"`
+		Description    string `json:"description"`
+		Visibility     string `json:"visibility"`
+		Category       string `json:"category"`
+		ScheduledAt    string `json:"scheduled_at"`
+		ScheduledAtAlt string `json:"scheduledAt"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&payload); err == nil {
-		if payload.Title != "" {
-			video.Title = payload.Title
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid request body")
+		return
+	}
+	scheduledRaw := payload.ScheduledAt
+	if scheduledRaw == "" {
+		scheduledRaw = payload.ScheduledAtAlt
+	}
+	var scheduled *time.Time
+	if scheduledRaw != "" {
+		parsed, err := time.Parse(time.RFC3339, scheduledRaw)
+		if err != nil {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "scheduled_at must be RFC3339")
+			return
 		}
-		if payload.Description != "" {
-			video.Description = payload.Description
+		scheduled = &parsed
+	}
+	// Validate the scheduled transition before mutating anything.
+	nextVisibility := video.Visibility
+	if payload.Visibility != "" {
+		nextVisibility = payload.Visibility
+	}
+	nextScheduled := video.ScheduledAt
+	if scheduled != nil {
+		nextScheduled = scheduled
+	}
+	if nextVisibility == "scheduled" {
+		if nextScheduled == nil {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Scheduled visibility requires scheduled_at")
+			return
 		}
-		if payload.Visibility != "" {
-			video.Visibility = payload.Visibility
+		if !time.Now().Before(*nextScheduled) {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Scheduled time must be in the future")
+			return
 		}
-		if payload.Category != "" {
-			video.Category = payload.Category
-		}
+	}
+	if payload.Title != "" {
+		video.Title = payload.Title
+	}
+	if payload.Description != "" {
+		video.Description = payload.Description
+	}
+	if payload.Visibility != "" {
+		video.Visibility = payload.Visibility
+	}
+	if payload.Category != "" {
+		video.Category = payload.Category
+	}
+	if scheduled != nil {
+		video.ScheduledAt = scheduled
+	}
+	if video.Visibility != "scheduled" && payload.Visibility != "" {
+		video.ScheduledAt = nil
 	}
 	h.Store.PersistVideo(video)
 

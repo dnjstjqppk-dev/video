@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 // Hydrate overlays persisted rows onto the memory store after boot. Database
@@ -48,8 +49,16 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 	for _, job := range jobs {
 		s.MediaJobs[job.ID] = job
 	}
+	buckets, err := s.DB.LoadHourlyViews(ctx, time.Now().Add(-48*time.Hour))
+	if err != nil {
+		return fmt.Errorf("hydrate hourly views: %w", err)
+	}
+	for _, b := range buckets {
+		s.RecordHourlyView(b.ChannelID, b.Hour, b.Views)
+	}
 	slog.Info("Memory store hydrated from PostgreSQL",
 		"users", len(users), "channels", len(channels),
-		"videos", len(videos), "transactions", len(txs), "jobs", len(jobs))
+		"videos", len(videos), "transactions", len(txs), "jobs", len(jobs),
+		"hourly_buckets", len(buckets))
 	return nil
 }

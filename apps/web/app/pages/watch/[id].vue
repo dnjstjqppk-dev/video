@@ -128,6 +128,12 @@ async function submitReport() {
   }
 }
 
+function fmtDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString(appStore.locale === 'ko' ? 'ko-KR' : 'en-US')
+}
+
 const newCommentText = ref('')
 const replyTargetId = ref<string | null>(null)
 const replyText = ref('')
@@ -381,7 +387,7 @@ async function removeComment(commentId: string, parentId?: string) {
             <div>
               <NuxtLink :to="`/channels/${activeVideo.channelId}`" class="flex items-center gap-1 font-bold text-[var(--gvp-text)] hover:text-[var(--gvp-brand)]">
                 <span>{{ activeVideo.channel?.name || 'vravra 크리에이터' }}</span>
-                <svg class="h-4 w-4 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24">
+                <svg v-if="activeVideo.channel?.isVerified" class="h-4 w-4 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
               </NuxtLink>
@@ -457,7 +463,7 @@ async function removeComment(commentId: string, parentId?: string) {
           <div class="flex flex-wrap items-center gap-2.5 font-semibold text-[var(--gvp-text)] tabular-nums">
             <span>{{ activeVideo.viewCount.toLocaleString() }} views</span>
             <span class="text-[var(--gvp-text-muted)]">•</span>
-            <span>Published {{ new Date(activeVideo.publishedAt || activeVideo.createdAt).toLocaleDateString() }}</span>
+            <span>Published {{ fmtDate(activeVideo.publishedAt || activeVideo.createdAt) }}</span>
             <span
               v-for="tag in activeVideo.tags"
               :key="tag"
@@ -595,7 +601,7 @@ async function removeComment(commentId: string, parentId?: string) {
                     <span>{{ appStore.locale === 'ko' ? '고정됨' : 'Pinned' }}</span>
                   </span>
                   <span class="text-xs text-[var(--gvp-text-muted)] tabular-nums">
-                    {{ new Date(cmt.createdAt).toLocaleDateString() }}
+                    {{ fmtDate(cmt.createdAt) }}
                   </span>
                 </div>
 
@@ -712,7 +718,7 @@ async function removeComment(commentId: string, parentId?: string) {
                             {{ appStore.locale === 'ko' ? '크리에이터' : 'Creator' }}
                           </span>
                           <span class="text-[var(--gvp-text-muted)] tabular-nums">
-                            {{ new Date(reply.createdAt).toLocaleDateString() }}
+                            {{ fmtDate(reply.createdAt) }}
                           </span>
                         </div>
                         <p class="mt-0.5 text-[var(--gvp-text)]"><CommentText :text="reply.content" @seek="(s) => playerRef?.seekToSeconds(s)" /></p>

@@ -64,31 +64,49 @@ type VideoSource struct {
 	Bitrate     int64  `json:"bitrate"`
 }
 
+// VideoElement is one end-screen or info-card overlay owned by a video.
+type VideoElement struct {
+	ID         string `json:"id"`
+	Kind       string `json:"kind"` // end_screen, card
+	Title      string `json:"title"`
+	TargetType string `json:"target_type"` // video, playlist, channel, url
+	Target     string `json:"target"`
+	StartSec   int    `json:"start_sec"`
+	EndSec     int    `json:"end_sec"`
+}
+
 type Video struct {
-	ID              string         `json:"id"`
-	ChannelID       string         `json:"channel_id"`
-	ChannelName     string         `json:"channel_name,omitempty"`
-	ChannelHandle   string         `json:"channel_handle,omitempty"`
-	ChannelAvatar   string         `json:"channel_avatar_url,omitempty"`
-	Title           string         `json:"title"`
-	Description     string         `json:"description"`
-	VideoType       string         `json:"video_type"` // standard, shorts, live_vod
-	Visibility      string         `json:"visibility"` // public, unlisted, private, members_only
-	Status          string         `json:"status"`     // CREATED, PROCESSING, READY, FAILED
-	DurationSeconds int            `json:"duration_seconds"`
-	ThumbnailURL    string         `json:"thumbnail_url"`
-	HlsMasterURL    string         `json:"hls_master_url"`
-	ViewCount       int64          `json:"view_count"`
-	LikeCount       int64          `json:"like_count"`
-	DislikeCount    int64          `json:"dislike_count"`
-	CommentCount    int64          `json:"comment_count"`
-	Tags            []string       `json:"tags"`
-	Category        string         `json:"category"`
-	Sources         []VideoSource  `json:"sources"`
-	Chapters        []VideoChapter `json:"chapters"`
-	Captions        []VideoCaption `json:"captions"`
-	PublishedAt     time.Time      `json:"published_at"`
-	CreatedAt       time.Time      `json:"created_at"`
+	ID                     string         `json:"id"`
+	ChannelID              string         `json:"channel_id"`
+	ChannelName            string         `json:"channel_name,omitempty"`
+	ChannelHandle          string         `json:"channel_handle,omitempty"`
+	ChannelAvatar          string         `json:"channel_avatar_url,omitempty"`
+	ChannelSubscriberCount int64          `json:"channel_subscriber_count,omitempty"`
+	ChannelVideoCount      int            `json:"channel_video_count,omitempty"`
+	ChannelIsVerified      bool           `json:"channel_is_verified,omitempty"`
+	Title                  string         `json:"title"`
+	Description            string         `json:"description"`
+	VideoType              string         `json:"video_type"` // standard, shorts, live_vod
+	Visibility             string         `json:"visibility"` // public, unlisted, private, members_only, scheduled
+	Status                 string         `json:"status"`     // CREATED, PROCESSING, READY, FAILED
+	DurationSeconds        int            `json:"duration_seconds"`
+	ThumbnailURL           string         `json:"thumbnail_url"`
+	CustomThumbnailURL     string         `json:"custom_thumbnail_url,omitempty"`
+	AutoFrameURLs          []string       `json:"auto_frame_urls,omitempty"`
+	HlsMasterURL           string         `json:"hls_master_url"`
+	ViewCount              int64          `json:"view_count"`
+	LikeCount              int64          `json:"like_count"`
+	DislikeCount           int64          `json:"dislike_count"`
+	CommentCount           int64          `json:"comment_count"`
+	Tags                   []string       `json:"tags"`
+	Category               string         `json:"category"`
+	Sources                []VideoSource  `json:"sources"`
+	Chapters               []VideoChapter `json:"chapters"`
+	Captions               []VideoCaption `json:"captions"`
+	Elements               []VideoElement `json:"elements,omitempty"`
+	PublishedAt            time.Time      `json:"published_at"`
+	ScheduledAt            *time.Time     `json:"scheduled_at,omitempty"`
+	CreatedAt              time.Time      `json:"created_at"`
 }
 
 type Comment struct {
@@ -403,21 +421,21 @@ type LedgerEntry struct {
 }
 
 type PaymentTransaction struct {
-	ID              string        `json:"id"`
-	UserID          string        `json:"user_id"`
-	Provider        string        `json:"provider"` // stripe, toss
-	ProviderRef     string        `json:"provider_ref,omitempty"` // Toss paymentKey / Stripe session id
-	ProviderRefund  string        `json:"provider_refund,omitempty"`
-	IdempotencyKey  string        `json:"idempotency_key"`
-	Type            string        `json:"type"` // membership, super_chat, ad_topup, premium_subscription
-	AmountCents     int64         `json:"amount_cents"`
-	RefundedCents   int64         `json:"refunded_cents,omitempty"`
-	Currency        string        `json:"currency"`
-	Status          string        `json:"status"` // pending, succeeded, failed, refunded
-	CheckoutURL     string        `json:"checkout_url,omitempty"`
-	LedgerEntries   []LedgerEntry `json:"ledger_entries,omitempty"`
-	CreatedAt       time.Time     `json:"created_at"`
-	RefundedAt      *time.Time    `json:"refunded_at,omitempty"`
+	ID             string        `json:"id"`
+	UserID         string        `json:"user_id"`
+	Provider       string        `json:"provider"`               // stripe, toss
+	ProviderRef    string        `json:"provider_ref,omitempty"` // Toss paymentKey / Stripe session id
+	ProviderRefund string        `json:"provider_refund,omitempty"`
+	IdempotencyKey string        `json:"idempotency_key"`
+	Type           string        `json:"type"` // membership, super_chat, ad_topup, premium_subscription
+	AmountCents    int64         `json:"amount_cents"`
+	RefundedCents  int64         `json:"refunded_cents,omitempty"`
+	Currency       string        `json:"currency"`
+	Status         string        `json:"status"` // pending, succeeded, failed, refunded
+	CheckoutURL    string        `json:"checkout_url,omitempty"`
+	LedgerEntries  []LedgerEntry `json:"ledger_entries,omitempty"`
+	CreatedAt      time.Time     `json:"created_at"`
+	RefundedAt     *time.Time    `json:"refunded_at,omitempty"`
 }
 
 type PartnerContract struct {
@@ -442,7 +460,10 @@ type MemoryStore struct {
 	Channels        map[string]*Channel
 	Videos          map[string]*Video
 	Comments        map[string][]*Comment
-	Subscriptions   map[string]map[string]bool // userID -> set of channelIDs
+	Subscriptions   map[string]map[string]bool   // userID -> set of channelIDs
+	SubNotify       map[string]map[string]string // userID -> channelID -> all|custom|none
+	HourlyViews     map[string]map[int64]int64   // channelID -> hourUnix -> counted views
+	hourlyMu        sync.Mutex
 	Likes           map[string]map[string]bool // userID -> set of videoIDs
 	LiveStreams     map[string]*LiveStream
 	SuperChats      map[string][]*SuperChat
@@ -484,6 +505,8 @@ func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 		Videos:          make(map[string]*Video),
 		Comments:        make(map[string][]*Comment),
 		Subscriptions:   make(map[string]map[string]bool),
+		SubNotify:       make(map[string]map[string]string),
+		HourlyViews:     make(map[string]map[int64]int64),
 		Likes:           make(map[string]map[string]bool),
 		LiveStreams:     make(map[string]*LiveStream),
 		SuperChats:      make(map[string][]*SuperChat),

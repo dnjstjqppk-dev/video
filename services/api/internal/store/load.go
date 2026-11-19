@@ -3,7 +3,9 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -92,9 +94,10 @@ func (p *PostgresStore) LoadChannels(ctx context.Context) ([]*Channel, error) {
 func (p *PostgresStore) LoadVideos(ctx context.Context) ([]*Video, error) {
 	rows, err := p.DB.QueryContext(ctx, `SELECT
 		id, channel_id, title, COALESCE(description, ''), video_type, visibility, status,
-		duration_seconds, COALESCE(thumbnail_url, ''), COALESCE(hls_master_url, ''),
+		duration_seconds, COALESCE(thumbnail_url, ''), COALESCE(custom_thumbnail_url, ''),
+		COALESCE(auto_frame_urls, '{}'), COALESCE(hls_master_url, ''),
 		view_count, like_count, dislike_count, comment_count, tags, category,
-		published_at, created_at FROM videos`)
+		COALESCE(elements, '[]'), published_at, scheduled_at, created_at FROM videos`)
 	if err != nil {
 		return nil, fmt.Errorf("load videos: %w", err)
 	}
@@ -102,19 +105,55 @@ func (p *PostgresStore) LoadVideos(ctx context.Context) ([]*Video, error) {
 	var out []*Video
 	for rows.Next() {
 		var v Video
-		var published sql.NullTime
+		var published, scheduled sql.NullTime
+		var elementsJSON []byte
 		if err := rows.Scan(
 			&v.ID, &v.ChannelID, &v.Title, &v.Description, &v.VideoType, &v.Visibility, &v.Status,
-			&v.DurationSeconds, &v.ThumbnailURL, &v.HlsMasterURL,
+			&v.DurationSeconds, &v.ThumbnailURL, &v.CustomThumbnailURL,
+			pq.Array(&v.AutoFrameURLs), &v.HlsMasterURL,
 			&v.ViewCount, &v.LikeCount, &v.DislikeCount, &v.CommentCount,
-			pq.Array(&v.Tags), &v.Category, &published, &v.CreatedAt,
+			pq.Array(&v.Tags), &v.Category, &elementsJSON, &published, &scheduled, &v.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan video: %w", err)
 		}
 		if published.Valid {
 			v.PublishedAt = published.Time
 		}
+		if scheduled.Valid {
+			v.ScheduledAt = &scheduled.Time
+		}
+		if len(elementsJSON) > 0 {
+			if err := json.Unmarshal(elementsJSON, &v.Elements); err != nil {
+				return nil, fmt.Errorf("decode video elements: %w", err)
+			}
+		}
 		out = append(out, &v)
+	}
+	return out, rows.Err()
+}
+
+// HourlyBucket is one persisted per-channel hour of counted views.
+type HourlyBucket struct {
+	ChannelID string
+	Hour      time.Time
+	Views     int64
+}
+
+// LoadHourlyViews reads per-channel hourly views since the given cutoff.
+func (p *PostgresStore) LoadHourlyViews(ctx context.Context, since time.Time) ([]HourlyBucket, error) {
+	rows, err := p.DB.QueryContext(ctx, `SELECT channel_id, hour, views
+		FROM channel_hourly_views WHERE hour >= $1 ORDER BY hour ASC`, since)
+	if err != nil {
+		return nil, fmt.Errorf("load hourly views: %w", err)
+	}
+	defer rows.Close()
+	var out []HourlyBucket
+	for rows.Next() {
+		var b HourlyBucket
+		if err := rows.Scan(&b.ChannelID, &b.Hour, &b.Views); err != nil {
+			return nil, fmt.Errorf("scan hourly views: %w", err)
+		}
+		out = append(out, b)
 	}
 	return out, rows.Err()
 }

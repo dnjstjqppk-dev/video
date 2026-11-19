@@ -232,6 +232,18 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	return r
 }
 
+// sweepScheduledVideos flips due scheduled videos to public on an interval.
+// Persistence rides on PublishDueVideos; failures are logged, never fatal.
+func sweepScheduledVideos(memStore *store.MemoryStore) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		if flipped := memStore.PublishDueVideos(time.Now()); len(flipped) > 0 {
+			slog.Info("Scheduled videos published", "count", len(flipped), "video_ids", flipped)
+		}
+	}
+}
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -296,6 +308,9 @@ func main() {
 		go uploads.NewHandler(memStore).SweepQueuedJobs()
 	}
 	r := buildRouter(memStore)
+
+	// Scheduled publishing: flip due videos public every minute.
+	go sweepScheduledVideos(memStore)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,

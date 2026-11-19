@@ -6,6 +6,7 @@ import type {
   PlaybackInfo,
   Comment,
   VideoCaption,
+  VideoElement,
   Playlist,
   PlaylistItem,
   LiveStream,
@@ -33,6 +34,7 @@ import {
   mapPlayback,
   mapComment,
   mapVideoCaption,
+  mapVideoElement,
   mapLiveStream,
   mapNotification,
   mapAdCreative,
@@ -206,14 +208,27 @@ export class ApiClient {
     return { items: (raw.items || []).map(mapVideo), total: raw.total || 0 };
   }
 
-  async subscribeChannel(channelId: string): Promise<{ subscribed: boolean; subscriberCount: number }> {
+  async subscribeChannel(channelId: string): Promise<{ subscribed: boolean; notifyLevel: string; subscriberCount: number }> {
     const raw = await this.request<unknown>(`/v1/channels/${channelId}/subscribe`, { method: 'POST' });
-    return toCamelDeep(raw) as { subscribed: boolean; subscriberCount: number };
+    return toCamelDeep(raw) as { subscribed: boolean; notifyLevel: string; subscriberCount: number };
   }
 
-  async unsubscribeChannel(channelId: string): Promise<{ subscribed: boolean; subscriberCount: number }> {
+  async unsubscribeChannel(channelId: string): Promise<{ subscribed: boolean; notifyLevel: string; subscriberCount: number }> {
     const raw = await this.request<unknown>(`/v1/channels/${channelId}/subscribe`, { method: 'DELETE' });
-    return toCamelDeep(raw) as { subscribed: boolean; subscriberCount: number };
+    return toCamelDeep(raw) as { subscribed: boolean; notifyLevel: string; subscriberCount: number };
+  }
+
+  async getSubscription(channelId: string): Promise<{ channelId: string; subscribed: boolean; notifyLevel: string; subscriberCount: number }> {
+    const raw = await this.request<unknown>(`/v1/channels/${channelId}/subscription`);
+    return toCamelDeep(raw) as { channelId: string; subscribed: boolean; notifyLevel: string; subscriberCount: number };
+  }
+
+  async setSubscriptionNotify(channelId: string, notifyLevel: 'all' | 'custom' | 'none'): Promise<{ subscribed: boolean; notifyLevel: string; subscriberCount: number }> {
+    const raw = await this.request<unknown>(`/v1/channels/${channelId}/subscribe`, {
+      method: 'PATCH',
+      body: JSON.stringify({ notify_level: notifyLevel }),
+    });
+    return toCamelDeep(raw) as { subscribed: boolean; notifyLevel: string; subscriberCount: number };
   }
 
   // --- Uploads ---
@@ -491,6 +506,53 @@ export class ApiClient {
     return this.request(`/v1/videos/${videoId}/captions/${captionId}`, { method: 'DELETE' });
   }
 
+  async getVideoFrames(videoId: string): Promise<{ videoId: string; current: string; frames: Array<{ source: string; url: string }> }> {
+    const raw = await this.request<unknown>(`/v1/videos/${videoId}/frames`);
+    return toCamelDeep(raw) as { videoId: string; current: string; frames: Array<{ source: string; url: string }> };
+  }
+
+  async uploadVideoThumbnail(videoId: string, file: Blob): Promise<{ videoId: string; thumbnailUrl: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    const raw = await this.request<unknown>(`/v1/videos/${videoId}/thumbnail`, {
+      method: 'POST',
+      body: form,
+    });
+    return toCamelDeep(raw) as { videoId: string; thumbnailUrl: string };
+  }
+
+  async selectVideoThumbnail(videoId: string, source: string): Promise<{ videoId: string; thumbnailUrl: string }> {
+    const raw = await this.request<unknown>(`/v1/videos/${videoId}/thumbnail/select`, {
+      method: 'POST',
+      body: JSON.stringify({ source }),
+    });
+    return toCamelDeep(raw) as { videoId: string; thumbnailUrl: string };
+  }
+
+  async getVideoElements(videoId: string): Promise<VideoElement[]> {
+    const raw = await this.request<{ items: unknown[] }>(`/v1/videos/${videoId}/elements`);
+    return (raw.items || []).map(mapVideoElement);
+  }
+
+  async addVideoElement(videoId: string, data: { kind: string; title: string; targetType: string; target: string; startSec: number; endSec: number }): Promise<VideoElement> {
+    const raw = await this.request<unknown>(`/v1/videos/${videoId}/elements`, {
+      method: 'POST',
+      body: JSON.stringify({
+        kind: data.kind,
+        title: data.title,
+        target_type: data.targetType,
+        target: data.target,
+        start_sec: data.startSec,
+        end_sec: data.endSec,
+      }),
+    });
+    return mapVideoElement(raw);
+  }
+
+  async deleteVideoElement(videoId: string, elementId: string): Promise<void> {
+    return this.request(`/v1/videos/${videoId}/elements/${elementId}`, { method: 'DELETE' });
+  }
+
   async getStudioComments(page = 1, limit = 20): Promise<{ items: Comment[]; total: number }> {
     const raw = await this.request<{ items: unknown[]; total: number }>(`/v1/studio/comments?page=${page}&limit=${limit}`);
     return { items: (raw.items || []).map(mapComment), total: raw.total || 0 };
@@ -503,6 +565,19 @@ export class ApiClient {
     revenueTimeSeries: Array<{ date: string; value: number }>;
   }> {
     return this.request(`/v1/studio/analytics?range=${timeRange}`);
+  }
+
+  async getStudioRealtime(): Promise<{
+    channelId: string;
+    hours: Array<{ hour: string; views: number }>;
+    total48h: number;
+  }> {
+    const raw = await this.request<unknown>('/v1/studio/analytics/realtime');
+    return toCamelDeep(raw) as {
+      channelId: string;
+      hours: Array<{ hour: string; views: number }>;
+      total48h: number;
+    };
   }
 
   // --- Partners & Advertising Engine ---

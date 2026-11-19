@@ -7,6 +7,9 @@ export function usePartnerApi(): ApiClient {
   const authCookie = useCookie<string | null>('gvp_partner_token', {
     sameSite: 'lax'
   })
+  // The httpOnly session cookie is readable here on the server only, which
+  // authenticates SSR API calls; in the browser the /api proxy injects it.
+  const sessionCookie = useCookie<string | null>('gvp_session')
 
   if (!partnerClient || import.meta.server) {
     const baseUrl = import.meta.server
@@ -15,7 +18,7 @@ export function usePartnerApi(): ApiClient {
 
     partnerClient = createApiClient({
       baseUrl,
-      getToken: () => authCookie.value ?? null
+      getToken: () => authCookie.value ?? sessionCookie.value ?? null
     })
   }
 

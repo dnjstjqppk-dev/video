@@ -85,16 +85,22 @@ watch([activeMetric, seriesPoints], async () => {
   chart?.resize()
 })
 
-onMounted(async () => {
-  if (!chartCanvasRef.value) return
+async function initChart() {
+  if (chart || !chartCanvasRef.value) return
   try {
     const echarts = await import('echarts')
     chart = echarts.init(chartCanvasRef.value)
     renderChart()
-    window.addEventListener('resize', onResize)
   } catch {
     chart = null
   }
+}
+
+watch(chartCanvasRef, () => { void initChart() })
+
+onMounted(() => {
+  void initChart()
+  window.addEventListener('resize', onResize)
 })
 function onResize() { chart?.resize() }
 onUnmounted(() => {
@@ -102,6 +108,24 @@ onUnmounted(() => {
   chart?.dispose()
   chart = null
 })
+
+const { data: realtimeData, pending: realtimePending, error: realtimeError } = await useAsyncData('studio-realtime-48h', async () => {
+  try {
+    return await api.getStudioRealtime()
+  } catch {
+    return null
+  }
+})
+const realtimeHours = computed(() => realtimeData.value?.hours || [])
+const realtimeTotal = computed(() => realtimeData.value?.total48h || 0)
+const realtimeMax = computed(() => Math.max(1, ...realtimeHours.value.map(h => h.views)))
+const realtimeHasViews = computed(() => realtimeHours.value.some(h => h.views > 0))
+
+function realtimeLabel(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}시(UTC)`
+}
 
 const { data: topData } = await useAsyncData('studio-top-content', async () => {
   try {
@@ -180,18 +204,50 @@ function exportCsvReport() {
       </button>
     </div>
 
-    <div class="rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--gvp-border)] pb-3">
-        <h2 class="text-sm font-semibold text-[var(--gvp-text)]">{{ metricMeta[activeMetric].label }} 추이</h2>
-        <span class="text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">{{ selectedRange }} · 일별 집계</span>
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div class="rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 xl:col-span-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--gvp-border)] pb-3">
+          <h2 class="text-sm font-semibold text-[var(--gvp-text)]">{{ metricMeta[activeMetric].label }} 추이</h2>
+          <span class="text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">{{ selectedRange }} · 일별 집계</span>
+        </div>
+        <div v-if="analyticsError" class="mt-4 rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-8 text-center" role="alert">
+          <p class="text-sm font-semibold text-[var(--gvp-live)]">분석 데이터를 불러오지 못했습니다.</p>
+        </div>
+        <div v-else-if="!hasData" class="mt-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+          <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">아직 집계된 시청 기록이 없습니다.</p>
+        </div>
+        <ClientOnly>
+        <div v-show="hasData && !analyticsError" ref="chartCanvasRef" class="mt-4 h-72 w-full" />
+        <template #fallback>
+          <div class="mt-4 h-72 w-full animate-pulse rounded-lg bg-[var(--gvp-elevated)]" aria-hidden="true" />
+        </template>
+      </ClientOnly>
       </div>
-      <div v-if="analyticsError" class="mt-4 rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-8 text-center" role="alert">
-        <p class="text-sm font-semibold text-[var(--gvp-live)]">분석 데이터를 불러오지 못했습니다.</p>
+
+      <div class="rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5" aria-label="실시간 48시간 조회수">
+        <div class="border-b border-[var(--gvp-border)] pb-3">
+          <h2 class="text-sm font-semibold text-[var(--gvp-text)]">실시간 48시간</h2>
+          <p class="tabular-nums mt-1 text-2xl font-semibold text-[var(--gvp-text)]">{{ realtimeTotal.toLocaleString() }}</p>
+          <p class="text-xs text-[var(--gvp-text-secondary)]">시간당 조회수 합계</p>
+        </div>
+        <div v-if="realtimePending" class="mt-4 flex h-72 items-end gap-[3px]" role="status" aria-label="불러오는 중">
+          <div v-for="i in 48" :key="i" class="flex-1 animate-pulse rounded-sm bg-[var(--gvp-elevated)]" :style="{ height: `${20 + ((i * 37) % 60)}%` }" />
+        </div>
+        <p v-else-if="realtimeError || !realtimeData" role="alert" class="mt-4 rounded-lg border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-6 text-center text-xs font-semibold text-[var(--gvp-live)]">
+          실시간 데이터를 불러오지 못했습니다.
+        </p>
+        <p v-else-if="!realtimeHasViews" class="mt-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center text-xs text-[var(--gvp-text-secondary)]">
+          지난 48시간 동안 집계된 조회수가 없습니다.
+        </p>
+        <div v-else class="tabular-nums mt-4 flex h-72 items-end gap-[3px]" role="img" aria-label="시간당 조회수 막대 차트">
+          <div
+            v-for="h in realtimeHours" :key="h.hour"
+            class="min-h-[2px] flex-1 rounded-sm bg-[var(--gvp-studio)]"
+            :style="{ height: `${Math.max(2, Math.round((h.views / realtimeMax) * 100))}%` }"
+            :title="`${realtimeLabel(h.hour)} · ${h.views.toLocaleString()}회`"
+          />
+        </div>
       </div>
-      <div v-else-if="!hasData" class="mt-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
-        <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">아직 집계된 시청 기록이 없습니다.</p>
-      </div>
-      <div v-show="hasData && !analyticsError" ref="chartCanvasRef" class="mt-4 h-72 w-full" />
     </div>
 
     <div v-if="activeTab !== 'overview'" class="rounded-xl border border-dashed border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] p-6 text-center">

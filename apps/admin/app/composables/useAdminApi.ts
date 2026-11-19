@@ -8,6 +8,9 @@ export function useAdminApi(): ApiClient {
     sameSite: 'strict',
     maxAge: 900 // 15-minute strict admin session TTL
   })
+  // The httpOnly session cookie is readable here on the server only, which
+  // authenticates SSR API calls; in the browser the /api proxy injects it.
+  const sessionCookie = useCookie<string | null>('gvp_session')
 
   if (!adminClient || import.meta.server) {
     const baseUrl = import.meta.server
@@ -16,7 +19,7 @@ export function useAdminApi(): ApiClient {
 
     adminClient = createApiClient({
       baseUrl,
-      getToken: () => authCookie.value ?? null
+      getToken: () => authCookie.value ?? sessionCookie.value ?? null
     })
   }
 

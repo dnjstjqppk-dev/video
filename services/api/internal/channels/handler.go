@@ -31,7 +31,9 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Use(auth.RequireAuth)
 		pr.Post("/", h.CreateChannel)
 		pr.Patch("/{id}", h.UpdateChannel)
+		pr.Get("/{id}/subscription", h.GetSubscription)
 		pr.Post("/{id}/subscribe", h.Subscribe)
+		pr.Patch("/{id}/subscribe", h.UpdateSubscription)
 		pr.Delete("/{id}/subscribe", h.Unsubscribe)
 	})
 
@@ -144,11 +146,42 @@ func (h *Handler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusOK, channel)
 }
 
+func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {
+	channelID := chi.URLParam(r, "id")
+	channel, ok := h.Store.Channels[channelID]
+	if !ok {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+		return
+	}
+	user := identity.GetUserFromContext(r.Context())
+	subscribed := h.Store.Subscriptions[user.ID] != nil && h.Store.Subscriptions[user.ID][channelID]
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"channel_id":       channelID,
+		"subscribed":       subscribed,
+		"notify_level":     h.Store.SubNotifyLevel(user.ID, channelID),
+		"subscriber_count": channel.SubscriberCount,
+	})
+}
+
 func (h *Handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	channelID := chi.URLParam(r, "id")
 	channel, ok := h.Store.Channels[channelID]
 	if !ok {
 		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+		return
+	}
+
+	var payload struct {
+		NotifyLevel string `json:"notify_level"`
+	}
+	if r.Body != nil && r.ContentLength != 0 {
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid request body")
+			return
+		}
+	}
+	if payload.NotifyLevel != "" && !store.ValidNotifyLevel(payload.NotifyLevel) {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "notify_level must be all, custom, or none")
 		return
 	}
 
@@ -161,9 +194,43 @@ func (h *Handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		h.Store.Subscriptions[user.ID][channelID] = true
 		channel.SubscriberCount++
 	}
+	level := payload.NotifyLevel
+	if level == "" {
+		level = h.Store.SubNotifyLevel(user.ID, channelID)
+	}
+	h.Store.SetSubNotify(user.ID, channelID, level)
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"subscribed":       true,
+		"notify_level":     level,
+		"subscriber_count": channel.SubscriberCount,
+	})
+}
+
+func (h *Handler) UpdateSubscription(w http.ResponseWriter, r *http.Request) {
+	channelID := chi.URLParam(r, "id")
+	channel, ok := h.Store.Channels[channelID]
+	if !ok {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+		return
+	}
+	var payload struct {
+		NotifyLevel string `json:"notify_level"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || !store.ValidNotifyLevel(payload.NotifyLevel) {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "notify_level must be all, custom, or none")
+		return
+	}
+	user := identity.GetUserFromContext(r.Context())
+	if h.Store.Subscriptions[user.ID] == nil || !h.Store.Subscriptions[user.ID][channelID] {
+		identity.WriteError(w, r, http.StatusConflict, "INVALID_STATE", "Subscribe before changing notifications")
+		return
+	}
+	h.Store.SetSubNotify(user.ID, channelID, payload.NotifyLevel)
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"channel_id":       channelID,
+		"subscribed":       true,
+		"notify_level":     payload.NotifyLevel,
 		"subscriber_count": channel.SubscriberCount,
 	})
 }
@@ -179,6 +246,7 @@ func (h *Handler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	user := identity.GetUserFromContext(r.Context())
 	if h.Store.Subscriptions[user.ID] != nil && h.Store.Subscriptions[user.ID][channelID] {
 		delete(h.Store.Subscriptions[user.ID], channelID)
+		h.Store.ClearSubNotify(user.ID, channelID)
 		if channel.SubscriberCount > 0 {
 			channel.SubscriberCount--
 		}
@@ -186,6 +254,7 @@ func (h *Handler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"subscribed":       false,
+		"notify_level":     "",
 		"subscriber_count": channel.SubscriberCount,
 	})
 }

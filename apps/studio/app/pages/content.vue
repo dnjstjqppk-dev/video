@@ -37,7 +37,6 @@ const searchQuery = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const config = useRuntimeConfig()
 const page = ref(1)
 const limit = 20
-const total = ref(0)
 const savingIds = ref<Set<string>>(new Set())
 const rowError = ref<string | null>(null)
 
@@ -68,16 +67,20 @@ const { data, pending, error, refresh } = await useAsyncData(
   () => `studio-content-${activeTab.value}-${page.value}`,
   async () => {
     const res = await api.getStudioVideos(page.value, limit)
-    total.value = res.total
     const rows = res.items.map(toRow)
-    return activeTab.value === 'all' ? rows : rows.filter(r => r.type === activeTab.value)
+    return {
+      total: res.total,
+      rows: activeTab.value === 'all' ? rows : rows.filter(r => r.type === activeTab.value)
+    }
   },
   { watch: [activeTab, page] }
 )
 
+const total = computed(() => data.value?.total ?? 0)
+
 const items = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  return (data.value ?? []).filter((r) => {
+  return (data.value?.rows ?? []).filter((r) => {
     if (statusFilter.value !== 'all' && r.status !== statusFilter.value) return false
     if (visibilityFilter.value !== 'all' && r.visibility !== visibilityFilter.value) return false
     if (r.views < viewsFilter.value) return false
@@ -90,6 +93,10 @@ const selectedCount = computed(() => items.value.filter(i => i.selected).length)
 
 async function setRowVisibility(row: StudioContentRow, vis: VideoVisibility) {
   const prev = row.visibility
+  if (vis === VideoVisibility.SCHEDULED && row.visibility !== VideoVisibility.SCHEDULED) {
+    rowError.value = '예약 공개는 업로드 위자드에서 시각과 함께 설정하세요.'
+    return
+  }
   row.visibility = vis
   rowError.value = null
   savingIds.value.add(row.id)
@@ -235,6 +242,7 @@ function formatDate(iso: string) {
             <option :value="VideoVisibility.UNLISTED">일부 공개</option>
             <option :value="VideoVisibility.PRIVATE">비공개</option>
             <option :value="VideoVisibility.MEMBERS_ONLY">멤버십 전용</option>
+            <option :value="VideoVisibility.SCHEDULED">예약</option>
           </select>
         </label>
         <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
@@ -309,6 +317,7 @@ function formatDate(iso: string) {
                 <option :value="VideoVisibility.UNLISTED">일부 공개</option>
                 <option :value="VideoVisibility.PRIVATE">비공개</option>
                 <option :value="VideoVisibility.MEMBERS_ONLY">멤버십 전용</option>
+                <option :value="VideoVisibility.SCHEDULED">예약</option>
               </select>
             </td>
             <td class="px-4 py-3 text-xs">

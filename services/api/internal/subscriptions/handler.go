@@ -68,6 +68,7 @@ func (h *Handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		h.Store.Subscriptions[user.ID][channelID] = true
 		channel.SubscriberCount++
 	}
+	h.Store.SetSubNotify(user.ID, channelID, h.Store.SubNotifyLevel(user.ID, channelID))
 
 	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"channel_id":       channelID,
@@ -87,6 +88,7 @@ func (h *Handler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	user := identity.GetUserFromContext(r.Context())
 	if h.Store.Subscriptions[user.ID] != nil && h.Store.Subscriptions[user.ID][channelID] {
 		delete(h.Store.Subscriptions[user.ID], channelID)
+		h.Store.ClearSubNotify(user.ID, channelID)
 		if channel.SubscriberCount > 0 {
 			channel.SubscriberCount--
 		}

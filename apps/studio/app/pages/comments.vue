@@ -12,21 +12,19 @@ const api = useStudioApi()
 const searchQuery = ref('')
 const page = ref(1)
 const limit = 20
-const total = ref(0)
 const actionError = ref<string | null>(null)
 const actingIds = ref<Set<string>>(new Set())
 
 const { data, pending, error, refresh } = await useAsyncData(
   () => `studio-comments-${page.value}`,
   async () => {
-    const res = await api.getStudioComments(page.value, limit)
-    total.value = res.total
-    return res.items
+    return await api.getStudioComments(page.value, limit)
   },
   { watch: [page] }
 )
 
-const comments = computed(() => data.value ?? [])
+const comments = computed(() => data.value?.items ?? [])
+const total = computed(() => data.value?.total ?? 0)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)))
 
 const filteredComments = computed(() => {

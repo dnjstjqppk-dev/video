@@ -8,6 +8,9 @@ export function useApi(): ApiClient {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production'
   })
+  // The httpOnly session cookie is readable here on the server only, which
+  // authenticates SSR API calls; in the browser the /api proxy injects it.
+  const sessionCookie = useCookie<string | null>('gvp_session')
 
   if (!clientInstance || import.meta.server) {
     const baseUrl = import.meta.server
@@ -16,7 +19,7 @@ export function useApi(): ApiClient {
 
     clientInstance = createApiClient({
       baseUrl,
-      getToken: () => authCookie.value ?? null,
+      getToken: () => authCookie.value ?? sessionCookie.value ?? null,
       onUnauthorized: () => {
         authCookie.value = null
       }

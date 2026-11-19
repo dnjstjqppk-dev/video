@@ -2,6 +2,42 @@
 
 All notable product changes. Dates are UTC.
 
+## [3.1.0] — 2026-11-19 — vravra spec completion (studio depth + SSR integrity)
+
+### Added
+
+- Scheduled publishing: `scheduled_at` storage, future-time validation,
+  per-minute API sweeper flips due videos public (live-verified).
+- Custom thumbnails: owner upload (JPEG/PNG/WebP, 5 MiB, decoded + sized)
+  plus worker-emitted `auto_1..3` frame selection in the upload wizard.
+- End screens and cards: per-video CRUD with timing/target validation.
+- Realtime analytics: deduped hourly view buckets (memory + PG) and a
+  48-hour bar card on the studio analytics page.
+- Subscription notifications: all/custom/none preference API + watch-page
+  radio UI, verified through real browser clicks.
+- Channel stats enrichment on video detail (subscribers, video count,
+  verified badge).
+
+### Fixed
+
+- SSR API calls now forward the `gvp_session` cookie, so logged-in SSR
+  renders with data on all four consoles.
+- Hydration mismatches: voice-button SSR gate, ClientOnly chart mount,
+  explicit date locales, data-derived totals (no fetcher side effects).
+- Shorts 375px horizontal overflow; comments/sound sheets are bottom
+  sheets on mobile.
+- Analytics chart init after ClientOnly mount (ref watcher).
+
+### Verification
+
+- `pnpm -r --filter "./apps/*" build`: all pass.
+- `pnpm -r typecheck`: all packages and consoles pass.
+- `cspell` over the repo: 0 issues.
+- Go API full suite + media-worker tests pass; contract tests 5/5.
+- Browser pass over 37 page/viewport combos: zero overflow, AAA
+  contrast both themes, zero hydration mismatches (9 screenshots
+  inspected).
+
 ## [2.0.0] — 2026-11-18 — Next-gen UI/UX commercialization
 
 ### Added

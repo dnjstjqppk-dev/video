@@ -420,9 +420,20 @@ onBeforeUnmount(() => {
             <p v-if="detailsNotice" role="status" class="text-xs font-medium text-[var(--gvp-success)]">{{ detailsNotice }}</p>
             <p v-if="detailsFailed" role="alert" class="text-xs font-medium text-[var(--gvp-live)]">{{ detailsFailed }}</p>
           </div>
+          <section aria-label="썸네일" class="mt-8 border-t border-[var(--gvp-border)] pt-6">
+            <h3 class="mb-3 text-sm font-semibold text-[var(--gvp-text)]">썸네일</h3>
+            <UploadThumbnailPicker :video-id="videoId" :status="currentStatus" />
+          </section>
         </div>
-        <div v-show="step === 1" role="tabpanel" aria-label="동영상 요소">
-          <UploadCaptionsStep :video-id="videoId" />
+        <div v-show="step === 1" role="tabpanel" aria-label="동영상 요소" class="space-y-8">
+          <section aria-label="자막">
+            <h3 class="mb-3 text-sm font-semibold text-[var(--gvp-text)]">자막</h3>
+            <UploadCaptionsStep :video-id="videoId" />
+          </section>
+          <section aria-label="최종 화면 및 카드">
+            <h3 class="mb-3 text-sm font-semibold text-[var(--gvp-text)]">최종 화면 및 카드</h3>
+            <UploadElementsStep :video-id="videoId" />
+          </section>
         </div>
         <div v-show="step === 2" role="tabpanel" aria-label="검토">
           <UploadReviewStep :video-id="videoId" :status="currentStatus" :job-error="jobError" />

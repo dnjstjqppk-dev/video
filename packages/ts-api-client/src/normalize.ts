@@ -10,6 +10,7 @@ import type {
   VideoPlaybackSource,
   VideoChapter,
   VideoCaption,
+  VideoElement,
   PlaybackInfo,
   Comment,
   LiveStream,
@@ -136,6 +137,19 @@ function mapVideoChapter(raw: unknown): VideoChapter {
   };
 }
 
+export function mapVideoElement(raw: unknown): VideoElement {
+  const r = toCamelDeep<RecordAny>(raw as RecordAny);
+  return {
+    id: asString(r.id),
+    kind: r.kind,
+    title: asString(r.title),
+    targetType: r.targetType,
+    target: asString(r.target),
+    startSec: asNumber(r.startSec),
+    endSec: asNumber(r.endSec),
+  };
+}
+
 export function mapVideoCaption(raw: unknown, index: number): VideoCaption {
   const r = toCamelDeep<RecordAny>(raw as RecordAny);
   return {
@@ -188,6 +202,7 @@ export function mapVideo(raw: unknown): Video {
     sources: asArray(r.sources).map(mapVideoSource),
     chapters: asArray(r.chapters).map(mapVideoChapter),
     captions: asArray(r.captions).map((c, i) => mapVideoCaption(c, i)),
+    elements: asArray(r.elements).map(mapVideoElement),
     publishedAt: r.publishedAt ? asString(r.publishedAt) : undefined,
     scheduledAt: r.scheduledAt ? asString(r.scheduledAt) : undefined,
     createdAt,

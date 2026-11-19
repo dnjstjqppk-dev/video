@@ -1,5 +1,60 @@
 [
   {
+    "method": "DELETE",
+    "path": "/v1/me/blocked-users/{targetId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/delete-request",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/history",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/me/sessions/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/channels/{id}/subscribe",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/comments/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/subscriptions/{channelId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}/captions/{capId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}/elements/{elId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/videos/{id}/like",
+    "auth": "Auth"
+  },
+  {
     "method": "GET",
     "path": "/healthz",
     "auth": "Public"
@@ -16,13 +71,48 @@
   },
   {
     "method": "GET",
+    "path": "/v1/me",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/blocked-users",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/history",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/mfa",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/sessions",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/me/strikes",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
     "path": "/v1/admin/ads/delivery-diagnostics",
     "auth": "Role(super_admin, platform_admin)"
   },
   {
-    "method": "POST",
-    "path": "/v1/admin/finance/batches/approve",
-    "auth": "Role(super_admin, platform_admin, finance_admin)"
+    "method": "GET",
+    "path": "/v1/admin/audit-logs",
+    "auth": "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/dashboard",
+    "auth": "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
   },
   {
     "method": "GET",
@@ -40,34 +130,9 @@
     "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
   },
   {
-    "method": "POST",
-    "path": "/v1/admin/moderation/{id}/resolve",
-    "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
-  },
-  {
     "method": "GET",
     "path": "/v1/admin/policies/",
     "auth": "Role(super_admin, platform_admin (+support read on GET))"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/admin/policies/",
-    "auth": "Role(super_admin, platform_admin (+support read on GET))"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/admin/policies/flags/{key}",
-    "auth": "Role(super_admin, platform_admin (+support read on GET))"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/admin/audit-logs",
-    "auth": "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/admin/dashboard",
-    "auth": "Role(super_admin, platform_admin, finance_admin, moderator, support_agent)"
   },
   {
     "method": "GET",
@@ -75,23 +140,8 @@
     "auth": "Role(super_admin, platform_admin (+support read on GET /users))"
   },
   {
-    "method": "PATCH",
-    "path": "/v1/admin/users/{id}/status",
-    "auth": "Role(super_admin, platform_admin (+support read on GET /users))"
-  },
-  {
     "method": "GET",
     "path": "/v1/ads/admin/creatives",
-    "auth": "Role(super_admin, platform_admin)"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/ads/admin/creatives/{id}/approve",
-    "auth": "Role(super_admin, platform_admin)"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/ads/admin/creatives/{id}/reject",
     "auth": "Role(super_admin, platform_admin)"
   },
   {
@@ -115,19 +165,269 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
-    "path": "/v1/ads/campaigns",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
     "method": "GET",
     "path": "/v1/ads/campaigns/{id}",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "POST",
-    "path": "/v1/ads/campaigns/{id}/creatives",
+    "method": "GET",
+    "path": "/v1/ads/creatives/{id}/asset",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/ads/reports",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/alerts",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/campaigns",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/campaigns/{id}",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/advertiser/reports",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/channels/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/channels/{id}/subscription",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/channels/{id}/videos",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/feed/home",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/feed/shorts",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/feed/subscriptions",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/chat",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/health",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/polls/active",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/superchats",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/live-streams/{id}/ws",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/notifications/",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/campaigns",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/channels",
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/contracts",
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/me",
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/rights/claims",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/settlements",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/partners/settlements/earnings-summary",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/payments/transactions",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/playlists/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/search",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/search/suggestions",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/analytics",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/analytics/realtime",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/claims",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/comments",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/dashboard",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/earnings",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/settlements",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/videos",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/studio/videos/{id}/edit-jobs/{jobId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/subscriptions/",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/uploads/{id}/status",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/captions",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/comments",
+    "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/elements",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/frames",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/videos/{id}/playback",
+    "auth": "Public"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/me",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/admin/policies/",
+    "auth": "Role(super_admin, platform_admin (+support read on GET))"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/admin/policies/flags/{key}",
+    "auth": "Role(super_admin, platform_admin (+support read on GET))"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/admin/users/{id}/status",
+    "auth": "Role(super_admin, platform_admin (+support read on GET /users))"
   },
   {
     "method": "PATCH",
@@ -135,9 +435,94 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
-    "path": "/v1/ads/creatives/{id}/asset",
-    "auth": "Public"
+    "method": "PATCH",
+    "path": "/v1/advertiser/campaigns/{id}/status",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/channels/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/channels/{id}/subscribe",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/partners/contracts/{id}",
+    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/playlists/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/videos/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/blocked-users",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/delete-request",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/mfa/disable",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/mfa/setup",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/mfa/verify",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/me/sessions/{id}/revoke",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/admin/finance/batches/approve",
+    "auth": "Role(super_admin, platform_admin, finance_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/admin/moderation/{id}/resolve",
+    "auth": "Role(super_admin, platform_admin, moderator, support_agent)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/admin/creatives/{id}/approve",
+    "auth": "Role(super_admin, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/admin/creatives/{id}/reject",
+    "auth": "Role(super_admin, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/campaigns",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/ads/campaigns/{id}/creatives",
+    "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
@@ -155,38 +540,13 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
-    "path": "/v1/ads/reports",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/alerts",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
     "path": "/v1/advertiser/campaigns",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/campaigns",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/advertiser/campaigns/{id}",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
     "method": "POST",
     "path": "/v1/advertiser/campaigns/{id}/creatives",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/advertiser/campaigns/{id}/status",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
@@ -205,43 +565,13 @@
     "auth": "Role(advertiser, partner_manager, platform_admin)"
   },
   {
-    "method": "GET",
-    "path": "/v1/advertiser/reports",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
     "method": "POST",
     "path": "/v1/channels/",
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/channels/{id}",
-    "auth": "Public"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/channels/{id}",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
     "path": "/v1/channels/{id}/subscribe",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/channels/{id}/subscribe",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/channels/{id}/videos",
-    "auth": "Public"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/comments/{id}",
     "auth": "Auth"
   },
   {
@@ -270,59 +600,19 @@
     "auth": "Public"
   },
   {
-    "method": "GET",
-    "path": "/v1/feed/home",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/feed/shorts",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/feed/subscriptions",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/live-streams/",
-    "auth": "Public"
-  },
-  {
     "method": "POST",
     "path": "/v1/live-streams/",
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}/chat",
-    "auth": "Public"
-  },
-  {
     "method": "POST",
     "path": "/v1/live-streams/{id}/chat",
     "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}/health",
-    "auth": "Public"
   },
   {
     "method": "POST",
     "path": "/v1/live-streams/{id}/polls",
     "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}/polls/active",
-    "auth": "Public"
   },
   {
     "method": "POST",
@@ -350,23 +640,8 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}/superchats",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/live-streams/{id}/ws",
-    "auth": "Public"
-  },
-  {
     "method": "POST",
     "path": "/v1/moderation/reports",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/notifications/",
     "auth": "Auth"
   },
   {
@@ -375,19 +650,9 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/partners/campaigns",
-    "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
     "method": "POST",
     "path": "/v1/partners/campaigns",
     "auth": "Role(advertiser, partner_manager, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/partners/rights/claims",
-    "auth": "Auth"
   },
   {
     "method": "POST",
@@ -415,39 +680,9 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/partners/settlements",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/partners/settlements/earnings-summary",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
     "path": "/v1/partners/settlements/payout",
     "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/partners/channels",
-    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/partners/contracts",
-    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/partners/contracts/{id}",
-    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/partners/me",
-    "auth": "Role(partner_manager, advertiser, rights_holder, rights_owner, partner_finance, mcn_manager, partner_admin, platform_admin)"
   },
   {
     "method": "POST",
@@ -457,11 +692,6 @@
   {
     "method": "POST",
     "path": "/v1/payments/confirm",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/payments/transactions",
     "auth": "Auth"
   },
   {
@@ -480,83 +710,13 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/playlists/{id}",
-    "auth": "Public"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/playlists/{id}",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
     "path": "/v1/playlists/{id}/items",
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/search",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/search/suggestions",
-    "auth": "Public"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/earnings",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/settlements",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/analytics",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/claims",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/comments",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/dashboard",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/videos",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
     "path": "/v1/studio/videos/{id}/edit-jobs",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/studio/videos/{id}/edit-jobs/{jobId}",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/subscriptions/",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/subscriptions/{channelId}",
     "auth": "Auth"
   },
   {
@@ -570,11 +730,6 @@
     "auth": "Auth"
   },
   {
-    "method": "PUT",
-    "path": "/v1/uploads/{id}/chunks/{partNumber}",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
     "path": "/v1/uploads/{id}/complete",
     "auth": "Auth"
@@ -585,14 +740,9 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/uploads/{id}/status",
+    "method": "POST",
+    "path": "/v1/videos/{id}/captions",
     "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/videos/{id}/comments",
-    "auth": "Public"
   },
   {
     "method": "POST",
@@ -600,33 +750,8 @@
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/videos/{id}",
-    "auth": "Public"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/videos/{id}",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/videos/{id}",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/videos/{id}/captions",
-    "auth": "Auth"
-  },
-  {
     "method": "POST",
-    "path": "/v1/videos/{id}/captions",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/videos/{id}/captions/{capId}",
+    "path": "/v1/videos/{id}/elements",
     "auth": "Auth"
   },
   {
@@ -635,98 +760,18 @@
     "auth": "Auth"
   },
   {
-    "method": "DELETE",
-    "path": "/v1/videos/{id}/like",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/videos/{id}/playback",
-    "auth": "Public"
-  },
-  {
-    "method": "PATCH",
-    "path": "/v1/me",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/me",
+    "method": "POST",
+    "path": "/v1/videos/{id}/thumbnail",
     "auth": "Auth"
   },
   {
     "method": "POST",
-    "path": "/v1/me/blocked-users",
+    "path": "/v1/videos/{id}/thumbnail/select",
     "auth": "Auth"
   },
   {
-    "method": "GET",
-    "path": "/v1/me/blocked-users",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/me/blocked-users/{targetId}",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/me/delete-request",
-    "auth": "Auth"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/me/delete-request",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/me/history",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/me/history",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/me/mfa",
-    "auth": "Auth"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/me/mfa/disable",
-    "auth": "Auth"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/me/mfa/setup",
-    "auth": "Auth"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/me/mfa/verify",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/me/sessions",
-    "auth": "Auth"
-  },
-  {
-    "method": "DELETE",
-    "path": "/v1/me/sessions/{id}",
-    "auth": "Auth"
-  },
-  {
-    "method": "POST",
-    "path": "/v1/me/sessions/{id}/revoke",
-    "auth": "Auth"
-  },
-  {
-    "method": "GET",
-    "path": "/v1/me/strikes",
+    "method": "PUT",
+    "path": "/v1/uploads/{id}/chunks/{partNumber}",
     "auth": "Auth"
   }
 ]

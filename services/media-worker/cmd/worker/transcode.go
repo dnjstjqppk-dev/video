@@ -67,9 +67,10 @@ func statSize(path string) int64 {
 	return fi.Size()
 }
 
-// RunTranscode executes the real ABR ladder plus poster and storyboard stills.
-// It returns the emitted artifacts with local paths for the API to publish.
-func RunTranscode(ctx context.Context, inputPath, outDir string, ladder []RenditionProfile) ([]TranscodeArtifact, error) {
+// RunTranscode executes the real ABR ladder plus poster, storyboard, and
+// three auto-extracted thumbnail frames. It returns the emitted artifacts
+// with local paths for the API to publish.
+func RunTranscode(ctx context.Context, inputPath, outDir string, ladder []RenditionProfile, durationSec float64) ([]TranscodeArtifact, error) {
 	var artifacts []TranscodeArtifact
 	addFile := func(key, path, contentType string) error {
 		size := statSize(path)
@@ -110,6 +111,25 @@ func RunTranscode(ctx context.Context, inputPath, outDir string, ladder []Rendit
 	}
 	if err := addFile("poster.jpg", posterPath, "image/jpeg"); err != nil {
 		return nil, err
+	}
+
+	base := durationSec
+	if base <= 0 {
+		base = 60
+	}
+	for i, frac := range []float64{0.25, 0.5, 0.75} {
+		offset := base * frac
+		if offset < 1 {
+			offset = 1
+		}
+		name := fmt.Sprintf("auto_%d.jpg", i+1)
+		framePath := filepath.Join(outDir, name)
+		if err := runFFmpeg(ctx, BuildFrameArgs(inputPath, framePath, offset)); err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+		if err := addFile(name, framePath, "image/jpeg"); err != nil {
+			return nil, err
+		}
 	}
 
 	storyDir := filepath.Join(outDir, "storyboard")

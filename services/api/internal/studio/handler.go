@@ -25,6 +25,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Get("/dashboard", h.GetDashboard)
 	r.Get("/videos", h.GetVideos)
 	r.Get("/analytics", h.GetAnalytics)
+	r.Get("/analytics/realtime", h.GetRealtime)
 	r.Get("/comments", h.GetComments)
 	r.Get("/claims", h.GetClaims)
 	r.Post("/videos/{id}/edit-jobs", h.CreateEditJob)
@@ -205,6 +206,32 @@ func (h *Handler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		"watchTimeTimeSeries":  distributeSeries(totalWatchHours, days),
 		"subscriberTimeSeries": distributeSeries(subs, days),
 		"revenueTimeSeries":    distributeSeries(totalViews*4, days),
+	})
+}
+
+// GetRealtime returns the trailing 48 hourly view buckets for the caller's
+// channel, built from deduped counted views (empty hours are zero).
+func (h *Handler) GetRealtime(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	channel := h.Store.ChannelForUser(user.ID)
+	if channel == nil {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+		return
+	}
+	series := h.Store.HourlySeries(channel.ID, 48)
+	hours := make([]map[string]interface{}, 0, len(series))
+	var total int64
+	for _, p := range series {
+		hours = append(hours, map[string]interface{}{
+			"hour":  p.Hour.Format(time.RFC3339),
+			"views": p.Views,
+		})
+		total += p.Views
+	}
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"channel_id": channel.ID,
+		"hours":      hours,
+		"total_48h":  total,
 	})
 }
 

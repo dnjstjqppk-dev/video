@@ -79,6 +79,12 @@ type transcodeDispatchResult struct {
 	Artifacts []transcodeArtifactRef `json:"artifacts"`
 }
 
+// PublicBase exposes the player-facing object-storage base URL to other
+// packages (thumbnail frame selection shares publish addressing).
+func PublicBase(s3cfg S3Config) string {
+	return publicHLSBase(s3cfg)
+}
+
 // publicHLSBase resolves the player-facing base URL for published HLS.
 func publicHLSBase(s3cfg S3Config) string {
 	if v := strings.TrimSpace(os.Getenv("R2_PUBLIC_HLS_BASE")); v != "" {
@@ -280,6 +286,13 @@ func (h *Handler) publishReady(job *store.MediaJob, video *store.Video, workerBa
 	base := publicHLSBase(s3cfg)
 	video.HlsMasterURL = base + "/hls/" + video.ID + "/master.m3u8"
 	video.ThumbnailURL = base + "/hls/" + video.ID + "/poster.jpg"
+	autoFrames := make([]string, 0, 3)
+	for _, a := range result.Artifacts {
+		if strings.HasPrefix(a.Key, "auto_") && strings.HasSuffix(a.Key, ".jpg") && !strings.Contains(a.Key, "/") {
+			autoFrames = append(autoFrames, base+"/hls/"+video.ID+"/"+a.Key)
+		}
+	}
+	video.AutoFrameURLs = autoFrames
 	if result.Probe.DurationSeconds > 0 {
 		video.DurationSeconds = int(result.Probe.DurationSeconds)
 	}

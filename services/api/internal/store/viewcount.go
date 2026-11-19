@@ -29,6 +29,64 @@ func ViewerKey(r *http.Request, userID string) string {
 	return "anon:" + hex.EncodeToString(sum[:16])
 }
 
+// HourPoint is one hour bucket of counted channel views.
+type HourPoint struct {
+	Hour  time.Time
+	Views int64
+}
+
+// RecordHourlyView adds delta counted views to a channel's hour bucket.
+func (s *MemoryStore) RecordHourlyView(channelID string, at time.Time, delta int64) {
+	if channelID == "" || delta == 0 {
+		return
+	}
+	hour := at.UTC().Truncate(time.Hour)
+	s.hourlyMu.Lock()
+	if s.HourlyViews == nil {
+		s.HourlyViews = make(map[string]map[int64]int64)
+	}
+	buckets, ok := s.HourlyViews[channelID]
+	if !ok {
+		buckets = make(map[int64]int64)
+		s.HourlyViews[channelID] = buckets
+	}
+	buckets[hour.Unix()] += delta
+	s.hourlyMu.Unlock()
+}
+
+// HourlySeries returns the trailing N hour buckets for a channel, oldest
+// first, zero-filling hours with no counted views.
+func (s *MemoryStore) HourlySeries(channelID string, hours int) []HourPoint {
+	if hours <= 0 {
+		return nil
+	}
+	end := time.Now().UTC().Truncate(time.Hour)
+	s.hourlyMu.Lock()
+	buckets := s.HourlyViews[channelID]
+	s.hourlyMu.Unlock()
+	out := make([]HourPoint, 0, hours)
+	for i := hours - 1; i >= 0; i-- {
+		h := end.Add(time.Duration(-i) * time.Hour)
+		var views int64
+		if buckets != nil {
+			views = buckets[h.Unix()]
+		}
+		out = append(out, HourPoint{Hour: h, Views: views})
+	}
+	return out
+}
+
+// NoteCountedView records one deduped view against the owning channel's
+// current hour bucket, persisting best-effort to PostgreSQL.
+func (s *MemoryStore) NoteCountedView(v *Video) {
+	if v == nil || v.ChannelID == "" {
+		return
+	}
+	now := time.Now().UTC().Truncate(time.Hour)
+	s.RecordHourlyView(v.ChannelID, now, 1)
+	s.PersistHourlyView(v.ChannelID, now, 1)
+}
+
 // CountView records a view for (viewer, video), returning false when the
 // same viewer already counted this video inside the dedup window. Both the
 // playback-grant path and the analytics valid_view path consult this guard

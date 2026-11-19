@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -51,7 +52,7 @@ var requiredTables = []string{
 	"payment_transactions", "ledger_accounts", "ledger_entries", "media_jobs",
 }
 
-// VerifySchema checks that the migrated schema (db/migrations, incl. 00010)
+// VerifySchema checks that the migrated schema (db/migrations, incl. 00012)
 // is present. It creates nothing; operators apply migrations out of band.
 func (p *PostgresStore) VerifySchema(ctx context.Context) error {
 	var missing []string
@@ -87,6 +88,26 @@ func (p *PostgresStore) VerifySchema(ctx context.Context) error {
 	}
 	if !jobColExists {
 		missing = append(missing, "column media_jobs.source_ref (apply db/migrations/00011)")
+	}
+	var studioColExists bool
+	err = p.DB.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'videos' AND column_name = 'elements')`,
+	).Scan(&studioColExists)
+	if err != nil {
+		return fmt.Errorf("schema check failed for videos.elements: %w", err)
+	}
+	if !studioColExists {
+		missing = append(missing, "column videos.elements (apply db/migrations/00012)")
+	}
+	var hourlyExists bool
+	err = p.DB.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'channel_hourly_views')`,
+	).Scan(&hourlyExists)
+	if err != nil {
+		return fmt.Errorf("schema check failed for channel_hourly_views: %w", err)
+	}
+	if !hourlyExists {
+		missing = append(missing, "table channel_hourly_views (apply db/migrations/00012)")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("postgres schema incomplete, run db/migrations against DATABASE_URL: %s", strings.Join(missing, ", "))
@@ -206,11 +227,21 @@ func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 	if tags == nil {
 		tags = []string{}
 	}
-	_, err := p.DB.ExecContext(ctx, `INSERT INTO videos (
+	frames := v.AutoFrameURLs
+	if frames == nil {
+		frames = []string{}
+	}
+	elements, err := json.Marshal(v.Elements)
+	if err != nil {
+		return fmt.Errorf("encode video elements: %w", err)
+	}
+	_, err = p.DB.ExecContext(ctx, `INSERT INTO videos (
 		id, channel_id, title, description, video_type, visibility, status,
-		duration_seconds, thumbnail_url, hls_master_url, view_count, like_count,
-		dislike_count, comment_count, tags, category, published_at, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
+		duration_seconds, thumbnail_url, custom_thumbnail_url, auto_frame_urls,
+		hls_master_url, view_count, like_count,
+		dislike_count, comment_count, tags, category, elements, published_at,
+		scheduled_at, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW())
 	ON CONFLICT (id) DO UPDATE SET
 		title = EXCLUDED.title,
 		description = EXCLUDED.description,
@@ -219,6 +250,8 @@ func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 		status = EXCLUDED.status,
 		duration_seconds = EXCLUDED.duration_seconds,
 		thumbnail_url = EXCLUDED.thumbnail_url,
+		custom_thumbnail_url = EXCLUDED.custom_thumbnail_url,
+		auto_frame_urls = EXCLUDED.auto_frame_urls,
 		hls_master_url = EXCLUDED.hls_master_url,
 		view_count = EXCLUDED.view_count,
 		like_count = EXCLUDED.like_count,
@@ -226,15 +259,37 @@ func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 		comment_count = EXCLUDED.comment_count,
 		tags = EXCLUDED.tags,
 		category = EXCLUDED.category,
+		elements = EXCLUDED.elements,
 		published_at = EXCLUDED.published_at,
+		scheduled_at = EXCLUDED.scheduled_at,
 		updated_at = NOW();`,
 		v.ID, v.ChannelID, v.Title, nullIfEmpty(v.Description), v.VideoType, v.Visibility, v.Status,
-		v.DurationSeconds, nullIfEmpty(v.ThumbnailURL), nullIfEmpty(v.HlsMasterURL),
+		v.DurationSeconds, nullIfEmpty(v.ThumbnailURL), nullIfEmpty(v.CustomThumbnailURL),
+		pq.Array(frames), nullIfEmpty(v.HlsMasterURL),
 		v.ViewCount, v.LikeCount, v.DislikeCount, v.CommentCount,
-		pq.Array(tags), v.Category, nullTime(v.PublishedAt), v.CreatedAt,
+		pq.Array(tags), v.Category, elements, nullTime(v.PublishedAt), nullTimePtr(v.ScheduledAt), v.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert videos: %w", err)
+	}
+	return nil
+}
+
+// SaveHourlyViews increments a channel hour bucket in PostgreSQL.
+func (p *PostgresStore) SaveHourlyViews(ctx context.Context, channelID string, hour time.Time, delta int64) error {
+	if !validUUID(channelID) {
+		return fmt.Errorf("channel id %q is not a UUID", channelID)
+	}
+	_, err := p.DB.ExecContext(ctx, `INSERT INTO channel_hourly_views (
+		channel_id, hour, views, updated_at
+	) VALUES ($1, $2, $3, NOW())
+	ON CONFLICT (channel_id, hour) DO UPDATE SET
+		views = channel_hourly_views.views + EXCLUDED.views,
+		updated_at = NOW();`,
+		channelID, hour.UTC().Truncate(time.Hour), delta,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert hourly views: %w", err)
 	}
 	return nil
 }

@@ -54,7 +54,9 @@ function startVoice() {
   rec.start()
 }
 const hasVoice = import.meta.client && 'webkitSpeechRecognition' in window
+const mounted = ref(false)
 onMounted(() => {
+  mounted.value = true
   window.addEventListener('keydown', (e) => {
     if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName || '')) {
       e.preventDefault()
@@ -73,7 +75,7 @@ onMounted(() => {
       <button type="submit" aria-label="검색 실행" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
       </button>
-      <button v-if="hasVoice" type="button" aria-label="음성 검색" :disabled="voiceOn" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-border-strong)] disabled:opacity-50" @click="startVoice">
+      <button v-if="mounted && hasVoice" type="button" aria-label="음성 검색" :disabled="voiceOn" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-border-strong)] disabled:opacity-50" @click="startVoice">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 19v3" /></svg>
       </button>
     </form>

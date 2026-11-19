@@ -83,6 +83,19 @@ export interface VideoCaption {
   isDefault: boolean;
 }
 
+export type VideoElementKind = 'end_screen' | 'card';
+export type VideoElementTarget = 'video' | 'playlist' | 'channel' | 'url';
+
+export interface VideoElement {
+  id: string;
+  kind: VideoElementKind;
+  title: string;
+  targetType: VideoElementTarget;
+  target: string;
+  startSec: number;
+  endSec: number;
+}
+
 export interface Video {
   id: string;
   channelId: string;
@@ -106,6 +119,7 @@ export interface Video {
   sources: VideoPlaybackSource[];
   chapters: VideoChapter[];
   captions: VideoCaption[];
+  elements?: VideoElement[];
   publishedAt?: string;
   scheduledAt?: string;
   createdAt: string;

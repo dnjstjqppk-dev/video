@@ -281,6 +281,17 @@ func BuildThumbnailArgs(inputPath, outputThumb string) []string {
 	}
 }
 
+// BuildFrameArgs extracts one still frame at the given second offset.
+func BuildFrameArgs(inputPath, outputPath string, seconds float64) []string {
+	if seconds < 0 {
+		seconds = 0
+	}
+	return []string{
+		"-hide_banner", "-y", "-ss", fmt.Sprintf("%.2f", seconds), "-i", inputPath,
+		"-frames:v", "1", "-q:v", "2", outputPath,
+	}
+}
+
 // BuildStoryboardArgs generates 10-second interval thumbnails for sprite stitching (TASK-225).
 func BuildStoryboardArgs(inputPath, outputPattern string) []string {
 	return []string{
@@ -565,7 +576,7 @@ func (w *MediaWorker) processReal(job TranscodeJob) error {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return fail(err)
 	}
-	artifacts, err := RunTranscode(context.Background(), inputPath, outDir, ladder)
+	artifacts, err := RunTranscode(context.Background(), inputPath, outDir, ladder, meta.DurationSeconds)
 	if err != nil {
 		return fail(err)
 	}

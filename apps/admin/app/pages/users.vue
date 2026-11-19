@@ -14,7 +14,6 @@ const sanctionReason = ref('')
 const sanctionTotp = ref('')
 const page = ref(1)
 const limit = 20
-const total = ref(0)
 const actionError = ref<string | null>(null)
 const actingIds = ref<Set<string>>(new Set())
 const states = ref<Record<string, string>>({})
@@ -22,12 +21,12 @@ const states = ref<Record<string, string>>({})
 const { data, pending, error, refresh } = await useAsyncData(
   () => `admin-users-${page.value}-${searchFilter.value}`,
   async () => {
-    const res = await api.getAdminUsers(page.value, limit)
-    total.value = res.total
-    return res.items
+    return await api.getAdminUsers(page.value, limit)
   },
   { watch: [page] }
 )
+
+const total = computed(() => data.value?.total ?? 0)
 
 const { data: auditData, pending: auditPending, refresh: refreshAudit } = await useAsyncData(
   'admin-users-audit',
@@ -37,7 +36,7 @@ const { data: auditData, pending: auditPending, refresh: refreshAudit } = await 
   }
 )
 
-const users = computed(() => data.value ?? [])
+const users = computed(() => data.value?.items ?? [])
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)))
 
 const filteredUsers = computed(() => {

@@ -60,7 +60,7 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### 4.2 영속 저장 — PARTIAL (이중 스키마 해소됨, 코어 4종 영속화)
 
-- `db/migrations/00001..00010`: **75개 테이블 DDL IMPLEMENTED** (계정 10, 콘텐츠 14, 소셜 9, 라이브 5, 광고 6, 결제 10, 저작권 8, 운영 5, 광고엔진 8 + 00010 누락 역할 9종·결제 컬럼 2종 추가).
+- `db/migrations/00001..00012`: **76개 테이블 DDL IMPLEMENTED** (계정 10, 콘텐츠 14, 소셜 9, 라이브 5, 광고 6, 결제 10, 저작권 8, 운영 5, 광고엔진 8 + 00010 누락 역할 9종·결제 컬럼 2종 추가 + 00012 스튜디오 완성분: 썸네일/요소 컬럼·시간당 조회 테이블).
 - **FIXED 2026-11-17:** 간이 DDL `InitSchema` 삭제 → `VerifySchema`(생성 없이 검증; `DATABASE_URL` 설정 + 스키마 불일치 시 부팅 거부)로 교체.
   `SaveUser/SaveChannel/SaveVideo/SaveTransaction`이 실스키마(users+user_profiles·UUID·tags·원장 계정 매핑) 기준으로 재작성됐고,
   부팅 시 `Hydrate`로 DB 행을 메모리에 적재한다. 사용자·채널·영상·결제+원장은 재시작 내구성 실증 완료(실서버 재시작 증명).
