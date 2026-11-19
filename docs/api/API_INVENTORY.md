@@ -1,4 +1,4 @@
-# Global Video Platform — Complete `/v1` API Inventory
+# vravra — Complete `/v1` API Inventory
 
 > **Contract map (2026-11-16, chi.Walk verified):** this inventory documents the **target contract** (~60 endpoints
 > with rate limits, idempotency, and pagination semantics). The **implemented contract** is now fully inventoried in
@@ -84,7 +84,7 @@ All HTTP endpoints are versioned under `/v1` and return errors strictly conformi
 | `POST` | `/v1/live-streams/{id}/stop` | `live:write` | `creator` (Owner) | 15/min | Idempotent | None | Ends live broadcast & archives DVR VOD; emits `livestream.ended` |
 | `POST` | `/v1/live-streams/{id}/rotate-key` | `live:write` | `creator` (Owner) | 10/min | Idempotent | None | Invalidates old stream key and issues new RTMPS key |
 
-## 7. Creator Studio Console (`/v1/studio`)
+## 7. vravra studio Console (`/v1/studio`)
 
 | Method | URL | Auth Scope | Required Role | Rate Limit | Idempotency | Pagination | Side Effects & Events |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

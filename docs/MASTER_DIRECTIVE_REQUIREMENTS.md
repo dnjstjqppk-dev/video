@@ -4,7 +4,7 @@
 
 **Command ID:** `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001`
 
-**Target:** 첨부된 `video-master.zip`의 Global Video Platform 전체 Monorepo
+**Target:** 첨부된 `video-master.zip`의 vravra 전체 Monorepo
 
 **Mission:** YouTube와 경쟁할 수 있는 독립 브랜드 동영상 플랫폼을 실제 사용자, 크리에이터, 광고주, 파트너가 사용할 수 있는 상용 서비스로 완성한다.
 
@@ -50,7 +50,7 @@
 현재 확인된 기준 구성:
 
 - `apps/web` — 사용자 Nuxt 웹
-- `apps/studio` — Creator Studio
+- `apps/studio` — vravra studio
 - `apps/partners` — 파트너 및 광고주 웹
 - `apps/admin` — 관리자 웹
 - `apps/mobile` — Flutter iOS/Android
@@ -254,7 +254,7 @@ Shorts 데이터와 일반 영상 데이터는 통합 검색 가능하되 형식
 
 ---
 
-## ARTICLE 4. Creator Studio 전면 상용화
+## ARTICLE 4. vravra studio 전면 상용화
 
 크리에이터 전용 서비스에 다음 기능을 제공한다.
 
@@ -852,10 +852,10 @@ Valkey는 캐시와 단기 데이터, NATS는 이벤트 메시지, OpenSearch는
 
 - 다크 모드 중심 정체성
 - 영상 중심 카드 레이아웃
-- StreamVerse 브랜드 콘셉트
+- vravra 브랜드 콘셉트
 - 메인 내비게이션
 - Shorts 전용 경험
-- Creator Studio의 프로페셔널 대시보드
+- vravra studio의 프로페셔널 대시보드
 - Partner 및 Admin의 구분된 콘솔
 
 다만 다음을 전면 개선한다.
@@ -1061,7 +1061,7 @@ WCAG 2.2 AA 수준을 목표로 접근성을 검증한다.
 인증, 영구 DB, 업로드, 미디어 처리, 결제, 광고 연결, 보안 취약점 정상화.
 
 ### PHASE 2 — 상용 핵심 기능
-사용자 웹, 모바일, Creator Studio, Advertiser, Partner, Admin 주요 기능 완성.
+사용자 웹, 모바일, vravra studio, Advertiser, Partner, Admin 주요 기능 완성.
 
 ### PHASE 3 — 광고 수익화
 Ad Server, 인벤토리, 타기팅, 예산 제어, 유효 노출, 광고주 통계, 청구·정산.

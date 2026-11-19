@@ -1,4 +1,4 @@
-# Global Video Platform (StreamVerse) — Phase 11 Commercial Remediation & Governance Audit Report
+# vravra (vravra) — Phase 11 Commercial Remediation & Governance Audit Report
 
 - **Date:** 2026-11-01
 - **Auditor:** GVP Core Architecture & Reliability Engineering Team

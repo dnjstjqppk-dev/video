@@ -1,13 +1,13 @@
-# Global Video Platform — Benchmark Matrix, RBAC/ABAC & Unit Economics
+# vravra — Benchmark Matrix, RBAC/ABAC & Unit Economics
 
 ## 1. Competitive Feature Benchmark Matrix
 
-| Domain / Capability | YouTube / YouTube Studio | Twitch / IVS | Vimeo Enterprise | Global Video Platform (GVP v2.0) |
+| Domain / Capability | YouTube / YouTube Studio | Twitch / IVS | Vimeo Enterprise | vravra (GVP v2.0) |
 | :--- | :--- | :--- | :--- | :--- |
 | **Playback Engine** | Custom HTML5 / DASH / HLS | Low-Latency HLS | HLS + CDN | **Shaka Player + HLS.js (Web) & `media_kit` (Flutter) with Signed ABR HLS** |
 | **Upload Architecture** | Resumable HTTP Chunked | RTMP Live Only | tus.io Resumable | **Direct-to-R2 Presigned Multipart (10MB chunks, Resume & Checksum)** |
 | **Transcoding Pipeline** | Custom ASICs (Argos) | Managed Transcode | Managed AWS | **Self-Hosted Spot FFmpeg Workers on R2 (Zero Egress) + Cloudflare Stream Live** |
-| **Creator Studio** | Dedicated SPA | Creator Dashboard | Team Library | **Independent Nuxt 4 `apps/studio` (`studio.brand.com`) with ClickHouse Analytics** |
+| **vravra studio** | Dedicated SPA | Creator Dashboard | Team Library | **Independent Nuxt 4 `apps/studio` (`studio.brand.com`) with ClickHouse Analytics** |
 | **Partner / MCN / Content ID** | CMS + Content ID | Affiliate Portal | Enterprise Admin | **Independent Nuxt 4 `apps/partners` (`partners.brand.com`) with Ads, MCN & Claims** |
 | **Admin & Trust/Safety** | Internal Tools | Internal Mod | Internal Admin | **Independent Nuxt 4 `apps/admin` (`admin.brand.com`) with Immutable Audit Logs** |
 

@@ -1,4 +1,4 @@
-# Global Video Platform — Operations Runbook & Disaster Recovery (DR)
+# vravra — Operations Runbook & Disaster Recovery (DR)
 
 > **Current-hosting note (2026-11-16, code-audited):** this runbook targets the **production K8s/RDS topology**.
 > The actually running stack is operator-PC hosted (`gvp-api.exe :18092`, media worker `:8081`) behind a
@@ -59,7 +59,7 @@
 1. **Inspect NATS JetStream DLQ (`MEDIA_JOBS_DLQ`)**:
    - Jobs failing 5 consecutive delivery attempts (e.g., corrupted container header or OOM on malformed 8K input) are routed to `MEDIA_JOBS_DLQ`.
 2. **Triage Error Reason**:
-   - If the error is `INVALID_CODEC_OR_CORRUPT_CONTAINER`, mark the video `FAILED` with user-facing diagnostic message in Creator Studio.
+   - If the error is `INVALID_CODEC_OR_CORRUPT_CONTAINER`, mark the video `FAILED` with user-facing diagnostic message in vravra studio.
    - If the error was transient (Spot node preemption during FFmpeg pass), replay messages from `MEDIA_JOBS_DLQ` back to `MEDIA_JOBS`.
 
 ### Scenario B: `GvpOutboxRelayStalled` (`outbox_events` Backlog > 500)

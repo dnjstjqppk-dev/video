@@ -1,4 +1,4 @@
-# StreamVerse API Spec — Endpoints, Schemas and RBAC
+# vravra API Spec — Endpoints, Schemas and RBAC
 
 Canonical contract sources: `openapi/gvp-v1.yaml` (119 paths),
 `docs/api/ROUTE_CENSUS.md` + `docs/api/routes.json` (router census with auth

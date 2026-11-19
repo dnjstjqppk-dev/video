@@ -1,7 +1,7 @@
 # Phase 7 — Independent Release Audit & Quality Gate Report
 
 - **Audit Date**: 2026-10-24
-- **Audit Scope**: Global Video Platform Monorepo (`apps/`, `packages/`, `services/`, `db/`, `proto/`, `openapi/`, `infra/`, `.github/`, `tests/`, `docs/`)
+- **Audit Scope**: vravra Monorepo (`apps/`, `packages/`, `services/`, `db/`, `proto/`, `openapi/`, `infra/`, `.github/`, `tests/`, `docs/`)
 - **Auditor Role**: Independent Release Gate & Security Auditor (Phase 7)
 - **Overall Release Decision**: **CONDITIONAL GO (In-Repo Production-Ready; Pending External Cloud/Payment/AppStore Live Credentials)**
 

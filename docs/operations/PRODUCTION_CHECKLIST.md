@@ -1,4 +1,4 @@
-# Production Cutover Checklist — StreamVerse Commercial Launch
+# Production Cutover Checklist — vravra Commercial Launch
 
 Target reader: the operator performing the testbed → commercial cutover.
 Authority: Master Directive `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001` ARTICLES 17–19.

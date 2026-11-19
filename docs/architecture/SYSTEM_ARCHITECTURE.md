@@ -1,4 +1,4 @@
-# Global Video Platform — System Architecture Specification (Phase 0~7)
+# vravra — System Architecture Specification (Phase 0~7)
 
 ## 0. As-Built Operating Topology (2026-11-16, code-audited)
 
@@ -19,13 +19,13 @@ Authoritative current status: [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_
 
 ## 1. Executive Architecture Overview
 
-The **Global Video Platform (GVP)** is a commercial-grade, multi-surface video ecosystem engineered around **4 independently deployed Nuxt 4 / Vue 3 web consoles**, a **Flutter iOS/Android mobile client**, and a **Go Modular Monolith API paired with 5 horizontally scalable background workers**.
+The **vravra (GVP)** is a commercial-grade, multi-surface video ecosystem engineered around **4 independently deployed Nuxt 4 / Vue 3 web consoles**, a **Flutter iOS/Android mobile client**, and a **Go Modular Monolith API paired with 5 horizontally scalable background workers**.
 
 ```mermaid
 flowchart TD
   subgraph Clients["Multi-Surface Clients"]
     Web["User Web Portal (www.brand.com)<br/>Nuxt 4 + Shaka Player"]
-    Studio["Creator Studio (studio.brand.com)<br/>Nuxt 4 + ECharts + Multipart Uploader"]
+    Studio["vravra studio (studio.brand.com)<br/>Nuxt 4 + ECharts + Multipart Uploader"]
     Partners["Partner Portal (partners.brand.com)<br/>Nuxt 4 + Ads / MCN / Content ID"]
     Admin["Admin Console (admin.brand.com)<br/>Nuxt 4 + Trust & Safety / FinOps"]
     Mobile["Mobile App (iOS / Android)<br/>Flutter + Riverpod + media_kit"]

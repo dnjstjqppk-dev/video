@@ -6,7 +6,7 @@ consoles use Authorization Code + PKCE against the same issuer.
 
 ## 1. Create the ZITADEL project
 
-1. Console → Projects → New project named `streamverse-production`.
+1. Console → Projects → New project named `vravra-production`.
 2. Add an application per console surface:
    - `web` — redirect `https://<web>/auth/callback`, logout `https://<web>/`,
      PKCE required, auth method `none` (public client with secret for server exchange).

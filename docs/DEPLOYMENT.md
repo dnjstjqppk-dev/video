@@ -1,4 +1,4 @@
-# StreamVerse Deployment — Consoles, API Tunnel and Rollback
+# vravra Deployment — Consoles, API Tunnel and Rollback
 
 ## 1. Pipeline
 

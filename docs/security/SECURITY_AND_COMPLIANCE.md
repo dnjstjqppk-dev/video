@@ -1,4 +1,4 @@
-# Global Video Platform — Security, Identity, DRM & Compliance Architecture
+# vravra — Security, Identity, DRM & Compliance Architecture
 
 ## 1. ZITADEL OIDC / OAuth 2.1 + PKCE Identity Architecture
 

@@ -1,7 +1,7 @@
-# StreamVerse / Global Video Platform — 구현 현황 및 개발 백로그 (Source of Truth)
+# vravra / vravra — 구현 현황 및 개발 백로그 (Source of Truth)
 
 - **작성일:** 2026-11-16 (전수 코드 대조 기준)
-- **브랜드:** StreamVerse (법인: Booking Network Co., Ltd. / Master Directive `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001`)
+- **브랜드:** vravra (법인: Booking Network Co., Ltd. / Master Directive `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001`)
 - **판정:** 상용 불가 (COMMERCIAL NO-GO) — 아키텍처 테스트베드 + 프로토타입 단계. `docs/audits/COMMERCIAL_REMEDIATION_AUDIT.md`의 NO-GO 판정을 유지한다.
 - **분류 기준:** `IMPLEMENTED / PARTIAL / MOCK / BROKEN / MISSING / UNVERIFIED` (Master Directive ARTICLE 1)
 - **2026-11-17 remediated:** P0-1(코어 4종 영속화) · P0-2(실측/실인코딩/게시) · P0-3(결제 fail-closed) · P0-4(재생 서명·가시성) · P0-5(소재 파이프라인·연동검증·빈도제한) · P0-7(MFA 재인증) · P0-8(광고 인증·격리).
@@ -13,8 +13,8 @@
 
 ## 1. 이 사이트의 정체 (1줄 정의)
 
-**StreamVerse는 YouTube급 독립 브랜드를 목표로 하는 멀티서페이스 동영상 플랫폼 모노레포다.**
-4개 Nuxt 4 웹 콘솔(사용자 포털·Creator Studio·파트너/광고주·관리자) + Flutter iOS/Android 앱 + Go 모듈러 모놀리스 API + 6개 Go 워커 + PostgreSQL 마이그레이션 75테이블로 구성되며, 현재 프론트 4종은 Cloudflare Workers에 배포되고 API는 운영자 PC에서 Cloudflare Tunnel로 노출되는 하이브리드 형태로 기동한다.
+**vravra는 YouTube급 독립 브랜드를 목표로 하는 멀티서페이스 동영상 플랫폼 모노레포다.**
+4개 Nuxt 4 웹 콘솔(사용자 포털·vravra studio·파트너/광고주·관리자) + Flutter iOS/Android 앱 + Go 모듈러 모놀리스 API + 6개 Go 워커 + PostgreSQL 마이그레이션 75테이블로 구성되며, 현재 프론트 4종은 Cloudflare Workers에 배포되고 API는 운영자 PC에서 Cloudflare Tunnel로 노출되는 하이브리드 형태로 기동한다.
 결제 어댑터·S3 멀티파트·광고 결정 엔진 같은 뼈대는 실제로 동작하지만, **영구 저장·실제 트랜스코딩·실제 광고 소재 송출·실제 라이브 인제스트·NATS/Valkey/OpenSearch/ClickHouse 연동은 아직 코드에 연결되지 않았다.**
 
 ## 2. 표면(서페이스) 인벤토리
@@ -22,7 +22,7 @@
 | 표면 | 경로 | 기술 | 현재 상태 |
 | :--- | :--- | :--- | :--- |
 | 사용자 웹 포털 | `apps/web` | Nuxt 4, Shaka/HLS 플레이어 | 배포 중. API 우선 + 시드 폴백 혼재 |
-| Creator Studio | `apps/studio` | Nuxt 4, 멀티파트 업로더 | 배포 중. 업로드 실배선, 분석은 폴백 혼재 |
+| vravra studio | `apps/studio` | Nuxt 4, 멀티파트 업로더 | 배포 중. 업로드 실배선, 분석은 폴백 혼재 |
 | 파트너/광고주 포털 | `apps/partners` | Nuxt 4 | 배포 중. 캠페인/정산/권리 화면 실배선(메모리 기반) |
 | 관리자 콘솔 | `apps/admin` | Nuxt 4 | 배포 중. Ad Delivery Inspector 실배선(메모리 기반) |
 | 모바일 앱 | `apps/mobile` | Flutter, Riverpod, GoRouter, Dio, media_kit | 빌드됨. 화면별 실데이터 여부 미확인 |

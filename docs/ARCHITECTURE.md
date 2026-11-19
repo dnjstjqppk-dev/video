@@ -1,4 +1,4 @@
-# StreamVerse Architecture — Consoles, State, API and Media Pipeline
+# vravra Architecture — Consoles, State, API and Media Pipeline
 
 Companion to `docs/architecture/SYSTEM_ARCHITECTURE.md` (system view) and
 `docs/IMPLEMENTATION_STATUS.md` (build status). This file describes the
@@ -9,7 +9,7 @@ frontend module layout, state management, and how consoles reach the backend.
 | Console | Path | Port | Theme default | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | Viewer web | `apps/web` | 3000 | dark | home, watch, shorts, live, channels, search |
-| Creator Studio | `apps/studio` | 3001 | light | dashboard, content, upload, analytics, comments, earn |
+| vravra studio | `apps/studio` | 3001 | light | dashboard, content, upload, analytics, comments, earn |
 | Partners | `apps/partners` | 3002 | light | advertiser, campaigns, MCN, rights, settlements |
 | Admin | `apps/admin` | 3003 | light | overview, moderation, users, finance, policies, ads |
 

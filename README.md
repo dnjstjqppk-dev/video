@@ -1,14 +1,15 @@
-# StreamVerse — Global Video Platform (Enterprise Multi-Surface Ecosystem)
+# vravra — vravra (Enterprise Multi-Surface Ecosystem)
 
-StreamVerse is a next-generation video content platform: **4 independently
-deployed Vue 3 / Nuxt 4 consoles** (viewer web, Creator Studio, partners,
+vravra is a next-generation video content platform: **4 independently
+deployed Vue 3 / Nuxt 4 consoles** (viewer web, vravra studio, partners,
 admin), a **Flutter mobile app**, and a **Go modular monolith API + workers**
 backed by **PostgreSQL 18, Valkey 8, NATS JetStream, OpenSearch, ClickHouse,
 and Cloudflare R2 / Stream**.
 
-> **Release 2.0.0 (2026-11-18):** premium UI/UX redesign is complete — dual
-> theme (Deep Obsidian Dark + Pure Crisp Light), modular app shell, real
-> API-backed viewer/studio/admin flows, and full docs. See [CHANGELOG.md](CHANGELOG.md)
+> **Release 3.0.0 (2026-11-19):** vravra rebrand is complete — Vivid
+> Electric Coral-Crimson (`#FF2E4C`) + Studio Cobalt (`#2563EB`) dual theme
+> (daytime Light + True OLED Dark), YouTube-grade viewer/studio UX, real
+> API-backed flows, and full docs. See [CHANGELOG.md](CHANGELOG.md)
 > and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for scope
 > and remaining backend backlog.
 
@@ -16,11 +17,12 @@ and Cloudflare R2 / Stream**.
 
 ## 1. Design system (summary)
 
-- **Brand:** Electric Indigo `#6366F1` primary, Cyan Pulse `#06B6D4` accent,
-  Rose `#F43F5E` reserved for live. Full spec: [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md).
-- **Themes:** web defaults to dark; studio/partners/admin default to light.
-  Every surface keeps a working toggle; colors are CSS variables, never
-  hard-coded in components.
+- **Brand:** Vivid Electric Coral-Crimson `#FF2E4C` primary,
+  Signal Amber-Red `#FF3B30` reserved for live, Studio Cobalt `#2563EB`
+  for vravra studio data. Full spec: [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md).
+- **Themes:** every surface defaults to daytime Light with a True OLED Dark
+  mode and a persisted light/dark/system toggle; colors are CSS variables,
+  never hard-coded in components.
 - **Shell:** glass sticky header, autocomplete search, `+ Create` menu, tabbed
   notification center, workspace switcher, 240px/72px drawer, mobile bottom tabs.
 - **Modules:** every new or touched component stays within 50-80 lines and
@@ -31,7 +33,7 @@ and Cloudflare R2 / Stream**.
 | Domain | Console | Routes (highlights) |
 | :--- | :--- | :--- |
 | Viewer | `apps/web` `:3000` | `/` feed, `/watch/:id`, `/shorts`, `/live/:id`, `/channels/:id`, `/search` |
-| Creator Studio | `apps/studio` `:3001` | dashboard, `/content`, `/upload`, `/analytics`, `/comments`, `/monetization` |
+| vravra studio | `apps/studio` `:3001` | dashboard, `/content`, `/upload`, `/analytics`, `/comments`, `/monetization` |
 | Partners | `apps/partners` `:3002` | advertiser, campaigns, MCN, rights, settlements |
 | Admin | `apps/admin` `:3003` | overview, `/moderation`, `/users`, `/finance`, `/policies`, `/ads` |
 

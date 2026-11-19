@@ -1,4 +1,4 @@
-# StreamVerse User Guide — Viewer, Creator and Admin Manuals
+# vravra User Guide — Viewer, Creator and Admin Manuals
 
 ## 1. Viewer (web console, port 3000)
 
