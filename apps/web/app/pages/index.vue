@@ -153,7 +153,7 @@ function formatViews(count: number): string {
           :key="cat.id"
           type="button"
           :aria-pressed="selectedCategory === cat.id"
-          class="h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition"
+          class="h-8 shrink-0 rounded-full px-3 text-xs font-medium transition"
           :class="
             selectedCategory === cat.id
               ? 'bg-[var(--gvp-text)] text-[var(--gvp-canvas)] font-semibold'

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Video } from '@gvp/shared-types'
+import { VideoQuality } from '@gvp/shared-types'
+import { formatRelativeTime, formatTimecode, formatViewCount } from '@gvp/ui'
 import { useAppStore } from '~/stores/app'
 
 const route = useRoute()
@@ -46,6 +48,14 @@ const results = computed(() => {
   return list
 })
 
+function hasCaptions(video: Video): boolean {
+  return (video.captions?.length || 0) > 0
+}
+
+function has4K(video: Video): boolean {
+  return (video.sources || []).some(s => s.quality === VideoQuality.P2160 || (s.height || 0) >= 2160)
+}
+
 const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' | 'playlist'; label: string }> = [
   { id: 'all', label: 'All Types' },
   { id: 'video', label: 'Videos' },
@@ -65,8 +75,8 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
           v-for="filter in typeFilters"
           :key="filter.id"
           type="button"
-          class="rounded-md px-3.5 py-1.5 text-xs font-semibold transition"
-          :class="selectedType === filter.id ? 'bg-[var(--gvp-brand)] text-white' : 'border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
+          class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition"
+          :class="selectedType === filter.id ? 'bg-[var(--gvp-text)] text-[var(--gvp-canvas)]' : 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-border-strong)]'"
           @click="selectedType = filter.id"
         >
           {{ filter.label }}
@@ -125,40 +135,40 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
       <article
         v-for="video in results"
         :key="video.id"
-        class="group flex flex-col gap-4 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3 transition hover:bg-[var(--gvp-canvas)] sm:flex-row"
+        class="group flex flex-col gap-4 rounded-xl p-2 transition hover:bg-[var(--gvp-elevated)] sm:flex-row"
       >
-        <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full shrink-0 overflow-hidden rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] sm:w-80">
-          <img :src="video.thumbnailUrl" :alt="video.title" class="h-full w-full object-cover" />
-          <span class="absolute bottom-2 right-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-1.5 py-0.5 font-mono text-xs font-semibold text-[var(--gvp-text)] tabular-nums">
-            {{ Math.floor(video.durationSeconds / 60) }}:{{ String(video.durationSeconds % 60).padStart(2, '0') }}
+        <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-[var(--gvp-elevated)] sm:w-80">
+          <img :src="video.thumbnailUrl" :alt="video.title" class="h-full w-full object-cover" loading="lazy" />
+          <span class="absolute bottom-2 right-2 rounded bg-black/80 px-1 py-0.5 text-xs font-medium text-white tabular-nums">
+            {{ formatTimecode(video.durationSeconds) }}
           </span>
         </NuxtLink>
 
         <div class="flex flex-1 flex-col justify-between py-1">
           <div>
-            <NuxtLink :to="`/watch/${video.id}`" class="text-base font-bold leading-snug text-[var(--gvp-text)] group-hover:text-[var(--gvp-brand)]">
+            <NuxtLink :to="`/watch/${video.id}`" class="line-clamp-2 text-base font-semibold leading-snug text-[var(--gvp-text)]">
               {{ video.title }}
             </NuxtLink>
             <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
-              {{ video.viewCount.toLocaleString() }} views · Published {{ new Date(video.publishedAt || video.createdAt).toLocaleDateString() }}
+              {{ formatViewCount(video.viewCount, appStore.locale) }} · {{ formatRelativeTime(video.publishedAt || video.createdAt, appStore.locale) }}
             </p>
-            <NuxtLink :to="`/channels/${video.channelId}`" class="mt-3 flex items-center gap-2 text-xs text-[var(--gvp-text)] hover:text-[var(--gvp-text)]">
-              <img :src="video.channel?.avatarUrl" :alt="video.channel?.name" class="h-6 w-6 rounded-full border border-[var(--gvp-border)] object-cover" />
-              <span class="font-semibold">{{ video.channel?.name }}</span>
-              <span class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--gvp-brand-hover)]">Verified</span>
+            <NuxtLink :to="`/channels/${video.channelId}`" class="mt-3 flex items-center gap-2 text-xs text-[var(--gvp-text)]">
+              <img :src="video.channel?.avatarUrl" :alt="video.channel?.name" class="h-6 w-6 rounded-full object-cover" loading="lazy" />
+              <span class="font-medium">{{ video.channel?.name }}</span>
+              <svg v-if="video.channel?.isVerified" class="h-3.5 w-3.5 shrink-0 text-[var(--gvp-text-secondary)]" fill="currentColor" viewBox="0 0 24 24" aria-label="인증된 채널"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
             </NuxtLink>
             <p class="mt-2 line-clamp-2 text-xs text-[var(--gvp-text-secondary)]">
               {{ video.description }}
             </p>
           </div>
 
-          <div class="mt-3 flex flex-wrap gap-1.5">
-            <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text)] tabular-nums">4K 60fps</span>
-            <span class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text)]">CC Subtitles</span>
+          <div v-if="has4K(video) || hasCaptions(video) || (video.tags?.length || 0) > 0" class="mt-3 flex flex-wrap gap-1.5">
+            <span v-if="has4K(video)" class="rounded bg-[var(--gvp-elevated)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text-secondary)] tabular-nums">4K</span>
+            <span v-if="hasCaptions(video)" class="rounded bg-[var(--gvp-elevated)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--gvp-text-secondary)]">CC</span>
             <span
               v-for="tag in video.tags"
               :key="tag"
-              class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--gvp-brand-hover)]"
+              class="rounded bg-[var(--gvp-elevated)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--gvp-text-secondary)]"
             >
               #{{ tag }}
             </span>

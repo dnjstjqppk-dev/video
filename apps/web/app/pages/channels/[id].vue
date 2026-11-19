@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Channel } from '@gvp/shared-types'
+import { formatRelativeTime, formatTimecode, formatViewCount } from '@gvp/ui'
 import { useAppStore } from '~/stores/app'
 
 const route = useRoute()
@@ -35,11 +36,6 @@ function votePoll(index: number) {
   if (pollSelection.value !== null || !Number.isInteger(index) || pollRawVotes.value[index] === undefined) return
   pollSelection.value = index
   pollRawVotes.value[index] += 1
-}
-
-function formatClock(totalSeconds: number): string {
-  const sec = Math.max(0, Math.floor(totalSeconds || 0))
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 }
 
 const { data: uploadsData } = await useAsyncData(`channel-videos-${channelId.value}`, async () => {
@@ -94,9 +90,7 @@ const channelLive = computed(() => liveData.value || [])
           <div>
             <div class="flex items-center gap-2">
               <h1 class="text-xl font-extrabold text-[var(--gvp-text)] sm:text-2xl">{{ channel.name }}</h1>
-              <span v-if="channel.isVerified" class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-2 py-0.5 text-xs font-bold text-[var(--gvp-brand-hover)]">
-                Verified
-              </span>
+              <svg v-if="channel.isVerified" class="h-5 w-5 shrink-0 text-[var(--gvp-text-secondary)]" fill="currentColor" viewBox="0 0 24 24" aria-label="인증된 채널"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
             </div>
             <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] tabular-nums">
               {{ channel.handle }} · {{ channel.subscriberCount.toLocaleString() }} subscribers · {{ channel.videoCount }} videos
@@ -109,8 +103,8 @@ const channelLive = computed(() => liveData.value || [])
 
         <button
           type="button"
-          class="rounded-md px-6 py-2.5 text-xs font-semibold transition"
-          :class="isSubscribed ? 'border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]' : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'"
+          class="rounded-full px-6 py-2.5 text-xs font-semibold transition"
+          :class="isSubscribed ? 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]' : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'"
           @click="isSubscribed = !isSubscribed"
         >
           {{ isSubscribed ? (appStore.locale === 'ko' ? '구독중' : 'Subscribed') : (appStore.locale === 'ko' ? '구독하기' : 'Subscribe') }}
@@ -118,16 +112,18 @@ const channelLive = computed(() => liveData.value || [])
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="mt-8 flex gap-6 border-b border-[var(--gvp-border)] text-sm font-semibold">
+      <div class="mt-8 flex gap-6 overflow-x-auto border-b border-[var(--gvp-border)] text-sm font-semibold" role="tablist" aria-label="채널 섹션">
         <button
-          v-for="tab in (['videos', 'shorts', 'live', 'playlists', 'community'] as const)"
-          :key="tab"
+          v-for="tab in ([['videos', '동영상', 'Videos'], ['shorts', '쇼츠', 'Shorts'], ['live', '라이브', 'Live'], ['playlists', '재생목록', 'Playlists'], ['community', '커뮤니티', 'Community']] as const)"
+          :key="tab[0]"
           type="button"
-          class="border-b-2 pb-3 capitalize transition"
-          :class="activeTab === tab ? 'border-[var(--gvp-focus)] text-[var(--gvp-text)]' : 'border-transparent text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]'"
-          @click="activeTab = tab"
+          role="tab"
+          :aria-selected="activeTab === tab[0]"
+          class="shrink-0 border-b-2 pb-3 transition"
+          :class="activeTab === tab[0] ? 'border-[var(--gvp-focus)] text-[var(--gvp-text)]' : 'border-transparent text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]'"
+          @click="activeTab = tab[0]"
         >
-          {{ tab }}
+          {{ appStore.locale === 'ko' ? tab[1] : tab[2] }}
         </button>
       </div>
 
@@ -140,16 +136,16 @@ const channelLive = computed(() => liveData.value || [])
           v-for="vid in channelVideos"
           :key="vid.id"
           :to="`/watch/${vid.id}`"
-          class="group rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3 transition hover:bg-[var(--gvp-canvas)]"
+          class="group flex flex-col"
         >
-          <div class="relative aspect-video overflow-hidden rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]">
-            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" />
-            <span class="absolute bottom-2 right-2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-1.5 py-0.5 font-mono text-xs font-semibold text-[var(--gvp-text)] tabular-nums">
-              {{ formatClock(vid.durationSeconds) }}
+          <div class="relative aspect-video overflow-hidden rounded-xl bg-[var(--gvp-elevated)]">
+            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" loading="lazy" />
+            <span class="absolute bottom-2 right-2 rounded bg-black/80 px-1 py-0.5 text-xs font-medium text-white tabular-nums">
+              {{ formatTimecode(vid.durationSeconds) }}
             </span>
           </div>
-          <h3 class="mt-3 font-bold leading-snug text-[var(--gvp-text)] group-hover:text-[var(--gvp-brand)]">{{ vid.title }}</h3>
-          <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] tabular-nums">{{ vid.viewCount.toLocaleString() }} views</p>
+          <h3 class="mt-2.5 line-clamp-2 text-sm font-semibold leading-snug text-[var(--gvp-text)]">{{ vid.title }}</h3>
+          <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] tabular-nums">{{ formatViewCount(vid.viewCount, appStore.locale) }} · {{ formatRelativeTime(vid.publishedAt || vid.createdAt, appStore.locale) }}</p>
         </NuxtLink>
       </div>
 
@@ -162,14 +158,13 @@ const channelLive = computed(() => liveData.value || [])
           v-for="vid in channelShorts"
           :key="vid.id"
           :to="`/watch/${vid.id}`"
-          class="group flex flex-col overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] transition hover:bg-[var(--gvp-canvas)]"
+          class="group flex flex-col"
         >
-          <div class="aspect-[9/16] w-full overflow-hidden bg-[var(--gvp-elevated)]">
-            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" />
+          <div class="aspect-[9/16] w-full overflow-hidden rounded-xl bg-[var(--gvp-elevated)]">
+            <img :src="vid.thumbnailUrl" :alt="vid.title" class="h-full w-full object-cover" loading="lazy" />
           </div>
-          <div class="border-t border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3 text-xs font-bold text-[var(--gvp-text)] tabular-nums group-hover:text-[var(--gvp-brand)]">
-            {{ vid.title }}
-          </div>
+          <p class="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-[var(--gvp-text)]">{{ vid.title }}</p>
+          <p class="mt-0.5 text-[11px] text-[var(--gvp-text-secondary)] tabular-nums">{{ formatViewCount(vid.viewCount, appStore.locale) }}</p>
         </NuxtLink>
       </div>
 

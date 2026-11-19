@@ -371,8 +371,8 @@ onUnmounted(() => {
             <button
               v-if="!currentShort.isSponsored"
               type="button"
-              class="shrink-0 rounded-md px-3 py-1 text-xs font-semibold transition"
-              :class="currentShort.subscribed ? 'border border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text)]' : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'"
+              class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition"
+              :class="currentShort.subscribed ? 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)]' : 'bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]'"
               @click="toggleSubscribe(currentShort)"
             >
               {{ currentShort.subscribed ? 'Subscribed' : 'Subscribe' }}
@@ -429,66 +429,81 @@ onUnmounted(() => {
       <!-- Right Vertical Engagement Rail & Navigation Controls -->
       <div class="flex flex-col items-center gap-3" @click.stop>
         <!-- Like Button -->
-        <button
-          type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border px-2 py-2.5 text-xs font-semibold transition"
-          :class="currentShort.liked ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
-          @click="toggleLike(currentShort)"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-          </svg>
-          <span class="tabular-nums">{{ (currentShort.likes / 1000).toFixed(1) }}K</span>
-        </button>
+        <div class="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            aria-label="좋아요"
+            class="flex h-12 w-12 items-center justify-center rounded-full transition"
+            :class="currentShort.liked ? 'bg-[var(--gvp-brand)] text-white' : 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
+            @click="toggleLike(currentShort)"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+            </svg>
+          </button>
+          <span class="text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">{{ currentShort.likes >= 1000 ? `${(currentShort.likes / 1000).toFixed(1)}K` : currentShort.likes }}</span>
+        </div>
 
         <!-- Dislike Button -->
-        <button
-          type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border px-2 py-2.5 text-xs font-semibold transition"
-          :class="currentShort.disliked ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-surface)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
-          @click="toggleDislike(currentShort)"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-          </svg>
-          <span>{{ appStore.locale === 'ko' ? '싫어요' : 'Dislike' }}</span>
-        </button>
+        <div class="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            :aria-label="appStore.locale === 'ko' ? '싫어요' : 'Dislike'"
+            class="flex h-12 w-12 items-center justify-center rounded-full transition"
+            :class="currentShort.disliked ? 'bg-[var(--gvp-brand)] text-white' : 'bg-[var(--gvp-elevated)] text-[var(--gvp-text)] hover:bg-[var(--gvp-canvas)]'"
+            @click="toggleDislike(currentShort)"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+            </svg>
+          </button>
+          <span class="text-xs font-medium text-[var(--gvp-text-secondary)]">{{ appStore.locale === 'ko' ? '싫어요' : 'Dislike' }}</span>
+        </div>
 
         <!-- Comments Drawer Button -->
-        <button
-          type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-2.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
-          @click="showCommentsDrawer = !showCommentsDrawer"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-          <span class="tabular-nums">{{ currentShort.comments }}</span>
-        </button>
+        <div class="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            aria-label="댓글"
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
+            @click="showCommentsDrawer = !showCommentsDrawer"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </button>
+          <span class="text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">{{ currentShort.comments }}</span>
+        </div>
 
         <!-- Share Button -->
-        <button
-          type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-2.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
-          @click="handleShare(currentShort)"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-          </svg>
-          <span>{{ shareCopied ? 'Copied!' : 'Share' }}</span>
-        </button>
+        <div class="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            aria-label="공유"
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
+            @click="handleShare(currentShort)"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </button>
+          <span class="text-xs font-medium text-[var(--gvp-text-secondary)]">{{ shareCopied ? 'Copied!' : 'Share' }}</span>
+        </div>
 
         <!-- Remix / Audio Button -->
-        <button
-          type="button"
-          class="flex w-16 flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-2.5 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
-          @click="showSoundModal = !showSoundModal"
-        >
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-          </svg>
-          <span>Remix</span>
-        </button>
+        <div class="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            aria-label="Remix"
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-[var(--gvp-text)] transition hover:bg-[var(--gvp-canvas)]"
+            @click="showSoundModal = !showSoundModal"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+          </button>
+          <span class="text-xs font-medium text-[var(--gvp-text-secondary)]">Remix</span>
+        </div>
 
         <!-- Up/Down Swipe Navigation Buttons -->
         <div class="mt-2 flex flex-col gap-2">

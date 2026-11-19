@@ -49,7 +49,7 @@ async function report() {
     <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full overflow-hidden rounded-xl bg-[var(--gvp-elevated)]" @mouseenter="onEnter" @mouseleave="onLeave" @focus="onEnter" @blur="onLeave">
       <video v-if="hovering && video.previewUrl" :src="video.previewUrl" muted loop autoplay playsinline class="h-full w-full object-cover" />
       <img v-else :src="video.thumbnailUrl" :alt="video.title" class="h-full w-full object-cover" loading="lazy" />
-      <span class="tabular-nums absolute bottom-2 right-2 rounded-md bg-black/85 px-1.5 py-0.5 font-mono text-xs font-semibold text-white">{{ formatTimecode(video.durationSeconds) }}</span>
+      <span class="absolute bottom-2 right-2 rounded bg-black/80 px-1 py-0.5 text-xs font-medium text-white tabular-nums">{{ formatTimecode(video.durationSeconds) }}</span>
       <div v-if="progress > 0" class="absolute inset-x-0 bottom-0 h-[3px] bg-white/25"><div class="h-full bg-[var(--gvp-brand)]" :style="{ width: `${progress}%` }" /></div>
     </NuxtLink>
     <div class="mt-3 flex items-start justify-between gap-2">
@@ -57,7 +57,7 @@ async function report() {
         <img :src="video.channel?.avatarUrl || `https://api.dicebear.com/9.x/initials/svg?seed=${video.channelId}`" :alt="video.channel?.name" class="h-9 w-9 rounded-full object-cover" loading="lazy" />
       </NuxtLink>
       <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/watch/${video.id}`" class="clamp-2 text-sm font-semibold leading-snug text-[var(--gvp-text)] group-hover:text-[var(--gvp-brand)]">{{ video.title }}</NuxtLink>
+        <NuxtLink :to="`/watch/${video.id}`" class="line-clamp-2 text-sm font-semibold leading-snug text-[var(--gvp-text)]">{{ video.title }}</NuxtLink>
         <NuxtLink :to="`/channels/${video.channelId}`" class="mt-1 flex items-center gap-1 text-xs text-[var(--gvp-text-secondary)] hover:text-[var(--gvp-text)]">
           <span class="truncate">{{ video.channel?.name || 'StreamVerse Creator' }}</span>
           <svg v-if="video.channel?.isVerified" class="h-3.5 w-3.5 shrink-0 text-[var(--gvp-brand)]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>

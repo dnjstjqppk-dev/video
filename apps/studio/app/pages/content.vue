@@ -3,13 +3,14 @@ import { VideoVisibility, VideoProcessingStatus, type Video } from '@gvp/shared-
 import { useStudioApi } from '~/composables/useStudioApi'
 import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 import GvpBanner from '@gvp/ui/src/components/GvpBanner.vue'
-import { resolveStatusBadgeTone } from '@gvp/ui'
+import { formatDurationBadge, resolveStatusBadgeTone } from '@gvp/ui'
 
 useSeoMeta({
   title: 'Content Manager — Videos, Shorts, Live & Playlists'
 })
 
 const api = useStudioApi()
+const route = useRoute()
 
 interface StudioContentRow {
   id: string
@@ -19,18 +20,27 @@ interface StudioContentRow {
   status: VideoProcessingStatus
   views: number
   comments: number
+  likes: number
+  thumbnailUrl: string
+  durationSeconds: number
+  ageRestricted: boolean
   publishedAt: string
   selected: boolean
 }
 
 const activeTab = ref<'all' | 'video' | 'shorts' | 'live'>('all')
 const statusFilter = ref<'all' | VideoProcessingStatus>('all')
+const searchQuery = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const config = useRuntimeConfig()
 const page = ref(1)
 const limit = 20
 const total = ref(0)
 const savingIds = ref<Set<string>>(new Set())
 const rowError = ref<string | null>(null)
+
+watch(() => route.query.q, (q) => {
+  searchQuery.value = typeof q === 'string' ? q : ''
+})
 
 function toRow(v: Video): StudioContentRow {
   return {
@@ -41,6 +51,10 @@ function toRow(v: Video): StudioContentRow {
     status: v.status,
     views: v.viewCount,
     comments: v.commentCount,
+    likes: v.likeCount,
+    thumbnailUrl: v.thumbnailUrl,
+    durationSeconds: v.durationSeconds,
+    ageRestricted: v.isAgeRestricted,
     publishedAt: v.publishedAt || v.createdAt,
     selected: false
   }
@@ -58,8 +72,12 @@ const { data, pending, error, refresh } = await useAsyncData(
 )
 
 const items = computed(() => {
-  const rows = data.value ?? []
-  return statusFilter.value === 'all' ? rows : rows.filter(r => r.status === statusFilter.value)
+  const q = searchQuery.value.trim().toLowerCase()
+  return (data.value ?? []).filter((r) => {
+    if (statusFilter.value !== 'all' && r.status !== statusFilter.value) return false
+    if (q && !r.title.toLowerCase().includes(q)) return false
+    return true
+  })
 })
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)))
 const selectedCount = computed(() => items.value.filter(i => i.selected).length)
@@ -87,6 +105,14 @@ async function applyBulkVisibility(vis: VideoVisibility) {
   }
 }
 
+function restrictionOf(row: StudioContentRow): string | null {
+  if (row.status === VideoProcessingStatus.FAILED) return '처리 실패'
+  if (row.status === VideoProcessingStatus.PROCESSING) return '처리 중'
+  if (row.status === VideoProcessingStatus.QUEUED) return '대기 중'
+  if (row.ageRestricted) return '연령 제한'
+  return null
+}
+
 function formatDate(iso: string) {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('ko-KR')
@@ -97,29 +123,15 @@ function formatDate(iso: string) {
   <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">채널 콘텐츠 관리 (Content Manager)</h1>
+        <h1 class="text-xl font-semibold tracking-tight text-[var(--gvp-text)]">채널 콘텐츠</h1>
         <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
-          Manage visibility, processing status, and comments across Videos, Shorts, and Live VODs
+          동영상 · Shorts · 라이브 VOD의 공개 상태와 실적을 관리하세요
         </p>
       </div>
-
-      <!-- Bulk Actions Toolbar -->
-      <div v-if="selectedCount > 0" class="flex items-center gap-2 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs">
-        <span class="font-semibold text-[var(--gvp-text)] tabular-nums">{{ selectedCount }} selected</span>
-        <button
-          type="button"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
-          @click="applyBulkVisibility(VideoVisibility.PUBLIC)"
-        >
-          Set Public
-        </button>
-        <button
-          type="button"
-          class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors"
-          @click="applyBulkVisibility(VideoVisibility.PRIVATE)"
-        >
-          Set Private
-        </button>
+      <div v-if="selectedCount > 0" class="flex items-center gap-2 rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-3 py-1.5 text-xs">
+        <span class="font-semibold text-[var(--gvp-text)] tabular-nums">{{ selectedCount }}개 선택됨</span>
+        <button type="button" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PUBLIC)">공개로 설정</button>
+        <button type="button" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-3 text-xs font-medium hover:bg-[var(--gvp-canvas)]" @click="applyBulkVisibility(VideoVisibility.PRIVATE)">비공개로 설정</button>
       </div>
     </div>
 
@@ -127,7 +139,6 @@ function formatDate(iso: string) {
       {{ rowError }}
     </GvpBanner>
 
-    <!-- Filter Tabs + Status Filter -->
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--gvp-border)]">
       <div class="flex gap-6 text-xs font-semibold" role="tablist" aria-label="콘텐츠 유형">
         <button
@@ -143,33 +154,35 @@ function formatDate(iso: string) {
           {{ tab === 'all' ? '동영상' : tab === 'video' ? '일반' : tab === 'shorts' ? '숏폼' : '라이브' }}
         </button>
       </div>
-      <label class="flex items-center gap-2 pb-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
-        처리 상태
-        <select
-          v-model="statusFilter"
-          class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]"
-          aria-label="처리 상태 필터"
-        >
-          <option value="all">전체</option>
-          <option :value="VideoProcessingStatus.READY">READY</option>
-          <option :value="VideoProcessingStatus.PROCESSING">PROCESSING</option>
-          <option :value="VideoProcessingStatus.QUEUED">QUEUED</option>
-          <option :value="VideoProcessingStatus.FAILED">FAILED</option>
-        </select>
-      </label>
+      <div class="flex flex-wrap items-center gap-2 pb-2">
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="제목으로 필터"
+          aria-label="제목으로 필터"
+          class="h-8 w-44 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 text-xs text-[var(--gvp-text)] outline-none placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)]"
+        />
+        <label class="flex items-center gap-2 text-xs font-medium text-[var(--gvp-text-secondary)]">
+          처리 상태
+          <select v-model="statusFilter" class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 text-xs text-[var(--gvp-text)]" aria-label="처리 상태 필터">
+            <option value="all">전체</option>
+            <option :value="VideoProcessingStatus.READY">READY</option>
+            <option :value="VideoProcessingStatus.PROCESSING">PROCESSING</option>
+            <option :value="VideoProcessingStatus.QUEUED">QUEUED</option>
+            <option :value="VideoProcessingStatus.FAILED">FAILED</option>
+          </select>
+        </label>
+      </div>
     </div>
 
-    <!-- Loading -->
     <div v-if="pending" class="space-y-2" role="status" aria-label="불러오는 중">
       <div v-for="n in 5" :key="n" class="h-12 animate-pulse rounded-lg bg-[var(--gvp-elevated)]" />
     </div>
 
-    <!-- Error -->
     <GvpBanner v-else-if="error" tone="danger">
       콘텐츠를 불러오지 못했습니다. <button type="button" class="font-semibold underline" @click="refresh()">다시 시도</button>
     </GvpBanner>
 
-    <!-- Empty -->
     <GvpEmptyState
       v-else-if="items.length === 0"
       title="아직 업로드한 영상이 없습니다"
@@ -178,68 +191,64 @@ function formatDate(iso: string) {
       @action="navigateTo('/upload')"
     />
 
-    <!-- Content Table -->
-    <div v-else class="overflow-x-auto rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
+    <div v-else class="overflow-x-auto rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
       <table class="w-full text-left">
-        <thead class="bg-[var(--gvp-canvas)] border-y border-[var(--gvp-border)] text-xs font-semibold text-[var(--gvp-text-secondary)] uppercase tracking-wider">
+        <thead class="border-b border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
           <tr>
-            <th scope="col" class="py-2.5 px-4">Select</th>
-            <th scope="col" class="py-2.5 px-4">Video / Content</th>
-            <th scope="col" class="py-2.5 px-4">Visibility</th>
-            <th scope="col" class="py-2.5 px-4">Status</th>
-            <th scope="col" class="py-2.5 px-4">Views</th>
-            <th scope="col" class="py-2.5 px-4">Comments</th>
-            <th scope="col" class="py-2.5 px-4">Published</th>
-            <th scope="col" class="py-2.5 px-4 text-right">Actions</th>
+            <th scope="col" class="px-4 py-2.5"><span class="sr-only">선택</span></th>
+            <th scope="col" class="px-4 py-2.5">동영상</th>
+            <th scope="col" class="px-4 py-2.5">공개 상태</th>
+            <th scope="col" class="px-4 py-2.5">제한사항</th>
+            <th scope="col" class="px-4 py-2.5">날짜</th>
+            <th scope="col" class="px-4 py-2.5 text-right">조회수</th>
+            <th scope="col" class="px-4 py-2.5 text-right">댓글</th>
+            <th scope="col" class="px-4 py-2.5 text-right">좋아요</th>
+            <th scope="col" class="px-4 py-2.5 text-right">관리</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[var(--gvp-border)]">
-          <tr v-for="row in items" :key="row.id" class="hover:bg-[var(--gvp-canvas)] transition-colors">
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
+          <tr v-for="row in items" :key="row.id" class="transition-colors hover:bg-[var(--gvp-canvas)]">
+            <td class="px-4 py-3">
               <input v-model="row.selected" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" :aria-label="`${row.title} 선택`" />
             </td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)]">
-              <p class="font-medium text-[var(--gvp-text)]">{{ row.title }}</p>
-              <span class="mt-1 inline-block rounded-md bg-[var(--gvp-elevated)] px-2 py-0.5 text-[11px] font-medium uppercase text-[var(--gvp-text-secondary)]">
-                {{ row.type }}
-              </span>
+            <td class="px-4 py-3">
+              <div class="flex min-w-0 items-center gap-3">
+                <span class="relative shrink-0">
+                  <img :src="row.thumbnailUrl" :alt="row.title" class="h-12 w-[86px] rounded-md object-cover" loading="lazy" />
+                  <span class="absolute bottom-1 right-1 rounded bg-black/80 px-1 text-[10px] font-medium text-white tabular-nums">{{ formatDurationBadge(row.durationSeconds) }}</span>
+                </span>
+                <span class="min-w-0">
+                  <span class="block max-w-64 truncate text-sm font-medium text-[var(--gvp-text)]">{{ row.title }}</span>
+                  <span class="mt-1 inline-block rounded-md bg-[var(--gvp-elevated)] px-2 py-0.5 text-[11px] font-medium uppercase text-[var(--gvp-text-secondary)]">{{ row.type }}</span>
+                </span>
+              </div>
             </td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
+            <td class="px-4 py-3">
               <select
                 :value="row.visibility"
                 :disabled="savingIds.has(row.id)"
                 :aria-label="`${row.title} 공개 범위`"
-                class="rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--gvp-text)] disabled:opacity-50"
+                class="rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2 py-1.5 text-xs font-medium text-[var(--gvp-text)] disabled:opacity-50"
                 @change="setRowVisibility(row, ($event.target as HTMLSelectElement).value as VideoVisibility)"
               >
-                <option :value="VideoVisibility.PUBLIC">Public</option>
-                <option :value="VideoVisibility.UNLISTED">Unlisted</option>
-                <option :value="VideoVisibility.PRIVATE">Private</option>
-                <option :value="VideoVisibility.MEMBERS_ONLY">Members Only</option>
+                <option :value="VideoVisibility.PUBLIC">공개</option>
+                <option :value="VideoVisibility.UNLISTED">일부 공개</option>
+                <option :value="VideoVisibility.PRIVATE">비공개</option>
+                <option :value="VideoVisibility.MEMBERS_ONLY">멤버십 전용</option>
               </select>
             </td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums">
-              <span
-                class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium"
-                :class="{
-                  'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]': resolveStatusBadgeTone(row.status) === 'success',
-                  'border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] text-[var(--gvp-warning)]': resolveStatusBadgeTone(row.status) === 'warning',
-                  'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)]': resolveStatusBadgeTone(row.status) === 'danger',
-                  'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]': resolveStatusBadgeTone(row.status) === 'neutral',
-                  'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]': resolveStatusBadgeTone(row.status) === 'info'
-                }"
-              >
-                {{ row.status }}
-              </span>
+            <td class="px-4 py-3 text-xs">
+              <span v-if="restrictionOf(row)" class="inline-flex items-center rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 font-medium text-[var(--gvp-warning)]">{{ restrictionOf(row) }}</span>
+              <span v-else class="text-[var(--gvp-text-muted)]">없음</span>
             </td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums font-mono">{{ row.views.toLocaleString() }}</td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums font-mono">{{ row.comments.toLocaleString() }}</td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text-secondary)] border-b border-[var(--gvp-border)] tabular-nums">{{ formatDate(row.publishedAt) }}</td>
-            <td class="py-3 px-4 text-sm text-[var(--gvp-text)] border-b border-[var(--gvp-border)] tabular-nums text-right">
+            <td class="whitespace-nowrap px-4 py-3 text-xs text-[var(--gvp-text-secondary)] tabular-nums">{{ formatDate(row.publishedAt) }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.views.toLocaleString() }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.comments.toLocaleString() }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.likes.toLocaleString() }}</td>
+            <td class="px-4 py-3 text-right">
               <div class="inline-flex items-center gap-1.5">
                 <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
                 <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
-                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-8 items-center rounded-md border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
                 <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="실제 영상 보기" class="inline-flex h-8 items-center rounded-md bg-[var(--gvp-brand)] px-2.5 text-xs font-medium text-white hover:bg-[var(--gvp-brand-hover)]">보기↗</a>
               </div>
             </td>
@@ -248,25 +257,10 @@ function formatDate(iso: string) {
       </table>
     </div>
 
-    <!-- Pagination -->
     <div v-if="!pending && !error && totalPages > 1" class="flex items-center justify-center gap-3 text-xs">
-      <button
-        type="button"
-        :disabled="page <= 1"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
-        @click="page -= 1"
-      >
-        이전
-      </button>
+      <button type="button" :disabled="page <= 1" class="inline-flex h-9 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="page -= 1">이전</button>
       <span class="text-[var(--gvp-text-secondary)] tabular-nums" role="status">{{ page }} / {{ totalPages }} (총 {{ total }}개)</span>
-      <button
-        type="button"
-        :disabled="page >= totalPages"
-        class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
-        @click="page += 1"
-      >
-        다음
-      </button>
+      <button type="button" :disabled="page >= totalPages" class="inline-flex h-9 items-center rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-40" @click="page += 1">다음</button>
     </div>
   </div>
 </template>
