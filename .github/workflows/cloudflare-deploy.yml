@@ -66,6 +66,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.2
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      # api-proxy has no package.json of its own: install the workspace so
+      # npx resolves the local wrangler instead of npm-installing it (npm
+      # cannot parse the workspace:* protocol and fails the job).
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Deploy api-proxy via Wrangler
         if: env.CF_TOKEN != ''
         uses: cloudflare/wrangler-action@v3
