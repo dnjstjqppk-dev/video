@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { UserRole } from '@gvp/shared-types'
 import VravraLogo from '@gvp/ui/src/components/VravraLogo.vue'
 
 const route = useRoute()
-const config = useRuntimeConfig()
 
 const theme = useConsoleTheme()
-const activeAdminRole = useState<UserRole>('admin-role', () => UserRole.SUPER_ADMIN)
 
 const navLinks = [
   { path: '/', label: '플랫폼 통합 관제 (Operations)', icon: 'M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z' },
@@ -26,29 +23,10 @@ const navLinks = [
     <header class="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 sm:px-6">
       <div class="flex items-center gap-2.5">
         <VravraLogo size="sm" />
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-bold tracking-tight text-[var(--gvp-text)]">Super Admin Governance Console</span>
-          <span class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[var(--gvp-warning)]">
-            DEMO CONSOLE PREVIEW
-          </span>
-        </div>
+        <span class="text-sm font-bold tracking-tight text-[var(--gvp-text)]">Super Admin Governance Console</span>
       </div>
 
       <div class="flex items-center gap-2.5 text-xs">
-        <span class="text-[var(--gvp-text-secondary)]">Demo Role Preview:</span>
-        <select
-          v-model="activeAdminRole"
-          class="h-8 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-2.5 font-mono text-xs font-medium text-[var(--gvp-text)] focus:border-[var(--gvp-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--gvp-focus)]"
-        >
-          <option :value="UserRole.SUPER_ADMIN">SUPER_ADMIN</option>
-          <option :value="UserRole.PLATFORM_ADMIN">PLATFORM_ADMIN</option>
-          <option :value="UserRole.FINANCE_ADMIN">FINANCE_ADMIN</option>
-          <option :value="UserRole.MODERATOR">TRUST_SAFETY_MODERATOR</option>
-          <option :value="UserRole.SUPPORT_AGENT">SUPPORT_AGENT</option>
-        </select>
-        <span class="rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--gvp-success)]">
-          Read-Only Sandbox
-        </span>
         <button
           type="button"
           :aria-label="theme.mode.value === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'"
@@ -82,26 +60,18 @@ const navLinks = [
         </nav>
 
         <div class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3 text-[11px] text-[var(--gvp-text-secondary)]">
-          <p class="font-semibold text-[var(--gvp-text)]">Immutable Audit Trail Active</p>
+          <p class="font-semibold text-[var(--gvp-text)]">Audit Trail</p>
           <p class="mt-1 text-[var(--gvp-text-secondary)] leading-relaxed">
-            Every administrative mutation is cryptographically signed and appended to PostgreSQL 18 + ClickHouse audit logs.
+            Administrative mutations are recorded to the audit trail (memory-backed in this build).
           </p>
         </div>
       </aside>
 
       <main class="min-w-0 flex-1 bg-[var(--gvp-surface)] p-4 sm:p-6 lg:p-8">
         <div class="mx-auto max-w-7xl">
-          <div class="mb-6 flex items-center justify-between rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-4 py-2.5 text-xs text-[var(--gvp-warning)]">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold">어드민 관제 데모 샌드박스 (Demo Sandbox Mode)</span>
-              <span class="text-[var(--gvp-warning)]">|</span>
-              <span>실서비스 인증 게이트웨이 연동 전 아키텍처 시연용 프리뷰 화면입니다. 실제 제어 명령 및 킬스위치는 비활성화되어 있습니다.</span>
-            </div>
-            <span class="rounded border border-[var(--gvp-warning)] bg-[var(--gvp-surface)] px-2 py-0.5 font-mono text-[10px] font-semibold text-[var(--gvp-warning)]">SIMULATION ONLY</span>
-          </div>
           <slot />
           <footer class="mt-10 border-t border-[var(--gvp-border)] pt-4 text-center text-xs text-[var(--gvp-text-muted)]">
-            <span>vravra Admin Console · Commit <span class="font-mono text-[var(--gvp-text-secondary)]">3f8c1ef</span> · Architecture Prototype</span>
+            <span>vravra Admin Console</span>
           </footer>
         </div>
       </main>

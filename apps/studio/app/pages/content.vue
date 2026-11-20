@@ -329,7 +329,7 @@ function formatDate(iso: string) {
 
     <div v-else class="overflow-x-auto rounded-xl border border-[var(--gvp-border)] bg-[var(--gvp-surface)]">
       <table class="w-full text-left">
-        <thead class="border-b border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
+        <thead class="whitespace-nowrap border-b border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-xs font-semibold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
           <tr>
             <th scope="col" class="px-4 py-2.5"><span class="sr-only">선택</span></th>
             <th scope="col" class="px-4 py-2.5">동영상</th>
@@ -355,7 +355,7 @@ function formatDate(iso: string) {
                   <span class="absolute bottom-1 right-1 rounded bg-black/80 px-1 text-[10px] font-medium text-white tabular-nums">{{ formatDurationBadge(row.durationSeconds) }}</span>
                 </span>
                 <span class="min-w-0">
-                  <span class="block max-w-64 truncate text-sm font-medium text-[var(--gvp-text)]">{{ row.title }}</span>
+                  <span class="block max-w-40 truncate text-sm font-medium text-[var(--gvp-text)]" :title="row.title">{{ row.title }}</span>
                   <span class="mt-1 inline-block rounded-md bg-[var(--gvp-elevated)] px-2 py-0.5 text-[11px] font-medium uppercase text-[var(--gvp-text-secondary)]">{{ row.type }}</span>
                 </span>
               </div>
@@ -421,12 +421,12 @@ function formatDate(iso: string) {
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.views.toLocaleString() }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.comments.toLocaleString() }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums" :title="`좋아요 ${row.likes.toLocaleString()} / 싫어요 ${row.dislikes.toLocaleString()}`">{{ likePct(row) }}</td>
-            <td class="px-4 py-3 text-right">
-              <div class="inline-flex items-center gap-1.5">
-                <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
-                <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
-                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-8 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 text-xs font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
-                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="vravra에서 보기" class="inline-flex h-8 items-center rounded-full bg-[var(--gvp-studio)] px-2.5 text-xs font-medium text-white hover:opacity-90">보기↗</a>
+            <td class="whitespace-nowrap px-4 py-3 text-right">
+              <div class="inline-flex items-center gap-1 whitespace-nowrap">
+                <NuxtLink :to="`/editor/${row.id}`" title="세부정보 수정" class="inline-flex h-7 items-center rounded-full border border-[var(--gvp-border-strong)] px-2 text-[11px] font-medium hover:bg-[var(--gvp-canvas)]">편집</NuxtLink>
+                <NuxtLink to="/analytics" title="분석 보기" class="inline-flex h-7 items-center rounded-full border border-[var(--gvp-border-strong)] px-2 text-[11px] font-medium hover:bg-[var(--gvp-canvas)]">분석</NuxtLink>
+                <NuxtLink to="/comments" title="댓글 보기" class="inline-flex h-7 items-center rounded-full border border-[var(--gvp-border-strong)] px-2 text-[11px] font-medium hover:bg-[var(--gvp-canvas)]">댓글</NuxtLink>
+                <a :href="`${config.public.webUrl}/watch/${row.id}`" target="_blank" rel="noopener noreferrer" title="vravra에서 보기" class="inline-flex h-7 items-center rounded-full bg-[var(--gvp-studio)] px-2 text-[11px] font-medium text-white hover:opacity-90">보기↗</a>
               </div>
             </td>
           </tr>
