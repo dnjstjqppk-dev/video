@@ -13,12 +13,13 @@
 
 ### Watch page (`/watch/:id`)
 
-- Adaptive player: quality selector, speed (`0.25x`-`2.0x`), captions, chapter
-  bar, mini player (PiP), theater mode, fullscreen and shortcuts (`Space`, `K`,
-  `J`, `L`, `M`, `F`, `C`, `0`-`9`).
+- Adaptive player: quality selector, speed (`0.5x`-`2.0x` in the UI; `0.25x` via the hidden `Shift+</>` shortcut), captions, chapter
+  bar, mini player (PiP, `I`), theater mode (`T`), fullscreen and shortcuts (`Space`, `K`,
+  `J`, `L`, `M`, `F`, `C`, `0`-`9`, `,`/`.` frame step, `Shift+S` stats HUD).
 - Below the player: subscribe with notification options, like/dislike, share,
-  save, clip and a `•••` overflow menu, expandable description with timestamp
-  chapters, and threaded comments with sort and timestamp seeking.
+  save and report actions, AI badge for AI-made videos, series chip for episodes,
+  expandable description with timestamp chapters, and threaded comments with sort
+  and timestamp seeking.
 - The right rail lists related videos with filter chips.
 
 ### Search, shorts, live and channels
@@ -42,12 +43,16 @@
 
 - Dashboard (`/`): latest video performance, 28-day channel summary, recent
   comments with inline replies, and platform notices.
-- Content (`/content`): type tabs (Videos, Standard, Shorts, Live) plus a
-  processing-status filter; bulk visibility changes; per-row visibility
-  selector; quick actions for edit, analytics, comments and watch-on-web.
-- Upload (`/upload`): drag-and-drop multipart upload with progress, then the
-  4-step wizard (details, elements, checks, visibility/schedule) with custom
-  thumbnails.
+- Content (`/content`): type tabs (동영상/일반/숏폼/라이브) plus processing-status
+  and view-count filters; bulk delete and add-to-playlist; per-row visibility
+  selector; quick actions for edit, analytics, comments and watch-on-web; AI
+  flag toggle + review-submit + status badge (미제출/심사중/선정/반려).
+- Upload (`/upload`): drag-and-drop multipart upload (10 MB chunks, pause/
+  resume, per-chunk retry) with progress, then the 4-step wizard (details,
+  elements, checks, visibility/schedule) with custom thumbnails, AI metadata
+  (AI-made flag + tool) and a DRM checkbox.
+- Series (`/series`): season/episode attach/detach and completed status for
+  creator-run binge series.
 - Analytics (`/analytics`): 7/28/90/365-day ranges, views and watch-time
   series charts, revenue trend, and CSV export.
 - Comments (`/comments`): published/pending/unanswered/question filters with
@@ -71,5 +76,18 @@
   TOTP, settlement statements with CSV export, and a cost simulator.
 - Policies (`/policies`): policy versions, kill-switch flags and audit logs.
 - Ads (`/ads`): delivery diagnostics, campaign review and creative approval.
+- AI reviews (`/ai-reviews`): Originals review queue (approve/reject with memo).
 - Sensitive actions always require the reviewer's own 6-digit TOTP code and
-  are recorded in the immutable audit log.
+  are recorded in the audit log.
+
+## 4. AI Originals hall (web console)
+
+- Shelf (`/ai`): always-dark cinema hall with a featured billboard (Play / More
+  Info) and rails for binge series, Originals picks and AI Shorts.
+- Series (`/series/:id`): dark hero with binge-from-E1, season-grouped episode
+  list with AI badges.
+- Watch: episode series panel (current-episode mark, expand), next-episode
+  autoplay preference, AI badge with tool name.
+- Creator flow: Studio upload/content AI flag → submit for review → admin
+  approves in `/ai-reviews` → Originals shelf exposure. Verified end to end
+  on 2026-11-20 (real upload → badge → review → binge → autoplay).

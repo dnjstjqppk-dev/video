@@ -5,6 +5,11 @@
 - **Auditor Role**: Independent Release Gate & Security Auditor (Phase 7)
 - **Overall Release Decision**: **CONDITIONAL GO (In-Repo Production-Ready; Pending External Cloud/Payment/AppStore Live Credentials)**
 
+> **§0 Tracking (2026-11-20, history preserved below):** figures drifted since 10-24 (now 6 workers, 77 tables,
+> 14 migrations, 167 routes; mobile player is `video_player`). G7 k6 1k-CCU was spec-verified only — still
+> unexecuted. §3.2 external conditions (ZITADEL, R2/Stream, Stripe/Toss, DRM, stores) all still unmet.
+> Current verdict: COMMERCIAL NO-GO — see IMPLEMENTATION_STATUS (2026-11-20 re-baseline).
+
 ---
 
 ## 1. Executive Release Gate Evaluation

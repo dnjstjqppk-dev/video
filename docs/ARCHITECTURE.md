@@ -8,10 +8,13 @@ frontend module layout, state management, and how consoles reach the backend.
 
 | Console | Path | Port | Theme default | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| Viewer web | `apps/web` | 3000 | dark | home, watch, shorts, live, channels, search |
-| vravra studio | `apps/studio` | 3001 | light | dashboard, content, upload, analytics, comments, earn |
+| Viewer web | `apps/web` | 3000 | light | home, watch, shorts, live, channels, search, AI hall (`/ai`, `/series`) |
+| vravra studio | `apps/studio` | 3001 | light | dashboard, content, upload, series, analytics, comments, earn |
 | Partners | `apps/partners` | 3002 | light | advertiser, campaigns, MCN, rights, settlements |
-| Admin | `apps/admin` | 3003 | light | overview, moderation, users, finance, policies, ads |
+| Admin | `apps/admin` | 3003 | light | overview, moderation, users, finance, policies, ads, AI reviews |
+
+All consoles are light-first with a persisted light/dark/system toggle; the AI
+hall pages are an always-dark cinema exception (see DESIGN_SYSTEM §1).
 
 Each console is an independent Nuxt 4 + Vue 3 + Pinia + Tailwind app deployed to
 Cloudflare Workers. Shared code lives in `packages/`: `design-tokens`, `ui`,
@@ -19,25 +22,22 @@ Cloudflare Workers. Shared code lives in `packages/`: `design-tokens`, `ui`,
 
 ## 2. Viewer shell module tree
 
-New or rewritten modules stay within 50-80 lines each:
+Leaf components stay within 50-80 lines; page compositions are exempt with a
+split roadmap (see DESIGN_SYSTEM §6):
 
 ```text
 apps/web/app/
 ├── layouts/default.vue            # header + drawer + main + footer + tabs
-├── components/layout/
-│   ├── AppHeader.vue              # glass header shell
-│   ├── AppSearchBar.vue           # search + autocomplete dropdown
-│   ├── AppCreateMenu.vue          # + Create menu (studio deep links)
-│   ├── AppNotificationCenter.vue  # 420px tabbed notifications
-│   ├── AppProfileMenu.vue         # workspace switcher + theme + locale
-│   ├── AppSideDrawer.vue          # 240px / 72px drawer + subscriptions
-│   └── AppBottomTabs.vue          # mobile bottom navigation
-├── components/feed/FeedVideoCard.vue  # hover preview + kebab actions
+├── components/ (flat)             # AppHeader, AppSearchBar, AppCreateMenu,
+│                                  # AppNotificationCenter, AppProfileMenu,
+│                                  # AppSideDrawer, AppBottomTabs, FeedVideoCard,
+│                                  # VideoPlayer.client, WatchSeriesPanel,
+│                                  # AiBadge, Watch* (share/save/subscribe)
 ├── composables/
 │   ├── useApi.ts                  # typed client bound to runtime config
 │   ├── useRecentSearch.ts         # localStorage recent terms
 │   ├── useSubscriptionChannels.ts # channels from subscription feed
-│   └── useThemeMode.ts            # dark-first theme control
+│   └── useThemeMode.ts            # light-first theme control
 ├── plugins/click-outside.ts       # dropdown dismiss directive
 └── stores/ (app.ts, library.ts)   # session, options, watch history, library
 ```
@@ -54,8 +54,9 @@ light/dark/system toggle).
   persisted to `localStorage` (`gvp_library_v1`, capped at 200 entries
   each). The queue feeds watch-page autoplay-next.
 - Consoles: per-app session state plus `console-theme` preference.
-- Server state uses `useAsyncData` with refresh on user action; failures render
-  empty or error states, never seed fallbacks.
+- Server state uses `useAsyncData` with refresh on user action; new code must
+  render empty or error states, never seed fallbacks (legacy seed fallbacks
+  remain on some shelves — P1).
 
 ## 4. Backend API and media pipeline
 
@@ -65,15 +66,18 @@ browser -> console worker (/api) -> api-proxy worker
 ```
 
 - Go modular monolith serves `/v1` REST (see `docs/API_SPEC.md` and
-  `openapi/gvp-v1.yaml`). Auth is OIDC + PKCE with `gvp_access_token` cookie;
-  admin mutations require step-up TOTP and write audit logs.
+  `openapi/gvp-v1.yaml`). Auth is OIDC + PKCE with the `gvp_session` cookie
+  (proxy-injected `Authorization`); admin mutations require step-up TOTP and
+  write audit logs.
 - Uploads: multipart session, presigned part URLs, completion check, then HTTP
-  dispatch to the media worker, which probes with ffprobe, encodes the HLS
-  ladder with ffmpeg, and publishes to R2/MinIO before the API flips READY.
+  dispatch to the media worker, which probes with ffprobe, encodes the 7-rung
+  HLS ladder with ffmpeg, and publishes to S3-compatible storage before the
+  API flips READY.
 - Playback: signed HMAC playback tokens (1h, video-bound) with visibility and
-  membership checks; Shaka/HLS adaptive player with quality, speed, captions,
-  chapters, PiP and theater mode.
+  membership checks served through the in-app HLS gateway; Shaka adaptive
+  player with quality, speed, captions, chapters, PiP and theater mode.
 - Live: CRUD, stream-key rotation, ll-HLS fields, WebSocket chat hub, slow mode,
-  SuperChat and polls; ingest via Cloudflare Stream provisioning.
+  SuperChat and polls; real ingest is missing (controller only assembles
+  Stream URLs), DVR missing.
 - Ads: decision API with budget/schedule/category checks, creative upload with
   review states, frequency caps, and decision-linked billing events.

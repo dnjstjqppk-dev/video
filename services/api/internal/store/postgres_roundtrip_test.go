@@ -281,7 +281,7 @@ func TestPostgresAIVideoSeriesRoundTrip(t *testing.T) {
 		ID: vidID, ChannelID: chID, Title: "AI RT E1", Visibility: "public",
 		Status: "READY", AiGenerated: true, AiTool: "roundtrip", AiReviewStatus: "approved",
 		SeriesID: sID, SeasonNo: 1, EpisodeNo: 1,
-		DrmProtected: true, DrmKeyID: "kid-rt", DrmKeyHex: "aabbcc",
+		DrmProtected: true, DrmKeyID: "kid-rt", DrmKeyHex: "a1b2c3d4e5f6",
 		CreatedAt: now,
 	}); err != nil {
 		t.Fatalf("SaveVideo: %v", err)
@@ -307,7 +307,7 @@ func TestPostgresAIVideoSeriesRoundTrip(t *testing.T) {
 	if got.SeriesID != sID || got.SeasonNo != 1 || got.EpisodeNo != 1 {
 		t.Fatalf("series slot lost: %+v", got)
 	}
-	if !got.DrmProtected || got.DrmKeyID != "kid-rt" || got.DrmKeyHex != "aabbcc" {
+	if !got.DrmProtected || got.DrmKeyID != "kid-rt" || got.DrmKeyHex != "a1b2c3d4e5f6" {
 		t.Fatalf("DRM fields lost: %+v", got)
 	}
 	allSeries, err := pg.LoadSeries(ctx)

@@ -700,7 +700,7 @@ paths:
       summary: "Get series"
       operationId: GetSeriesById
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Public"
       parameters:
         - name: id
           in: path
@@ -710,8 +710,6 @@ paths:
       responses:
         '200':
           description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
@@ -1061,7 +1059,7 @@ paths:
       summary: "Get admin ai reviews"
       operationId: GetAdminAiReviews
       x-census: {generated: true, detail: pending}
-      x-auth: "Role(super_admin, platform_admin)"
+      x-auth: "Role(super_admin, platform_admin, moderator)"
       responses:
         '200':
           description: Success
@@ -1381,12 +1379,10 @@ paths:
       summary: "Get ai originals"
       operationId: GetAiOriginals
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Public"
       responses:
         '200':
           description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
   /channels/{id}/subscription:
@@ -1445,7 +1441,7 @@ paths:
       summary: "Get hls *"
       operationId: GetHlsByVideoID*
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Public"
       parameters:
         - name: videoID
           in: path
@@ -1455,8 +1451,6 @@ paths:
       responses:
         '200':
           description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
   /live-streams/{id}:
@@ -1793,12 +1787,10 @@ paths:
       summary: "Get series"
       operationId: GetSeries
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Public"
       responses:
         '200':
           description: Success
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -2116,7 +2108,7 @@ paths:
       summary: "Create admin finance batches approve"
       operationId: CreateAdminFinanceBatchesApprove
       x-census: {generated: true, detail: pending}
-      x-auth: "Role(super_admin, platform_admin, finance_admin)"
+      x-auth: "Role(super_admin, platform_admin)"
       requestBody:
         required: true
         content:
@@ -2760,7 +2752,7 @@ paths:
       summary: "Create videos ai review"
       operationId: CreateVideosByIdAiReview
       x-census: {generated: true, detail: pending}
-      x-auth: "Auth"
+      x-auth: "Role(super_admin, platform_admin, moderator)"
       parameters:
         - name: id
           in: path
@@ -2778,6 +2770,8 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /videos/{id}/ai-submit:

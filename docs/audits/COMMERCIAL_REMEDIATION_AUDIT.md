@@ -7,6 +7,11 @@
 - **Initial Verification Status:** `COMMERCIAL NO-GO` (Retraction of premature 100% commercial open claim)
 - **Target Operating Posture:** `VERIFIED ARCHITECTURE TESTBED & PROTOTYPE (FAIL-CLOSED SECURITY ENFORCED)`
 
+> **§0 Tracking (2026-11-20, history preserved below):** D-01/D-03/D-04/D-05/D-06/D-07/D-08/D-09/D-13 all resolved
+> (server payment verification, `/api`+api-proxy topology, hardcoded-token removal, deploy-condition fix incl. the
+> api-proxy job, sandbox labeling). Residual: CF account ID still hard-coded in the tunnel script. Verdict NO-GO
+> stands on new grounds — see IMPLEMENTATION_STATUS (2026-11-20 re-baseline).
+
 ---
 
 ## 1. Executive Summary & Remediation Mandate

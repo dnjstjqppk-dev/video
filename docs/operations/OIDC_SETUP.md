@@ -25,6 +25,8 @@ JWT_SECRET=<unique 32+ char secret>
 GVP_ALLOW_DEV_TOKENS=<unset>
 ```
 
+(`JWT_SECRET` length is a recommendation — the code checks presence, not length.)
+
 Rules enforced at boot:
 
 - Any missing value → fatal with this document referenced.
@@ -38,24 +40,29 @@ Rules enforced at boot:
 NUXT_OIDC_ISSUER=https://<tenant>.zitadel.cloud
 NUXT_OIDC_CLIENT_ID=<console application id>
 NUXT_OIDC_CLIENT_SECRET=<console application secret>
-NUXT_OIDC_REDIRECT_URI=https://<console>/auth/callback
 ```
+
+(The callback is derived from the request origin; no redirect-URI variable is read.)
 
 ## 4. Verify
 
 1. `go run ./cmd/server` (services/api) → log line
    `OIDC issuer discovery verified`.
 2. Open each console → login → redirected to ZITADEL → back with session.
-3. `curl $API/v1/me` with the session cookie returns the profile.
-4. Revoke the grant in ZITADEL → next request returns 401.
+3. `curl -H "Authorization: Bearer <token>" $API/v1/me` returns the profile
+   (the API reads the header only; browsers go through the console `/api`
+   proxy, which injects it from the session cookie).
+4. Revoke the grant in ZITADEL → already-issued tokens stay valid until `exp`
+   (no revocation introspection); new logins stop working.
 
 ## 5. Local development
 
 Leave `OIDC_ISSUER` unset and set `GVP_ALLOW_DEV_TOKENS=true` with
-`GVP_ENV=development`. Dev tokens (`creator`, `viewer`, `admin`,
-`advertiser`) never work in production: the middleware gates them on
-environment.
+`GVP_ENV=development`. Dev tokens (`creator-token`, `viewer-token`,
+`admin-token`, `advertiser-token`, or any exact user UUID) never work in
+production: the middleware gates them on environment, and the dev-token
+endpoint only serves localhost.
 
-> **Current-deployment note (2026-11-16):** the live stack still runs `GVP_ENV=test` + `GVP_ALLOW_DEV_TOKENS=true`
+> **Current-deployment note (2026-11-20):** the live stack still runs `GVP_ENV=test` + `GVP_ALLOW_DEV_TOKENS=true`
 > with no ZITADEL tenant, so demo login is open. Complete §1–§4 and switch to `GVP_ENV=production`
 > before any real-user traffic (P0 backlog item 6 in [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)).

@@ -200,9 +200,15 @@ POST /v1/videos/{id}/thumbnail/select
 PUT /v1/uploads/{id}/chunks/{partNumber}
 """
 
-# Routes that intentionally serve unauthenticated traffic (audited 2026-11-17).
+# Routes that intentionally serve unauthenticated traffic (audited 2026-11-17,
+# AI/series/HLS re-audited 2026-11-20 against handler guards).
 PUBLIC = {
     ("GET", "/healthz"), ("GET", "/ready"), ("GET", "/metrics"),
+    ("GET", "/v1/series/"), ("GET", "/v1/series/{id}"),
+    ("GET", "/v1/ai-originals"),
+    # HLS gateway: public stills + visibility-gated streams (token or session);
+    # same "Public with gating" class as GET /v1/videos/{id}.
+    ("GET", "/v1/hls/{videoID}/*"),
     ("POST", "/v1/ads/decision"), ("POST", "/v1/ads/events"),
     ("GET", "/v1/ads/creatives/{id}/asset"),
     ("POST", "/v1/advertiser/decision"), ("POST", "/v1/advertiser/events"),
@@ -221,8 +227,12 @@ PUBLIC = {
     ("POST", "/v1/payments/webhooks/{provider}"),
 }
 
-# (method, path-prefix) -> role guard, in match order (audited 2026-11-17).
+# (method, path-prefix) -> role guard, in match order (audited 2026-11-17,
+# AI/series re-audited 2026-11-20; exact paths must precede their prefixes).
 ROLE_RULES = [
+    ("/v1/videos/{id}/ai-review", "super_admin, platform_admin, moderator"),
+    ("/v1/admin/ai-reviews", "super_admin, platform_admin, moderator"),
+    ("/v1/admin/finance/batches/approve", "super_admin, platform_admin"),
     ("/v1/ads/admin", "super_admin, platform_admin"),
     ("/v1/ads/campaigns", "advertiser, partner_manager, platform_admin"),
     ("/v1/ads/preview", "advertiser, partner_manager, platform_admin"),

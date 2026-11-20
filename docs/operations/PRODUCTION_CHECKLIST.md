@@ -42,7 +42,7 @@ Never commit values; this table lists NAMES only.
 ## Gate 2 — Infrastructure cutover order
 
 1. Provision production data plane (PG18 HA + PITR, Valkey, NATS JetStream, OpenSearch, ClickHouse, R2/Stream).
-2. Run migrations `00001..00009` against production + verify `SELECT count(*)` per table family.
+2. Run migrations `00001..00014` against production + verify `SELECT count(*)` per table family (77 tables).
 3. Deploy API + 6 workers to hosted compute (leave the operator-PC tunnel behind; keep it as break-glass only).
 4. Switch consoles' `NUXT_INTERNAL_API_URL` from api-proxy/tunnel to the hosted API; redeploy 4 consoles + api-proxy (or retire api-proxy).
 5. Move DNS from `*.workers.dev` to canonical domains (`www/studio/partners/admin/media/api.brand.com`) with WAF signed-URL rules.
@@ -52,7 +52,7 @@ Never commit values; this table lists NAMES only.
 
 - Static: lint/typecheck/build, migration verify, contract suite (incl. census gate), dep scan, secret scan.
 - Functional: signup→login→logout, real upload→encode→play, history/comment/subscribe persistence, live ingest+play,
-  ad register→review→serve→click→bill, pay→refund→ledger, admin isolation matrix.
+  ad register→review→serve→click→bill, pay→refund→ledger, AI submit→review→shelf→binge, admin isolation matrix.
 - E2E: Chromium/Firefox/WebKit × 360–1920px, Android+iOS smoke, player/ad/shorts/auth transitions, a11y pass.
 - Security: unauthenticated 401 matrix, cross-tenant 403 matrix, unapproved-ad suppression, forged-webhook rejection, replay idempotency.
 - Ops: PITR restore drill, DLQ replay drill, k6 1k-CCU baseline within SLO, cost meter vs. unit-economics model, rollback drill.

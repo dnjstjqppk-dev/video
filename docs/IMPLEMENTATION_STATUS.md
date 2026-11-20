@@ -1,34 +1,39 @@
 # vravra / vravra — 구현 현황 및 개발 백로그 (Source of Truth)
 
-- **작성일:** 2026-11-16 (전수 코드 대조 기준)
+- **작성일:** 2026-11-16 (전수 코드 대조 기준) · **재기준:** 2026-11-20 (커밋 d4964ea, 167 라우트, 전체 게이트 그린)
 - **브랜드:** vravra (법인: Booking Network Co., Ltd. / Master Directive `BN-GVP-YOUTUBE-CLASS-PRODUCTION-001`)
-- **판정:** 상용 불가 (COMMERCIAL NO-GO) — 아키텍처 테스트베드 + 프로토타입 단계. `docs/audits/COMMERCIAL_REMEDIATION_AUDIT.md`의 NO-GO 판정을 유지한다.
+- **판정:** 상용 불가 (COMMERCIAL NO-GO) 유지 — 근거 갱신: `GVP_ENV=test`+데브토큰 on, 퀵터널+workers.dev(도메인/Zone 없음), 메모리 1차 저장, 워커 5/6종 시뮬레이터, k6·PITR 미실증.
+  기능 버티컬(AI 홈그라운드)은 E2E 그린이나 상용 전환 게이트(G1-1~G1-4, GLOBAL_STRATEGY §4)는 미충족이다.
 - **분류 기준:** `IMPLEMENTED / PARTIAL / MOCK / BROKEN / MISSING / UNVERIFIED` (Master Directive ARTICLE 1)
 - **2026-11-17 remediated:** P0-1(코어 4종 영속화) · P0-2(실측/실인코딩/게시) · P0-3(결제 fail-closed) · P0-4(재생 서명·가시성) · P0-5(소재 파이프라인·연동검증·빈도제한) · P0-7(MFA 재인증) · P0-8(광고 인증·격리).
   P0-6은 코드 완료, ZITADEL 실테넌트 발급(사용자 작업) 대기. 상세 §4·§5의 `FIXED/DONE 2026-11-17` 표기 및 §6 참조.
 - **2026-11-18 UI/UX 상용화(Release 2.0.0):** 듀얼 테마 디자인 시스템(Deep Obsidian Dark 기본·Pure Crisp Light 콘솔) + 모듈화 앱 셸(50~80라인) +
   시청자/스튜디오/관리자 spec 정합 + 전수 문서 최신화. 상세 `CHANGELOG.md` · `docs/DESIGN_SYSTEM.md` · `docs/ARCHITECTURE.md` · `docs/API_SPEC.md` · `docs/USER_GUIDE.md`.
+- **2026-11-19 AI 홈그라운드 MVP + DRM 배선:** 시리즈/회차, AI 제출·심사 파이프라인, 관리자 심사 큐, Originals 선반, 스튜디오 시리즈/AI 제출, HLS 게이트웨이(서명 토큰),
+  Widevine/FairPlay(ClearKey 개발 플로우) 배선. DB 00013(DRM 3컬럼)·00014(시리즈 테이블+AI 7컬럼).
+- **2026-11-20 E2E 그린 + 시네마관 + 문서 고도화:** 실업로드→AI배지→심사→정주행→자동재생 브라우저 E2E(콘솔 에러 0), `/ai`·`/series` 넷플릭스식 다크 시네마 개편,
+  게이트웨이 CORP·자동재생·401 가드·수화 수정, PG 14 마이그레이션 실적용 + 라운드트립 6종, 전수 문서 재기준(본 회차). 전략: `docs/product/GLOBAL_STRATEGY.md`.
 
 ---
 
 ## 1. 이 사이트의 정체 (1줄 정의)
 
 **vravra는 YouTube급 독립 브랜드를 목표로 하는 멀티서페이스 동영상 플랫폼 모노레포다.**
-4개 Nuxt 4 웹 콘솔(사용자 포털·vravra studio·파트너/광고주·관리자) + Flutter iOS/Android 앱 + Go 모듈러 모놀리스 API + 6개 Go 워커 + PostgreSQL 마이그레이션 75테이블로 구성되며, 현재 프론트 4종은 Cloudflare Workers에 배포되고 API는 운영자 PC에서 Cloudflare Tunnel로 노출되는 하이브리드 형태로 기동한다.
-결제 어댑터·S3 멀티파트·광고 결정 엔진 같은 뼈대는 실제로 동작하지만, **영구 저장·실제 트랜스코딩·실제 광고 소재 송출·실제 라이브 인제스트·NATS/Valkey/OpenSearch/ClickHouse 연동은 아직 코드에 연결되지 않았다.**
+4개 Nuxt 4 웹 콘솔(사용자 포털+AI 시네마관·vravra studio·파트너/광고주·관리자) + Flutter iOS/Android 앱 + Go 모듈러 모놀리스 API(167 라우트) + 6개 Go 워커 + PostgreSQL 마이그레이션 77테이블로 구성되며, 현재 프론트 4종은 Cloudflare Workers에 배포되고 API는 운영자 PC에서 Cloudflare Tunnel로 노출되는 하이브리드 형태로 기동한다.
+업로드·실인코딩·서명 재생·광고 E2E·AI 심사 파이프라인은 실제로 동작하고 브라우저 E2E로 증명됐으나, **상용 저장 1차 전환·실제 라이브 인제스트/DVR·NATS/Valkey/OpenSearch/ClickHouse 연동·k6/PITR 실증은 아직이다.** 전략적 방향은 AI 오리지널 버티컬 선점이며 범용 추천·쇼츠 볼륨 전쟁은 하지 않는다 (`docs/product/GLOBAL_STRATEGY.md`).
 
 ## 2. 표면(서페이스) 인벤토리
 
 | 표면 | 경로 | 기술 | 현재 상태 |
 | :--- | :--- | :--- | :--- |
-| 사용자 웹 포털 | `apps/web` | Nuxt 4, Shaka/HLS 플레이어 | 배포 중. API 우선 + 시드 폴백 혼재 |
-| vravra studio | `apps/studio` | Nuxt 4, 멀티파트 업로더 | 배포 중. 업로드 실배선, 분석은 폴백 혼재 |
+| 사용자 웹 포털 + AI 시네마관 | `apps/web` | Nuxt 4, Shaka 플레이어 | 배포 중. E2E 그린(실재생·정주행·자동재생) + `/ai`·`/series` 다크 시네마 |
+| vravra studio | `apps/studio` | Nuxt 4, 멀티파트 업로더 | 배포 중. 업로드·시리즈·AI 제출 실배선, 분석은 폴백 혼재 |
 | 파트너/광고주 포털 | `apps/partners` | Nuxt 4 | 배포 중. 캠페인/정산/권리 화면 실배선(메모리 기반) |
-| 관리자 콘솔 | `apps/admin` | Nuxt 4 | 배포 중. Ad Delivery Inspector 실배선(메모리 기반) |
-| 모바일 앱 | `apps/mobile` | Flutter, Riverpod, GoRouter, Dio, media_kit | 빌드됨. 화면별 실데이터 여부 미확인 |
-| API 프록시 워커 | `apps/api-proxy` | Cloudflare Worker | 존재. 터널 URL을 콘솔과 분리하는 안정 주소 |
-| Go API | `services/api` | Go 1.27, chi, PostgreSQL 메모리 병행 | PC 호스팅 `:18092`. 메모리 스토어가 실서빙 주체 |
-| 워커 6종 | `services/{media,analytics,recommendation,live-controller,realtime-chat,scheduler}-worker` | Go stdlib only | 실행됨. 전부 인메모리 시뮬레이터 (외부 의존성 0) |
+| 관리자 콘솔 | `apps/admin` | Nuxt 4 | 배포 중. Ad Delivery Inspector + AI 심사 큐 실배선(메모리 기반) |
+| 모바일 앱 | `apps/mobile` | Flutter, Riverpod, GoRouter, Dio, video_player | 빌드됨. 화면별 실데이터 여부 미확인 |
+| API 프록시 워커 | `apps/api-proxy` | Cloudflare Worker | 배포 자동화됨(deploy-api-proxy 잡). 터널 URL 분리 안정 주소 |
+| Go API | `services/api` | Go 1.27, chi, 메모리 1차 + PG 7종 write-through | PC 호스팅 `:18092`. 메모리 스토어가 실서빙 주체 |
+| 워커 6종 | `services/{media,analytics,recommendation,live-controller,realtime-chat,scheduler}-worker` | Go stdlib only | media-worker만 실동작(ffmpeg 실인코딩+HTTP). 나머지 5종 인메모리 시뮬레이터 |
 
 ## 3. 요청 흐름 (실제 가동 토폴로지)
 
@@ -58,17 +63,18 @@ browser -> console workers (web/studio/partners/admin, /api)
 - 관리자 MFA 강제·민감 작업 재인증: **FIXED 2026-11-17** — 계정 제재·모더레이션 해결·정책/킬스위치 변경·소재 승인/거절·정산 승인이 TOTP 재인증(미등록 412·오코드 401)을 요구하고 전 건 감사 로그를 남긴다 (`identity.RequireStepUp`).
 - 조직 단위 ABAC(광고주·파트너 격리): PARTIAL (광고 엔진은 캠페인 단위 검사, 조직 스코프 강제 미확인).
 
-### 4.2 영속 저장 — PARTIAL (이중 스키마 해소됨, 코어 4종 영속화)
+### 4.2 영속 저장 — PARTIAL (7종 write-through, 메모리 1차)
 
-- `db/migrations/00001..00012`: **76개 테이블 DDL IMPLEMENTED** (계정 10, 콘텐츠 14, 소셜 9, 라이브 5, 광고 6, 결제 10, 저작권 8, 운영 5, 광고엔진 8 + 00010 누락 역할 9종·결제 컬럼 2종 추가 + 00012 스튜디오 완성분: 썸네일/요소 컬럼·시간당 조회 테이블).
-- **FIXED 2026-11-17:** 간이 DDL `InitSchema` 삭제 → `VerifySchema`(생성 없이 검증; `DATABASE_URL` 설정 + 스키마 불일치 시 부팅 거부)로 교체.
-  `SaveUser/SaveChannel/SaveVideo/SaveTransaction`이 실스키마(users+user_profiles·UUID·tags·원장 계정 매핑) 기준으로 재작성됐고,
-  부팅 시 `Hydrate`로 DB 행을 메모리에 적재한다. 사용자·채널·영상·결제+원장은 재시작 내구성 실증 완료(실서버 재시작 증명).
-- 잔여: 댓글·광고·라이브·소셜 등 나머지 도메인은 메모리 전용 (동일 패턴으로 확장 예정). 비-UUID 구형 fixture ID는 경고 후 스킵.
+- `db/migrations/00001..00014`: **77개 테이블·104 FK DDL IMPLEMENTED** (계정 10, 콘텐츠 14, 소셜 9, 라이브 5, 광고 6, 결제 10, 저작권 8, 운영 5, 광고엔진 8 + 00010 역할 9종·결제 컬럼 2종 + 00011 잡 소스 + 00012 시간당 조회 테이블·영상 3컬럼 + 00013 DRM 3컬럼 + 00014 시리즈 테이블·AI 7컬럼). 전수 실측·실PG 적용 완료(2026-11-20).
+- **FIXED 2026-11-17:** 간이 DDL `InitSchema` 삭제 → `VerifySchema`(생성 없이 검증; 스키마 불일치 시 부팅 거부)로 교체.
+  사용자·채널·영상·결제+원장은 재시작 내구성 실증 완료(실서버 재시작 증명).
+- **2026-11-19/20 확장:** `SaveVideo`가 DRM·AI·시리즈 컬럼까지 저장하고 `SaveSeries/DeleteSeries`·`LoadSeries`가 추가됐다.
+  영속 대상은 7종(사용자·채널·영상·시리즈·시간당조회·미디어잡·결제)이며 부팅 시 `Hydrate`로 DB 행이 시드를 덮어쓴다. PG 라운드트립 6종 그린(실 PG, AI/DRM/시리즈 포함).
+- 잔여: 댓글·구독·좋아요·라이브·광고·업로드·클레임·중재·플레이리스트·알림·계약·감사는 메모리 전용. PG 도달 불가 시 경고+메모리 계속이나 스키마 불일치 시 부팅 거부(비대칭) — 상용 전환 시 1차 전환 필요.
 - sqlc 쿼리 5종(`db/queries`) PARTIAL, 시드(`db/seeds/seeds.sql`) 존재.
-- `db/schema/schema.sql`, `db/schema/inventory.csv`, `docs/architecture/erd/*`는 실제 마이그레이션과 **다른 88테이블 스키마를 기술** → STALE (본 문서 §7 참조).
+- `db/schema/schema.sql`, `db/schema/inventory.csv`는 실제 마이그레이션과 **다른 88테이블 스키마를 기술** → STALE. `docs/architecture/erd/*`는 14종 재생성으로 해소됨.
 
-### 4.3 업로드·미디어 파이프라인 — PARTIAL (인제스트 실동작, 트랜스코딩 MOCK)
+### 4.3 업로드·미디어 파이프라인 — PARTIAL (인제스트·실인코딩 동작, 7단 래더)
 
 - 멀티파트 세션 생성·presigned 파트 URL(SigV4, R2/MinIO)·완료 검증: IMPLEMENTED (`uploads/s3.go`, `uploads/handler.go`).
 - 로컬 릴레이 모드(실바이트 수신·조립·디스크 저장): IMPLEMENTED.
@@ -76,7 +82,7 @@ browser -> console workers (web/studio/partners/admin, /api)
 - **P0 MOCK: FIXED 2026-11-17** — 워커가 ffprobe 실측 → ffmpeg ABR ladder·포스터·스토리보드 실인코딩 → 산출물을 API가 R2/MinIO에 게시한 뒤 READY로 전환한다.
   실증: S3 업로드→트랜스코딩→게시→READY 전 구간을 실바이트로 통과(도커 ffmpeg + LocalStack S3, 게시 HLS를 ffprobe로 재생 검증).
   `REQUIRE_PROBED_SOURCE` 기본 true(명시적 false만 구 전환 경로 허용). 실패 시 FAILED + 상태 API에 오류 노출 + DLQ 적재.
-- 워커 도달 불가 시 재시도·큐·DLQ 복구 없음 (QUEUED 영구 정체): MISSING (NATS 연동 시 해소, P1-13).
+- 실제 래더는 7단(240p~2160p)이며 디스패치는 HTTP POST다 (NATS 아님). 워커 도달 불가 시 재시도·큐·DLQ 복구 없음 (QUEUED 영구 정체): MISSING (P1-13 범위 축소로 연기).
 - WebP 하이라이트·자막·챕터 생성: MISSING (인자 빌더만 존재, 후속).
 - ~~READY 전환 시 영상 강제 `public`~~ **FIXED 2026-11-17** — READY가 가시성을 건드리지 않아 비공개 초안이 유지된다.
 
@@ -84,7 +90,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 - `GET /v1/videos/{id}/playback`: **FIXED 2026-11-17** — HMAC-SHA256 서명 토큰(`v1.<b64id>.<exp>.<sig>`, 1h, 영상 바인딩) 발급 + private(비소유 404)·members_only(미자격 403) 검사 (`videos/playback_token.go`, `videos/visibility.go`). 지역/연령 검사는 정책 데이터 부재로 잔여.
 - ~~조회수 중복 가산~~ **FIXED 2026-11-17 (P1-14):** 재생 허가·`valid_view`가 24h 시청자·영상 중복 제거(`store.CountView`)를 공유해 세션당 1회만 가산. 집계치는 P0-1 쓰루라이트로 PG에 영속.
-- HLS 서명·AES-128 키 발급·Widevine/FairPlay: MISSING (문서만 존재).
+- **2026-11-19/20 HLS 게이트웨이:** `GET /v1/hls/{videoID}/*`가 터널 뒤 재생을 중계한다 (가시성 게이팅 + 썸네일 공개 + 서명 토큰 + m3u8 토큰 리라이트 + cross-origin CORP). 브라우저 E2E 그린.
+- **DRM PARTIAL (코드 완료·E2E 미실행):** 마이그레이션 00013, 업로드 `drmProtected`→키 발급, 디스패치 키 전달, 워커 packager(CENC cbcs/ClearKey), 재생 `drm` 블록, 플레이어 clearKeys+라이선스 URL 설정, 스튜디오 DRM 토글. 실라이선스 서버 연동·E2E는 잔여.
 
 ### 4.5 광고 (최상위 P0 비즈니스 요구) — PARTIAL
 
@@ -116,8 +123,8 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### 4.8 Studio·파트너·관리자·소셜 — PARTIAL (메모리 CRUD)
 
-- Studio 대시보드/콘텐츠/업로드/댓글/분석/수익 화면과 API: 실배선이나 집계는 인메모리·시드 혼재.
-- 파트너 캠페인/MCN/권리/정산, 관리자 사용자/모더레이션/감사로그/정책 화면과 API: 실배선(메모리 기반).
+- Studio 대시보드/콘텐츠/업로드/댓글/분석/수익 화면과 API: 실배선이나 집계는 인메모리·시드 혼재. **2026-11-19:** 시리즈 관리(`/series`), 콘텐츠 AI 표시·심사 제출·상태 뱃지, 업로드 AI 메타+DRM 체크 추가.
+- 파트너 캠페인/MCN/권리/정산, 관리자 사용자/모더레이션/감사로그/정책 화면과 API: 실배선(메모리 기반). **2026-11-19:** 관리자 AI 심사 큐(`/ai-reviews`) 추가.
 - 저작권 지문 생성·매칭: MISSING (클레임/분쟁/DMCA 폼만 존재).
 - 댓글/좋아요/구독/재생목록/시청기록: 인메모리 IMPLEMENTED.
 
@@ -135,23 +142,32 @@ browser -> console workers (web/studio/partners/admin, /api)
 ### 4.10 프론트 공통 결함
 
 - ~~**BROKEN:** 모지바케 3파일~~ **정정 2026-11-17:** 3파일 모두 유효 UTF-8·정상 한글로 오탐 확정. 조치 불요.
-- **STALE:** `apps/*/nuxt.config.ts`의 콘솔 상호 링크가 구 서브도메인(`dnjstjqppk`)을 가리키고 실배포(`dnjstjq0824`)와 불일치.
+- ~~**STALE:** 콘솔 상호 링크 구 서브도메인~~ **해소 확인 2026-11-20:** 4콘솔 `nuxt.config.ts`가 전부 `dnjstjq0824` 현행 주소를 가리킨다.
 - 시드 폴백: 홈/시청/분석/Shorts·라이브 선반이 API 실패 시 가짜 수치와 함께 렌더링된다. Empty State 정책(지시 ARTICLE 0.5) 위반 소지 → P1.
-- `cloudflare-deploy.yml`은 4개 콘솔만 배포하고 `apps/api-proxy`를 배포하지 않는다 → MISSING (수동 배포 절차 필요).
+- ~~api-proxy 수동 배포~~ **DONE:** `cloudflare-deploy.yml`에 deploy-api-proxy 잡 추가로 자동화됨.
 - 메모리상의 `/api 404 error 1042` 이슈는 본 세션에서 미재현 → UNVERIFIED (재검증 필요).
 
 ### 4.11 모바일 — UNVERIFIED (표면적 PARTIAL)
 
-- Dio 에러 envelope 처리·OIDC 서비스·7개 화면·라우터·오프라인/네이티브 브릿지 파일 존재. 화면별 실데이터/목업 여부는 본 세션 미판독 → 전수 확인 필요.
+- Dio 에러 envelope 처리·OIDC 서비스·7개 화면·라우터·오프라인/네이티브 브릿지 파일 존재. 플레이어는 `video_player`(문서의 media_kit 표기는 오기). 화면별 실데이터/목업 여부는 미판독 → 전수 확인 필요.
 
 ### 4.12 테스트·CI/CD — PARTIAL
 
-- Go 단위/통합, 계약 6종, OWASP 4종, API 레벨 E2E 4종, k6 스펙, Flutter 테스트: 존재. **브라우저 실렌더링 E2E·실결제·실송출 검증은 없음.**
-- OpenAPI 스펙은 chi.Walk 실측 140라우트 기준으로 동기화됐다 (119 경로, 상세 36 + 인벤토리 83,
-  `docs/generate_route_census.py`, 계약 게이트 테스트 포함). P0 변경 라우트의 상세 스키마는 P1-8에서 추가 완료.
-- ERD 9종도 실측 마이그레이션 기준으로 재생성됐다 (`docs/generate_erd.py`). P1-8/P1-9의 문서 동기화분은 본 회차 완료.
-- GitHub CI/CD 그린 이력 있음(11-07, d1ce1f6). 최신 `5d2c347`의 파이프라인 결과는 UNVERIFIED.
-- 원격은 GitHub인데 지시는 GitLab 우선(ARTICLE 0.12/19) → GitLab 파이프라인 실가동 UNVERIFIED.
+- **2026-11-20 로컬 게이트 전부 그린:** Go 28패키지+워커, `pnpm -r typecheck`, cspell 547파일 0건, 계약/OWASP 9/9, Playwright API E2E 4/4(18086), 4콘솔 Nuxt 빌드,
+  PG 14 마이그레이션 실적용 + 라운드트립 6종(실 PG), 브라우저 AI E2E(실업로드→심사→정주행→자동재생, 콘솔 에러 0). GitHub 원격 CI 결과는 UNVERIFIED.
+- OpenAPI 스펙은 chi.Walk 실측 167라우트 기준으로 동기화됐다 (140 경로, 상세 44 + 인벤토리,
+  `docs/generate_route_census.py`, 계약 게이트 테스트 포함). AI/시리즈/HLS 가드 표기는 11-20 실측 정정.
+- ERD 14종도 실측 마이그레이션 기준으로 재생성됐다 (`docs/generate_erd.py`, 77테이블·104FK). 파서 버그(FK 과소·NOT 아티팩트) 수정.
+- 실결제·실송출 검증은 없음. 원격은 GitHub인데 지시는 GitLab 우선(ARTICLE 0.12/19) → GitLab 파이프라인 실가동 UNVERIFIED.
+
+### 4.13 AI 홈그라운드 — IMPLEMENTED (E2E 그린, Epic 1~3)
+
+- DB 00014(시리즈 테이블+AI 7컬럼), 모델·PG 영속·시드(NeoDrama AI 채널+Seoul 2099), 시리즈 CRUD+회차 attach/detach, AI 제출/심사 API(PATCH AI 필드 포함),
+  Originals 선반(홈/쇼츠 AI 제외), 관리자 심사 큐.
+- 웹: AiBadge, WatchSeriesPanel, watch 다음화 자동재생 우선, `/ai`·`/series/[id]` 넷플릭스식 다크 시네마관. 스튜디오: 시리즈 관리+AI 제출. 관리자: 심사 페이지.
+- 브라우저 E2E 그린(2026-11-20): 실업로드 2건→AI 표시→승인→시리즈 attach→정주행→다음화 자동재생, 콘솔 에러 0.
+- 잔여: Epic 2 후속(팔로우·알림·완주율), Epic 3 후속(심사 코멘트 공개·선정작 슬롯), Epic 4~6(권리·수익·제작 연동) — 상세 `docs/product/AI_HOME_GROUND_BACKLOG.md`.
+- 제약: 시리즈 생성 시 `AiOriginal=false` 고정, API로 Originals 지정 불가(승인된 회차가 속하면 자동 지정). `ReviewAI`에는 step-up 재인증 미적용(알려진 관찰).
 
 ## 5. 실제 개발 필요 항목 (P0 → P2)
 
@@ -195,9 +211,9 @@ browser -> console workers (web/studio/partners/admin, /api)
 
 ### P2 — 고도화
 
-21. 추천 랭킹 파이프라인 (규칙→행동→랭킹 단계적).
-22. OpenSearch 통합 검색·자동완성·오타 교정·SEO 구조화 데이터.
-23. DRM(Widevine/FairPlay), DASH, 4K+ ladder, 다국어 더빙.
+21. 추천 랭킹 파이프라인 (규칙→행동→랭킹 단계적). 전략상 단계 4까지 직접 구축 안 함 (GLOBAL_STRATEGY §5).
+22. OpenSearch 통합 검색·자동완성·오타 교정 (SEO 구조화 데이터는 watch 완비).
+23. DRM 실라이선스 서버 연동 + E2E (코드 배선 완료, §4.4), DASH, 다국어 더빙.
 24. Content ID 지문, MCN 전자서명·수익 분배, 브랜드 마켓.
 25. TV/CTV, 커머스/라이브쇼핑, 외부 파트너 API.
 
@@ -220,3 +236,6 @@ browser -> console workers (web/studio/partners/admin, /api)
   증거: Go 25pkg + 워커 6 + 통합 1 그린, 계약/OWASP 9/9, Playwright 4/4(로컬 18086), 신규 목 테스트 23건(결제 8·광고 6·재생/검색 9).
 - **2026-11-17 P0-7/P0-5/P0-1/P0-2/P0-6 수정분:** 센서스 140라우트(소재 업로드/조회 3종 추가, HOLE 0건 유지).
   증거: Go 전 패키지 + PG 라운드트립 3종(실 PG) + 실서버 재시작 내구 + 도커 ffmpeg 실인코딩 + LocalStack S3 전 구간 E2E + Playwright 4/4(MFA/TOTP·업로드 포함).
+- **2026-11-20 전수 재기준:** 센서스 167라우트(AI/시리즈/HLS 가드 실측 정정, HOLE 0건) + ERD 14종(77테이블·104FK, 파서 버그 수정) + 전략 문서 신설.
+  증거: Go 28pkg+워커, typecheck, cspell 0, 계약/OWASP 9/9, Playwright 4/4, 4콘솔 빌드, PG 14 마이그레이션 + 라운드트립 6종, 브라우저 AI E2E 그린.
+  감사 보고서 2종은 역사 기록이므로 본문은 유지하고 §0 추적문을 추가했다.

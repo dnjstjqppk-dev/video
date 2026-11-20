@@ -2,6 +2,34 @@
 
 All notable product changes. Dates are UTC.
 
+## [Unreleased] — AI Originals home ground + cinema hall
+
+### Added
+
+- AI home ground vertical: series/seasons/episodes, AI submit→review pipeline,
+  admin review queue, Originals shelf (`/ai`), series binge pages (`/series`),
+  watch series panel with next-episode autoplay, studio series + AI submission.
+- HLS gateway (`GET /v1/hls/{videoID}/*`) with visibility gating, signed
+  playback tokens and cross-origin stills.
+- DRM wiring (migration 00013, ClearKey dev flow, packager CENC path, studio
+  toggle); license-server E2E pending.
+- Global strategy (`docs/product/GLOBAL_STRATEGY.md`): AI-vertical-first
+  positioning + gated global expansion roadmap.
+
+### Changed
+
+- `/ai` and `/series` redesigned as an always-dark Netflix-style cinema hall
+  (billboard hero + rails); all consoles remain light-first otherwise.
+- API census re-audited (167 routes, corrected AI/series/HLS guards); ERD
+  regenerated for all 14 migrations (77 tables, 104 FKs).
+
+### Verified
+
+- Browser E2E green: real upload → AI badge → review → binge → autoplay
+  with zero console errors (2026-11-20).
+- Full local gates green: Go, typecheck, cspell, contract/OWASP, Playwright
+  API E2E, 4-console builds, PG round-trips on live Postgres.
+
 ## [3.2.0] — 2026-11-19 — Full vravra identity system & brand SSOT
 
 ### Added

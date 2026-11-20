@@ -23,9 +23,12 @@ results do not count as production verification).
 | playback | 1039.0 | 0 | 41.2 ms | 103.7 ms | 158.6 ms | 169.2 ms |
 
 Conditions: 50-way concurrency, loopback, single-API process, in-memory
-seed store. The playback run distributed `X-Forwarded-For` across 250
+store. The playback run distributed `X-Forwarded-For` across 250
 client IPs (see Rate limiting); without distribution the global limiter
 429s the burst by design.
+
+> Gate 3 asks for k6 at 1k CCU: this run does NOT satisfy it (spec-verified
+> only). Re-run at Gate 3 scale before quoting SLOs externally.
 
 ## Rate limiting (verified live)
 
@@ -39,9 +42,9 @@ client IPs (see Rate limiting); without distribution the global limiter
 - `Stop-Process` on the API (healthz → connection refused), then restart
   the same binary: **healthz 200 again after 1760 ms** (stopwatch from
   process spawn to first HTTP 200, 200 ms poll interval).
-- Stateless API: no warmup, no cache rebuild, no data loss (seed store
-  rehydrates from code; production PostgreSQL path is covered by
-  `RUNBOOK_AND_DR.md` §2 PITR).
+- Stateless API: no warmup, no cache rebuild, no data loss (memory store
+  rehydrates from code plus PG hydrate when configured; production PITR in
+  `RUNBOOK_AND_DR.md` §2 is unexercised).
 
 ## Declared SLOs (operator-PC stack)
 

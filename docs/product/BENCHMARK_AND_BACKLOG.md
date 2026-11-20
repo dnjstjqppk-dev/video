@@ -1,15 +1,19 @@
 # vravra — Benchmark Matrix, RBAC/ABAC & Unit Economics
 
+> Implementation status key (audited 2026-11-20, commit d4964ea): **구현** = code + gate/E2E verified ·
+> **목표** = documented target, not wired. Strategy: [GLOBAL_STRATEGY.md](GLOBAL_STRATEGY.md).
+
 ## 1. Competitive Feature Benchmark Matrix
 
 | Domain / Capability | YouTube / YouTube Studio | Twitch / IVS | Vimeo Enterprise | vravra (GVP v2.0) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Playback Engine** | Custom HTML5 / DASH / HLS | Low-Latency HLS | HLS + CDN | **Shaka Player + HLS.js (Web) & `media_kit` (Flutter) with Signed ABR HLS** |
-| **Upload Architecture** | Resumable HTTP Chunked | RTMP Live Only | tus.io Resumable | **Direct-to-R2 Presigned Multipart (10MB chunks, Resume & Checksum)** |
-| **Transcoding Pipeline** | Custom ASICs (Argos) | Managed Transcode | Managed AWS | **Self-Hosted Spot FFmpeg Workers on R2 (Zero Egress) + Cloudflare Stream Live** |
-| **vravra studio** | Dedicated SPA | Creator Dashboard | Team Library | **Independent Nuxt 4 `apps/studio` (`studio.brand.com`) with ClickHouse Analytics** |
-| **Partner / MCN / Content ID** | CMS + Content ID | Affiliate Portal | Enterprise Admin | **Independent Nuxt 4 `apps/partners` (`partners.brand.com`) with Ads, MCN & Claims** |
-| **Admin & Trust/Safety** | Internal Tools | Internal Mod | Internal Admin | **Independent Nuxt 4 `apps/admin` (`admin.brand.com`) with Immutable Audit Logs** |
+| **AI Originals Vertical** | Unfiltered AI flood | — | Staff picks (generic) | **Review-gated shelf + creator-run series + cinema hall, E2E green** (구현 — 핵심 승부처) |
+| **Playback Engine** | Custom HTML5 / DASH / HLS | Low-Latency HLS | HLS + CDN | **Shaka Player (Web) & `video_player` (Flutter) with Signed ABR HLS** (구현; HLS.js fallback 미확인) |
+| **Upload Architecture** | Resumable HTTP Chunked | RTMP Live Only | tus.io Resumable | **S3-Compatible Presigned Multipart (10MB chunks, Resume & Checksum)** (구현; R2/MinIO/Seaweed 호환) |
+| **Transcoding Pipeline** | Custom ASICs (Argos) | Managed Transcode | Managed AWS | **FFmpeg Workers, 7-rung ladder (240p–2160p)** (구현; Spot K8s + Stream Live는 목표) |
+| **vravra studio** | Dedicated SPA | Creator Dashboard | Team Library | **Independent Nuxt 4 `apps/studio` with series + AI submission** (구현; analytics 인메모리, ClickHouse는 목표) |
+| **Partner / MCN / Content ID** | CMS + Content ID | Affiliate Portal | Enterprise Admin | **Independent Nuxt 4 `apps/partners` with Ads, MCN & Claims** (구현, 메모리 기반; 지문 매칭 MISSING) |
+| **Admin & Trust/Safety** | Internal Tools | Internal Mod | Internal Admin | **Independent Nuxt 4 `apps/admin` with audit logs + AI review queue** (구현, 메모리 기반; 불변성 미확인) |
 
 ---
 
@@ -67,4 +71,4 @@ GVP enforces dual-layer **RBAC (Role-Based Access Control)** via Casbin and **AB
 | **Control Plane (DB, Cache, API)** | Standard HA | Core cluster | \$1,420.00 |
 | **Total Monthly Cost (100% Managed VOD)** | — | — | **\$8,320.00 / month** |
 
-> **Unit Economics Conclusion**: By combining **Cloudflare R2 (zero egress fee)** + **Spot Kubernetes FFmpeg workers** for VOD/Shorts with **Cloudflare Stream** for low-latency live broadcasting, GVP reduces monthly media delivery and encoding costs by **71.1% (\$2,401/mo vs \$8,320/mo)** while preserving sub-second CDN TTFB globally.
+> **Unit Economics Conclusion (estimates, unmeasured 2026-11-20)**: By combining **Cloudflare R2 (zero egress fee)** + **Spot Kubernetes FFmpeg workers** for VOD/Shorts with **Cloudflare Stream** for low-latency live broadcasting, GVP would reduce monthly media delivery and encoding costs by **71.1% (\$2,401/mo vs \$8,320/mo)**. Caveats: ladder is 7 rungs (not 4), Spot/Stream are targets (current: PC-hosted FFmpeg + URL-assembly live), and no load/cost run has been measured. Do not quote as measured figures.

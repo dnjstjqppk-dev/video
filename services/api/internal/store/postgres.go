@@ -53,7 +53,7 @@ var requiredTables = []string{
 	"series",
 }
 
-// VerifySchema checks that the migrated schema (db/migrations, incl. 00013)
+// VerifySchema checks that the migrated schema (db/migrations, incl. 00014)
 // is present. It creates nothing; operators apply migrations out of band.
 func (p *PostgresStore) VerifySchema(ctx context.Context) error {
 	var missing []string

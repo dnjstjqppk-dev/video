@@ -12,8 +12,9 @@ pnpm --filter @gvp/<app> build
 # wrangler deploy .output/server/index.mjs --assets .output/public
 ```
 
-The `apps/api-proxy` worker is deployed manually (see its README) and holds
-the `API_UPSTREAM` secret so console configs never embed tunnel URLs.
+The `apps/api-proxy` worker is deployed by the `deploy-api-proxy` job in the
+same workflow and holds the `API_UPSTREAM` secret so console configs never
+embed tunnel URLs.
 
 ## 2. Runtime topology
 
@@ -32,6 +33,8 @@ users -> console workers (*.workers.dev, /api) -> api-proxy worker
 - API: `NUXT_INTERNAL_API_URL` (server-side), OIDC issuer/client/secret.
 - Production requires `GVP_ENV=production`, dev tokens disabled, and a real
   ZITADEL tenant — full gate list in `docs/operations/PRODUCTION_CHECKLIST.md`.
+  The live stack does not meet these yet (`GVP_ENV=test`, dev tokens on,
+  quick tunnel, no domain/Zone) — see IMPLEMENTATION_STATUS.
 
 ## 4. Verify and roll back
 

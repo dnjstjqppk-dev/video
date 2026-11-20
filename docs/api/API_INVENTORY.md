@@ -1,10 +1,12 @@
 # vravra — Complete `/v1` API Inventory
 
-> **Contract map (2026-11-16, chi.Walk verified):** this inventory documents the **target contract** (~60 endpoints
-> with rate limits, idempotency, and pagination semantics). The **implemented contract** is now fully inventoried in
-> [ROUTE_CENSUS.md](ROUTE_CENSUS.md) (146 chi registrations with auth guards) and [openapi/gvp-v1.yaml](../../openapi/gvp-v1.yaml)
-> (124 paths: 40 hand-detailed + 84 generated inventory, gated by `tests/contract/openapi_contract.test.ts`).
+> **Contract map (target contract; counts refreshed 2026-11-20):** this inventory documents the **target contract** (~60 endpoints
+> with rate limits, idempotency, and pagination semantics). The **implemented contract** is fully inventoried in
+> [ROUTE_CENSUS.md](ROUTE_CENSUS.md) (167 chi registrations with auth guards) and [openapi/gvp-v1.yaml](../../openapi/gvp-v1.yaml)
+> (140 paths: 44 hand-detailed + generated inventory, gated by `tests/contract/openapi_contract.test.ts`).
 > Per-endpoint detailed schemas for the generated inventory remain P1 backlog in [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
+> Notation: `user`+ below means `registered_user` and up; per-route rate limits are targets — implemented is a single
+> global 1200 req/min per-IP limit (see ROUTE_CENSUS for the implemented guard on each route).
 
 All HTTP endpoints are versioned under `/v1` and return errors strictly conforming to the standard envelope:
 

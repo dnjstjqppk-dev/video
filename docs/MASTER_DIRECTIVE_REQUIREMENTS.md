@@ -56,7 +56,7 @@
 - `apps/mobile` — Flutter iOS/Android
 - `services/api` — Go API
 - `services/*-worker` — 미디어, 분석, 추천, 라이브, 실시간 채팅, 스케줄러
-- `db/migrations` — 8개 SQL 마이그레이션
+- `db/migrations` — 14개 SQL 마이그레이션 (77테이블·104FK, 2026-11-20 실측)
 - `db/schema` — 스키마 및 인벤토리
 - `packages/*` — 공통 UI, 타입, API Client
 - `infra/*` — Docker, Kubernetes, Helm, Terraform, Monitoring
@@ -850,7 +850,7 @@ Valkey는 캐시와 단기 데이터, NATS는 이벤트 메시지, OpenSearch는
 
 다음 요소를 유지한다.
 
-- 다크 모드 중심 정체성
+- 콘솔 Light 기본 + 다크 토글 정체성 (AI관은 항상 다크 시네마 예외)
 - 영상 중심 카드 레이아웃
 - vravra 브랜드 콘셉트
 - 메인 내비게이션

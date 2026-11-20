@@ -16,6 +16,8 @@ spent only on key actions (subscribe, live, upload, hero metrics).
 
 Default theme is **Light (daytime white)** on every console, with a
 persisted light/dark/system toggle and a True OLED Dark cinema theme.
+Exception: the AI hall (`/ai`, `/series/[id]`) is always-dark cinema mode in
+both themes (explicit `neutral-950` surfaces, not theme tokens).
 
 | Token | Dark | Light |
 | :--- | :--- | :--- |
@@ -80,9 +82,19 @@ Reference implementation: `GvpDropdown.vue` + `dropdown.ts` helpers, and the
 - Loading uses shimmer skeletons (`.gvp-shimmer`); errors show a retry
   banner; empty results show an empty state, never fake data.
 
+## 5.1 AI badge (`AiBadge.vue`)
+
+The AI label is a badge of honor, never hidden: brand-crimson pill, uppercase
+`AI` + bolt glyph, `title` tooltip with tool and approval state.
+Props: `tool?` (e.g. `Vravra Studio AI`), `approved?` (Originals pick),
+`size` (`xs` default on cards, `sm` on watch/hero). Placement: top-left on
+thumbnails and rails, beside the watch title, on series episode rows.
+
 ## 6. Usage rules
 
-1. New or touched components stay within 50-80 lines; split larger ones.
+1. New or touched leaf components stay within 50-80 lines; split larger ones.
+   Page-level compositions (e.g. `watch/[id].vue`, ~900 lines) are exempt but
+   must move toward section components when touched (roadmap, not yet split).
 2. Consoles default to light with a light/dark/system toggle.
 3. Status colors: success `#10B981`, warning `#F59E0B`, danger
    `#EF4444`, info/studio `#2563EB`, live `#FF3B30`, brand `#FF2E4C`.

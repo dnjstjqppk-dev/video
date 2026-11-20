@@ -64,7 +64,7 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/videos/{id}/frames` | Auth |  |
 | `GET` | `/v1/videos/{id}/playback` | Public |  |
 | `PATCH` | `/v1/videos/{id}` | Auth |  |
-| `POST` | `/v1/videos/{id}/ai-review` | Auth |  |
+| `POST` | `/v1/videos/{id}/ai-review` | Role(super_admin, platform_admin, moderator) |  |
 | `POST` | `/v1/videos/{id}/ai-submit` | Auth |  |
 | `POST` | `/v1/videos/{id}/captions` | Auth |  |
 | `POST` | `/v1/videos/{id}/comments` | Auth |  |
@@ -204,7 +204,7 @@ for real paths `/v1/me...`.
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/admin/ads/delivery-diagnostics` | Role(super_admin, platform_admin) |  |
-| `GET` | `/v1/admin/ai-reviews` | Role(super_admin, platform_admin) |  |
+| `GET` | `/v1/admin/ai-reviews` | Role(super_admin, platform_admin, moderator) |  |
 | `GET` | `/v1/admin/audit-logs` | Role(super_admin, platform_admin, finance_admin, moderator, support_agent) |  |
 | `GET` | `/v1/admin/dashboard` | Role(super_admin, platform_admin, finance_admin, moderator, support_agent) |  |
 | `GET` | `/v1/admin/finance/settlements` | Role(super_admin, platform_admin, finance_admin) |  |
@@ -215,7 +215,7 @@ for real paths `/v1/me...`.
 | `PATCH` | `/v1/admin/policies/` | Role(super_admin, platform_admin (+support read on GET)) | trailing-slash route |
 | `PATCH` | `/v1/admin/policies/flags/{key}` | Role(super_admin, platform_admin (+support read on GET)) |  |
 | `PATCH` | `/v1/admin/users/{id}/status` | Role(super_admin, platform_admin (+support read on GET /users)) |  |
-| `POST` | `/v1/admin/finance/batches/approve` | Role(super_admin, platform_admin, finance_admin) |  |
+| `POST` | `/v1/admin/finance/batches/approve` | Role(super_admin, platform_admin) |  |
 | `POST` | `/v1/admin/moderation/{id}/resolve` | Role(super_admin, platform_admin, moderator, support_agent) |  |
 
 ## payments (5)
@@ -261,13 +261,13 @@ for real paths `/v1/me...`.
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/ai-originals` | Auth |  |
+| `GET` | `/v1/ai-originals` | Public |  |
 
 ## hls (1)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/v1/hls/{videoID}/*` | Auth |  |
+| `GET` | `/v1/hls/{videoID}/*` | Public |  |
 
 ## notifications (2)
 
@@ -282,8 +282,8 @@ for real paths `/v1/me...`.
 | :--- | :--- | :--- | :--- |
 | `DELETE` | `/v1/series/{id}` | Auth |  |
 | `DELETE` | `/v1/series/{id}/episodes/{videoId}` | Auth |  |
-| `GET` | `/v1/series/` | Auth | trailing-slash route |
-| `GET` | `/v1/series/{id}` | Auth |  |
+| `GET` | `/v1/series/` | Public | trailing-slash route |
+| `GET` | `/v1/series/{id}` | Public |  |
 | `PATCH` | `/v1/series/{id}` | Auth |  |
 | `POST` | `/v1/series/` | Auth | trailing-slash route |
 | `POST` | `/v1/series/{id}/episodes` | Auth |  |

@@ -117,7 +117,7 @@
   {
     "method": "GET",
     "path": "/v1/admin/ai-reviews",
-    "auth": "Role(super_admin, platform_admin)"
+    "auth": "Role(super_admin, platform_admin, moderator)"
   },
   {
     "method": "GET",
@@ -217,7 +217,7 @@
   {
     "method": "GET",
     "path": "/v1/ai-originals",
-    "auth": "Auth"
+    "auth": "Public"
   },
   {
     "method": "GET",
@@ -252,7 +252,7 @@
   {
     "method": "GET",
     "path": "/v1/hls/{videoID}/*",
-    "auth": "Auth"
+    "auth": "Public"
   },
   {
     "method": "GET",
@@ -352,12 +352,12 @@
   {
     "method": "GET",
     "path": "/v1/series/",
-    "auth": "Auth"
+    "auth": "Public"
   },
   {
     "method": "GET",
     "path": "/v1/series/{id}",
-    "auth": "Auth"
+    "auth": "Public"
   },
   {
     "method": "GET",
@@ -537,7 +537,7 @@
   {
     "method": "POST",
     "path": "/v1/admin/finance/batches/approve",
-    "auth": "Role(super_admin, platform_admin, finance_admin)"
+    "auth": "Role(super_admin, platform_admin)"
   },
   {
     "method": "POST",
@@ -792,7 +792,7 @@
   {
     "method": "POST",
     "path": "/v1/videos/{id}/ai-review",
-    "auth": "Auth"
+    "auth": "Role(super_admin, platform_admin, moderator)"
   },
   {
     "method": "POST",

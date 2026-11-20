@@ -1,10 +1,20 @@
 # vravra — Operations Runbook & Disaster Recovery (DR)
 
-> **Current-hosting note (2026-11-16, code-audited):** this runbook targets the **production K8s/RDS topology**.
-> The actually running stack is operator-PC hosted (`gvp-api.exe :18092`, media worker `:8081`) behind a
-> Cloudflare quick tunnel + `apps/api-proxy` worker — see `infra/local/README.md` and
-> [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) §3. PITR/DLQ procedures below are unexercised
-> against the live stack (P1 backlog item 20); outbox relay and NATS DLQ do not exist in code yet.
+> **Current-hosting note (2026-11-20, code-audited):** §2–§4 target the **production K8s/RDS topology** and are
+> NOT executable on the live stack. The actually running stack is operator-PC hosted (`gvp-api.exe :18092`,
+> media worker `:8081`) behind a Cloudflare quick tunnel + `apps/api-proxy` worker — see `infra/local/README.md` and
+> [docs/IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) §3. PITR/DLQ are unexercised (P1-20); outbox relay and
+> NATS DLQ do not exist in code. Use §0 below for the live stack.
+
+## 0. Live-stack procedures (operator PC, quick tunnel)
+
+| Symptom | Action |
+| :--- | :--- |
+| Console `/api` dead | Check tunnel URL rotation: read the fresh `*.trycloudflare.com` URL and update the `API_UPSTREAM` secret, redeploy api-proxy. |
+| API down (`:18092`) | Restart `gvp-api.exe` with the `infra/local` env (`GVP_ENV=test`, dev tokens, R2 → `:9002`, worker → `:8081`). In-memory videos are lost; PG-hydrated rows return. |
+| Transcodes stuck QUEUED | Restart the media worker (`:8081`) with `FFMPEG_BIN`/`FFPROBE_BIN`/`PACKAGER_BIN`; re-submit. No DLQ exists — stuck jobs need manual re-queue. |
+| S3 errors (`:9002`) | Restart `weed.exe server` (master 19333, volume 18083, s3 9002). If raft wedges after unclean shutdown, wipe `tools/data/seaweed` and restart (probe data only). |
+| Full PC reboot | Start order: SeaweedFS → API → media worker → tunnel → verify `/healthz` + one `/v1/feed/home` through the proxy. Auto-start on boot is NOT registered. |
 
 ## 1. Recovery Objectives (RTO & RPO)
 

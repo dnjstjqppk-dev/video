@@ -1,17 +1,20 @@
 # vravra API Spec — Endpoints, Schemas and RBAC
 
-Canonical contract sources: `openapi/gvp-v1.yaml` (119 paths),
-`docs/api/ROUTE_CENSUS.md` + `docs/api/routes.json` (router census with auth
-guards), and `packages/ts-api-client/src/client.ts` (typed caller used by all
-consoles). This file summarizes request/response shape and access rules.
+Canonical contract sources: `openapi/gvp-v1.yaml` (140 paths),
+`docs/api/ROUTE_CENSUS.md` + `docs/api/routes.json` (167-route router census
+with auth guards, re-audited 2026-11-20), and
+`packages/ts-api-client/src/client.ts` (typed caller used by all consoles).
+This file summarizes request/response shape and access rules.
 
 ## 1. Conventions
 
 - Base path `/v1`, JSON everywhere, standard error envelope
-  `{ code, message, requestId, field? }` mapped to `ApiError` by the client.
-- Auth: `Authorization: Bearer <token>` from the `gvp_access_token` cookie;
-  `401` clears the session. Mutations through the Nuxt proxy also send the
-  double-submit `X-CSRF-Token` header.
+  `{ error: { code, message, request_id, field? } }` mapped to `ApiError` by
+  the client.
+- Auth: `Authorization: Bearer <token>` from the `gvp_session` cookie
+  (httpOnly, proxy-injected); `401` nulls only the legacy token cookie while
+  `gvp_session` is kept. Mutations through the Nuxt proxy also send the
+  double-submit `X-CSRF-Token` header (checked against the `gvp_csrf` cookie).
 - Pagination: `page` (1-based) + `limit`, responses carry `{ items, total }`
   or `{ items, nextCursor }`.
 - Money: integer minor units with explicit `currency` (KRW uses won units;
@@ -24,6 +27,9 @@ consoles). This file summarizes request/response shape and access rules.
 | Identity | `GET /v1/me`, `PATCH /v1/me`, sessions revoke, TOTP `POST /v1/me/mfa/*` |
 | Channels | `GET /v1/channels/{id}`, create/update, videos list, subscribe/unsubscribe |
 | Videos | `GET /v1/videos/{id}`, playback info, update/delete, like/unlike, captions CRUD |
+| AI review | `POST /v1/videos/{id}/ai-submit`, `POST /v1/videos/{id}/ai-review` (staff 3-role), `GET /v1/admin/ai-reviews` queue |
+| Series | series CRUD, episode attach/detach, public list/get; `GET /v1/ai-originals` shelf |
+| HLS | `GET /v1/hls/{videoID}/*` gateway (visibility gating + signed `?token=`, cross-origin) |
 | Uploads | multipart session create, part URLs, complete, studio edit jobs |
 | Feed/search | home feed, shorts feed, subscriptions feed, `GET /v1/search`, suggestions, feedback |
 | Social | comments list/add/delete/like/heart/pin, playlists CRUD + items, notifications + read |
