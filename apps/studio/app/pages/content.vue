@@ -32,7 +32,6 @@ interface StudioContentRow {
   submittingAi: boolean
   confirmAiOff: boolean
   savingAi: boolean
-  selected: boolean
 }
 
 const aiReviewLabel: Record<StudioContentRow['aiReviewStatus'], string> = {
@@ -77,9 +76,17 @@ function toRow(v: Video): StudioContentRow {
     aiReviewStatus: (v.aiReviewStatus || '') as StudioContentRow['aiReviewStatus'],
     submittingAi: false,
     confirmAiOff: false,
-    savingAi: false,
-    selected: false
+    savingAi: false
   }
+}
+
+// Row selection lives in its own reactive set: mutating a flag on rows
+// inside the filtered `items` computed does not invalidate `selectedCount`.
+const selectedIds = ref<Set<string>>(new Set())
+const selectedCount = computed(() => selectedIds.value.size)
+function toggleRowSelected(id: string) {
+  if (selectedIds.value.has(id)) selectedIds.value.delete(id)
+  else selectedIds.value.add(id)
 }
 
 async function toggleAiFlag(row: StudioContentRow) {
@@ -143,7 +150,7 @@ const items = computed(() => {
   })
 })
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)))
-const selectedCount = computed(() => items.value.filter(i => i.selected).length)
+watch([activeTab, page], () => selectedIds.value.clear())
 
 async function setRowVisibility(row: StudioContentRow, vis: VideoVisibility) {
   const prev = row.visibility
@@ -166,7 +173,7 @@ async function setRowVisibility(row: StudioContentRow, vis: VideoVisibility) {
 
 async function applyBulkVisibility(vis: VideoVisibility) {
   rowError.value = null
-  const targets = items.value.filter(i => i.selected)
+  const targets = items.value.filter(i => selectedIds.value.has(i.id))
   for (const row of targets) {
     await setRowVisibility(row, vis)
   }
@@ -179,10 +186,11 @@ async function applyBulkDelete() {
   rowError.value = null
   bulkBusy.value = true
   try {
-    const targets = items.value.filter(i => i.selected)
+    const targets = items.value.filter(i => selectedIds.value.has(i.id))
     for (const row of targets) {
       await api.deleteVideo(row.id)
     }
+    selectedIds.value.clear()
     await refresh()
   } catch (e: unknown) {
     rowError.value = e instanceof Error ? e.message : '일괄 삭제에 실패했습니다.'
@@ -198,7 +206,7 @@ async function applyBulkPlaylist() {
   bulkBusy.value = true
   try {
     const pl = await api.createPlaylist({ title, visibility: 'private' })
-    const targets = items.value.filter(i => i.selected)
+    const targets = items.value.filter(i => selectedIds.value.has(i.id))
     for (const row of targets) {
       await api.addPlaylistItem(pl.id, row.id)
     }
@@ -346,7 +354,7 @@ function formatDate(iso: string) {
         <tbody class="divide-y divide-[var(--gvp-border)]">
           <tr v-for="row in items" :key="row.id" class="transition-colors hover:bg-[var(--gvp-canvas)]">
             <td class="px-4 py-3">
-              <input v-model="row.selected" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" :aria-label="`${row.title} 선택`" />
+              <input :checked="selectedIds.has(row.id)" type="checkbox" class="rounded-md border-[var(--gvp-border-strong)] accent-[var(--gvp-brand)]" :aria-label="`${row.title} 선택`" @change="toggleRowSelected(row.id)" />
             </td>
             <td class="px-4 py-3">
               <div class="flex min-w-0 items-center gap-3">

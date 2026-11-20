@@ -15,6 +15,19 @@ const devError = ref<string | null>(null)
 const devLoading = ref(false)
 const isLocalhost = ref(false)
 
+const route = useRoute()
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  oidc_unconfigured: 'OIDC 로그인이 설정되지 않은 환경입니다. 로컬에서는 아래 개발 토큰 로그인을 이용하세요.',
+  oidc_denied: 'OIDC 인증이 거부되었습니다. 다시 시도하세요.',
+  oauth_state: '로그인 상태가 만료되었거나 유효하지 않습니다. 다시 시도하세요.',
+  token_exchange: 'OIDC 토큰 교환에 실패했습니다. 잠시 후 다시 시도하세요.'
+}
+const authErrorMessage = computed(() => {
+  const code = String(route.query.error || '')
+  if (!code) return null
+  return AUTH_ERROR_MESSAGES[code] || '로그인 처리 중 오류가 발생했습니다.'
+})
+
 if (import.meta.client) {
   const host = window.location.hostname
   isLocalhost.value = host === 'localhost' || host === '127.0.0.1'
@@ -51,6 +64,10 @@ async function loginWithDevToken() {
         OIDC 싱글사인온으로 안전하게 로그인하세요.
       </p>
 
+      <div v-if="authErrorMessage" class="mt-4 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-3 py-2 text-xs font-medium text-[var(--gvp-live)]" role="alert">
+        {{ authErrorMessage }}
+      </div>
+
       <a
         href="/auth/login"
         class="mt-6 w-full inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
@@ -58,6 +75,7 @@ async function loginWithDevToken() {
         {{ BRAND.name }} 계정으로 계속하기
       </a>
 
+      <ClientOnly>
       <div v-if="isLocalhost" class="mt-6 border-t border-[var(--gvp-border)] pt-5">
         <p class="text-xs font-semibold text-[var(--gvp-text)]">로컬 개발 전용 토큰 로그인</p>
         <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">
@@ -82,6 +100,7 @@ async function loginWithDevToken() {
         </div>
         <p v-if="devError" class="mt-2 text-xs font-medium text-[var(--gvp-live)]">{{ devError }}</p>
       </div>
+      </ClientOnly>
     </div>
   </div>
 </template>

@@ -3,10 +3,7 @@ export default defineEventHandler(async (event) => {
   const oidc = config.oidc as { issuer?: string; clientId?: string }
 
   if (!oidc?.issuer || !oidc?.clientId) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'OIDC provider is not configured for this environment'
-    })
+    return authError(event, 503, 'oidc_unconfigured', 'OIDC provider is not configured for this environment')
   }
 
   const state = crypto.randomUUID()

@@ -31,6 +31,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.With(auth.RequireAuth).Post("/comments/{id}/like", h.LikeComment)
 	r.With(auth.RequireAuth).Post("/comments/{id}/heart", h.HeartComment)
 	r.With(auth.RequireAuth).Post("/comments/{id}/pin", h.PinComment)
+	r.With(auth.RequireAuth).Post("/comments/{id}/hide", h.HideComment)
 
 	return r
 }
@@ -45,11 +46,27 @@ func (h *Handler) GetComments(w http.ResponseWriter, r *http.Request) {
 		rawList = []*store.Comment{}
 	}
 
+	// Hidden comments stay visible to the channel owner and operators only.
+	canSeeHidden := false
+	if user := identity.GetUserFromContext(r.Context()); user != nil {
+		if video, ok := h.Store.Videos[videoID]; ok {
+			if channel, ok := h.Store.Channels[video.ChannelID]; ok && channel != nil && channel.OwnerID == user.ID {
+				canSeeHidden = true
+			}
+		}
+		if user.Role == "super_admin" || user.Role == "platform_admin" {
+			canSeeHidden = true
+		}
+	}
+
 	// Separate root comments and child replies
 	rootComments := []*store.Comment{}
 	childReplies := make(map[string][]*store.Comment)
 
 	for _, c := range rawList {
+		if c.IsHidden && !canSeeHidden {
+			continue
+		}
 		if c.ParentID == "" {
 			rootComments = append(rootComments, c)
 		} else {
@@ -257,6 +274,39 @@ func (h *Handler) PinComment(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN", "Only video creator can pin comments")
+				return
+			}
+		}
+	}
+	identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Comment not found")
+}
+
+// HideComment toggles comment visibility (channel owner or admin only).
+// Hidden comments stay visible to the owner and operators via GetComments.
+func (h *Handler) HideComment(w http.ResponseWriter, r *http.Request) {
+	commentID := chi.URLParam(r, "id")
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+
+	for _, list := range h.Store.Comments {
+		for _, c := range list {
+			if c.ID == commentID {
+				video, vOk := h.Store.Videos[c.VideoID]
+				if vOk {
+					channel, chOk := h.Store.Channels[video.ChannelID]
+					if chOk && (channel.OwnerID == user.ID || user.Role == "super_admin") {
+						c.IsHidden = !c.IsHidden
+						identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+							"id":        c.ID,
+							"is_hidden": c.IsHidden,
+						})
+						return
+					}
+				}
+				identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN", "Only video creator can hide comments")
 				return
 			}
 		}

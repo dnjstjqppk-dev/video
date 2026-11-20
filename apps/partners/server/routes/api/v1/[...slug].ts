@@ -1,7 +1,7 @@
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
-function assertSameOriginOrCsrfToken(event: Parameters<Parameters<typeof defineEventHandler>[0]>[0]): void {
-  if (SAFE_METHODS.has(event.method)) return
+function csrfRejection(event: Parameters<Parameters<typeof defineEventHandler>[0]>[0]): ReturnType<typeof apiError> | null {
+  if (SAFE_METHODS.has(event.method)) return null
   const host = getRequestHeader(event, 'host') || ''
   const origin = getRequestHeader(event, 'origin') || ''
   const referer = getRequestHeader(event, 'referer') || ''
@@ -17,12 +17,9 @@ function assertSameOriginOrCsrfToken(event: Parameters<Parameters<typeof defineE
   const csrfHeader = getRequestHeader(event, 'x-csrf-token')
   const tokenOk = !!csrfCookie && !!csrfHeader && csrfCookie === csrfHeader
   if (!originOk && !tokenOk) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'CSRF validation failed',
-      data: { error: { code: 'CSRF_VALIDATION_FAILED', message: 'Cross-site request rejected' } }
-    })
+    return apiError(event, 403, 'CSRF_VALIDATION_FAILED', 'Cross-site request rejected', 'CSRF validation failed')
   }
+  return null
 }
 
 export default defineEventHandler(async (event) => {
@@ -31,7 +28,8 @@ export default defineEventHandler(async (event) => {
   const target = `${upstream}${event.path.replace(/^\/api/, '')}`
 
   // Mutations require same-origin proof or a double-submit CSRF token.
-  assertSameOriginOrCsrfToken(event)
+  const csrfErr = csrfRejection(event)
+  if (csrfErr) return csrfErr
 
   // Inject the httpOnly session token so browser JS never handles credentials.
   if (!getRequestHeader(event, 'authorization')) {

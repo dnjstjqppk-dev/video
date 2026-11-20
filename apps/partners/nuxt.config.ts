@@ -9,8 +9,7 @@ export default defineNuxtConfig({
     host: '0.0.0.0'
   },
   modules: [
-    '@nuxtjs/tailwindcss',
-    '@pinia/nuxt'
+    '@nuxtjs/tailwindcss'
   ],
   css: ['@gvp/design-tokens/src/gvp.css'],
   runtimeConfig: {

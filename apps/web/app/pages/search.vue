@@ -153,8 +153,9 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
               {{ formatViewCount(video.viewCount, appStore.locale) }} · {{ formatRelativeTime(video.publishedAt || video.createdAt, appStore.locale) }}
             </p>
             <NuxtLink :to="`/channels/${video.channelId}`" class="mt-3 flex items-center gap-2 text-xs text-[var(--gvp-text)]">
-              <img :src="video.channel?.avatarUrl" :alt="video.channel?.name" class="h-6 w-6 rounded-full object-cover" loading="lazy" />
-              <span class="font-medium">{{ video.channel?.name }}</span>
+              <img v-if="video.channel?.avatarUrl" :src="video.channel.avatarUrl" :alt="video.channel?.name" class="h-6 w-6 rounded-full object-cover" loading="lazy" />
+              <span v-else class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--gvp-elevated)] text-[10px] font-bold text-[var(--gvp-text-secondary)]" aria-hidden="true">{{ (video.channel?.name || '?').charAt(0) }}</span>
+              <span class="font-medium">{{ video.channel?.name || '알 수 없는 채널' }}</span>
               <svg v-if="video.channel?.isVerified" class="h-3.5 w-3.5 shrink-0 text-[var(--gvp-text-secondary)]" fill="currentColor" viewBox="0 0 24 24" aria-label="인증된 채널"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
             </NuxtLink>
             <p class="mt-2 line-clamp-2 text-xs text-[var(--gvp-text-secondary)]">

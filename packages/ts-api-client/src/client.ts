@@ -505,6 +505,11 @@ export class ApiClient {
     return { isPinned: Boolean(raw.is_pinned ?? raw.isPinned) };
   }
 
+  async hideComment(commentId: string): Promise<{ isHidden: boolean }> {
+    const raw = await this.request<{ is_hidden?: boolean; isHidden?: boolean }>(`/v1/comments/${commentId}/hide`, { method: 'POST' });
+    return { isHidden: Boolean(raw.is_hidden ?? raw.isHidden) };
+  }
+
   // --- Playlists ---
   async createPlaylist(data: { title: string; description?: string; visibility?: string }): Promise<Playlist> {
     return this.request('/v1/playlists', {
@@ -522,6 +527,15 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ videoId }),
     });
+  }
+
+  async listMyPlaylists(): Promise<Playlist[]> {
+    const raw = await this.request<{ items?: unknown[] }>('/v1/playlists');
+    return ((raw as { items?: unknown[] }).items || []) as Playlist[];
+  }
+
+  async deletePlaylist(id: string): Promise<void> {
+    await this.request(`/v1/playlists/${id}`, { method: 'DELETE' });
   }
 
   // --- Live Streams ---
@@ -546,6 +560,13 @@ export class ApiClient {
   async startLiveStream(id: string): Promise<LiveStream> {
     const raw = await this.request<unknown>(`/v1/live-streams/${id}/start`, { method: 'POST' });
     return mapLiveStream(raw);
+  }
+
+  async voteLivePoll(id: string, optionIndex: number): Promise<unknown> {
+    return this.request<unknown>(`/v1/live-streams/${id}/polls/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ option_index: optionIndex }),
+    });
   }
 
   async getActiveLivePoll(id: string): Promise<{ question: string; options: Array<{ text: string; votes: number }>; totalVotes: number } | null> {
@@ -793,6 +814,14 @@ export class ApiClient {
     return mapPartnerContract(raw);
   }
 
+  async createPartnerContract(data: { channelId: string; creatorSplitPct?: number; validUntil?: string }): Promise<PartnerContract> {
+    const raw = await this.request<unknown>('/v1/partners/contracts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapPartnerContract(raw);
+  }
+
   async getStudioClaims(): Promise<CopyrightClaim[]> {
     const raw = await this.request<{ items: unknown[]; total: number }>('/v1/studio/claims');
     return (raw.items || []).map(mapCopyrightClaim);
@@ -814,6 +843,14 @@ export class ApiClient {
   async createCopyrightClaim(data: { videoId: string; assetId: string; action: string }): Promise<CopyrightClaim> {
     const raw = await this.request<unknown>('/v1/partners/rights/claims', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapCopyrightClaim(raw);
+  }
+
+  async updateCopyrightClaim(id: string, data: { action: string }): Promise<CopyrightClaim> {
+    const raw = await this.request<unknown>(`/v1/partners/rights/claims/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
     return mapCopyrightClaim(raw);

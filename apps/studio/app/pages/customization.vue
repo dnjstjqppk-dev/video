@@ -41,9 +41,15 @@ watch(data, (ch) => {
 
 async function saveCustomization() {
   if (!channelId.value || saving.value) return
-  saving.value = true
   saveSuccess.value = false
   saveError.value = null
+  // The API treats empty as unchanged (PATCH semantics): say so instead of
+  // reporting a success that changed nothing.
+  if (!channelName.value.trim()) {
+    saveError.value = '채널 이름을 입력하세요. (비워 두면 기존 이름이 유지됩니다)'
+    return
+  }
+  saving.value = true
   try {
     const updated = await api.updateChannel(channelId.value, {
       name: channelName.value.trim(),

@@ -16,6 +16,16 @@ const activeOrg = useState<{ id: string; name: string; type: string }>('partner-
   type: ''
 }))
 
+// The layout owns org resolution (awaited, SSR + client consistent): pages
+// must not populate layout state from their own async setup, because the
+// layout renders before an async page resolves, which both hides the org on
+// SSR and triggers hydration mismatches. Pages reuse the 'partner-overview'
+// key without refetching.
+const { data: orgOverview } = await useAsyncData('partner-overview', () => api.getPartnerOverview().catch(() => null))
+if (orgOverview.value?.organization) {
+  activeOrg.value = { ...orgOverview.value.organization }
+}
+
 onMounted(async () => {
   if (sessionUser.value) return
   try {

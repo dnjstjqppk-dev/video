@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import type { CopyrightClaim } from '@gvp/shared-types'
+import type { CopyrightClaim, UserProfile } from '@gvp/shared-types'
 import { CopyrightClaimAction, CopyrightClaimStatus } from '@gvp/shared-types'
 import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = usePartnerApi()
+const sessionUser = useState<UserProfile | null>('partner-session', () => null)
+
+// Policy changes are reporter-or-operator only (mirrors the API guard);
+// everyone else keeps read-only visibility into their own disputes.
+function canManageClaim(claim: CopyrightClaim): boolean {
+  const user = sessionUser.value
+  if (!user) return false
+  if (claim.rightsOwnerId && claim.rightsOwnerId === user.id) return true
+  return ['super_admin', 'platform_admin', 'moderator'].includes(user.role)
+}
 
 useSeoMeta({
   title: 'Rights Owner Console — SHA-256 Fingerprints & Content ID Claims'
@@ -11,7 +21,7 @@ useSeoMeta({
 
 const claimError = ref<string | null>(null)
 
-const { data: claimsData, pending: claimsPending, error: claimsError } = await useAsyncData('partner-claims', async () => {
+const { data: claimsData, pending: claimsPending, error: claimsError, refresh: refreshClaims } = await useAsyncData('partner-claims', async () => {
   return await api.getPartnerClaims()
 })
 
@@ -20,13 +30,8 @@ const claims = computed(() => claimsData.value || [])
 async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAction) {
   claimError.value = null
   try {
-    const updated = await api.createCopyrightClaim({
-      videoId: claim.claimedVideoId,
-      assetId: claim.assetId,
-      action
-    })
-    claim.claimAction = updated.claimAction
-    claim.status = updated.status
+    await api.updateCopyrightClaim(claim.id, { action })
+    await refreshClaims()
   } catch (e: unknown) {
     claimError.value = e instanceof Error ? e.message : '클레임 처리에 실패했습니다.'
   }
@@ -97,7 +102,7 @@ async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAc
             </p>
           </div>
 
-          <div class="mt-4 flex flex-wrap gap-2">
+          <div v-if="canManageClaim(claim)" class="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
               class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-white bg-[var(--gvp-brand)] rounded-md hover:bg-[var(--gvp-brand-hover)] transition-colors"
@@ -120,6 +125,9 @@ async function updateClaimAction(claim: CopyrightClaim, action: CopyrightClaimAc
               Enforce Block Worldwide
             </button>
           </div>
+          <p v-else class="mt-4 text-xs text-[var(--gvp-text-secondary)]">
+            정책 변경은 신고한 권리자 또는 운영자만 가능합니다. (읽기 전용으로 보고 있습니다)
+          </p>
         </div>
       </div>
     </div>

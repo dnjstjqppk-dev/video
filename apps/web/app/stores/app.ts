@@ -52,6 +52,12 @@ export const useAppStore = defineStore('gvp-web-app', () => {
 
   async function fetchMyChannel(api: ApiClient) {
     if (myChannelId.value || !currentUser.value) return myChannelId.value
+    // Roles without a personal channel skip the lookup instead of
+    // logging a 404 every session.
+    if (['viewer', 'registered_user', 'advertiser'].includes(currentUser.value.role)) {
+      myChannelId.value = null
+      return myChannelId.value
+    }
     try {
       const dash = await api.getStudioDashboard()
       myChannelId.value = dash.channel?.id || null

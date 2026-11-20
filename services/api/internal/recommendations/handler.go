@@ -140,25 +140,69 @@ func (h *Handler) Feedback(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusOK, map[string]string{"status": "recorded"})
 }
 
+// searchScore ranks a document against query words: title hits weigh most,
+// description/tags add recall, and matching every word earns a bonus so
+// precise queries float to the top. Zero means no word matched.
+func searchScore(words []string, title, description, tags string) int {
+	score := 0
+	all := true
+	for _, w := range words {
+		hit := false
+		if strings.Contains(title, w) {
+			score += 3
+			hit = true
+		}
+		if strings.Contains(description, w) {
+			score += 1
+			hit = true
+		}
+		if tags != "" && strings.Contains(tags, w) {
+			score += 1
+			hit = true
+		}
+		if !hit {
+			all = false
+		}
+	}
+	if all && len(words) > 0 {
+		score += len(words)
+	}
+	return score
+}
+
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(r.URL.Query().Get("q"))
 	page, limit := identity.ParsePagination(r, 20)
 	user := identity.GetUserFromContext(r.Context())
+	type scoredVideo struct {
+		v     *store.Video
+		score int
+	}
 	var matchedVideos []*store.Video
 	var matchedChannels []*store.Channel
 
 	if query != "" {
+		words := strings.Fields(query)
+		var scored []scoredVideo
 		for _, v := range h.Store.Videos {
 			if !videos.SearchVisible(user, v, h.Store.Channels) {
 				continue
 			}
-			if strings.Contains(strings.ToLower(v.Title), query) || strings.Contains(strings.ToLower(v.Description), query) {
-				matchedVideos = append(matchedVideos, v)
+			tags := ""
+			if len(v.Tags) > 0 {
+				tags = strings.ToLower(strings.Join(v.Tags, " "))
 			}
+			if s := searchScore(words, strings.ToLower(v.Title), strings.ToLower(v.Description), tags); s > 0 {
+				scored = append(scored, scoredVideo{v, s})
+			}
+		}
+		sort.SliceStable(scored, func(i, j int) bool { return scored[i].score > scored[j].score })
+		for _, s := range scored {
+			matchedVideos = append(matchedVideos, s.v)
 		}
 
 		for _, c := range h.Store.Channels {
-			if strings.Contains(strings.ToLower(c.Name), query) || strings.Contains(strings.ToLower(c.Handle), query) {
+			if searchScore(words, strings.ToLower(c.Name)+" "+strings.ToLower(c.Handle), "", "") > 0 {
 				matchedChannels = append(matchedChannels, c)
 			}
 		}

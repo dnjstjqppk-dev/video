@@ -35,6 +35,10 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 	for _, v := range videos {
 		s.Videos[v.ID] = v
 	}
+	// Persisted video rows are normalized (no channel columns), so re-attach
+	// denormalized channel identity after the overlay, or feeds, search, and
+	// playback lose channel names and avatars for every hydrated video.
+	s.EnrichVideoChannels()
 	series, err := s.DB.LoadSeries(ctx)
 	if err != nil {
 		return fmt.Errorf("hydrate series: %w", err)
@@ -69,4 +73,24 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 		"transactions", len(txs), "jobs", len(jobs),
 		"hourly_buckets", len(buckets))
 	return nil
+}
+
+// EnrichVideoChannels fills denormalized channel fields on every video from
+// the channel map. Videos whose channel is unknown are left untouched.
+func (s *MemoryStore) EnrichVideoChannels() {
+	for _, v := range s.Videos {
+		if v == nil {
+			continue
+		}
+		ch, ok := s.Channels[v.ChannelID]
+		if !ok || ch == nil {
+			continue
+		}
+		v.ChannelName = ch.Name
+		v.ChannelHandle = ch.Handle
+		v.ChannelAvatar = ch.AvatarURL
+		v.ChannelSubscriberCount = ch.SubscriberCount
+		v.ChannelVideoCount = ch.VideoCount
+		v.ChannelIsVerified = ch.IsVerified
+	}
 }

@@ -5,6 +5,6 @@ export default defineEventHandler(async (event) => {
     return await proxyRequest(event, `${upstream}/ready`, { fetchOptions: { redirect: 'manual' } })
   } catch (err: unknown) {
     const e = err as { response?: { status?: number } }
-    throw createError({ statusCode: e?.response?.status || 502, statusMessage: 'API readiness check failed' })
+    return apiError(event, e?.response?.status || 502, 'API_NOT_READY', 'API readiness check failed')
   }
 })

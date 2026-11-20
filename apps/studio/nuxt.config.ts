@@ -9,8 +9,7 @@ export default defineNuxtConfig({
     host: '0.0.0.0'
   },
   modules: [
-    '@nuxtjs/tailwindcss',
-    '@pinia/nuxt'
+    '@nuxtjs/tailwindcss'
   ],
   css: ['@gvp/design-tokens/src/gvp.css'],
   runtimeConfig: {
@@ -22,7 +21,7 @@ export default defineNuxtConfig({
     },
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
-      wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || '',
+      wsBaseUrl: process.env.NUXT_PUBLIC_WS_BASE_URL || 'ws://127.0.0.1:18092',
       webUrl: process.env.NUXT_PUBLIC_WEB_URL || 'https://global-video-platform.dnjstjq0824.workers.dev',
       partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjq0824.workers.dev',
       adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjq0824.workers.dev',

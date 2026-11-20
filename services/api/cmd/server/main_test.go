@@ -114,10 +114,10 @@ func TestUploadSessionStudioAndPartnerClaims(t *testing.T) {
 		t.Fatalf("expected 200 for studio dashboard, got %d", rec.Code)
 	}
 
-	// 3. Partner Claims
+	// 3. Partner Claims (filing requires a rights-holder role or operator)
 	claimBody := []byte(`{"videoId":"00000000-0000-0000-0000-000000000001","assetId":"asset-99","action":"monetize"}`)
 	req = httptest.NewRequest(http.MethodPost, "/v1/partners/rights/claims", bytes.NewReader(claimBody))
-	req.Header.Set("Authorization", "Bearer creator-token")
+	req.Header.Set("Authorization", "Bearer admin-token")
 	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

@@ -38,6 +38,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Get("/claims", h.ListClaims)
 	r.Get("/claims/{id}", h.GetClaim)
 	r.Post("/claims", h.CreateClaim)
+	r.Patch("/claims/{id}", h.UpdateClaimAction)
 	r.Post("/claims/{id}/dispute", h.DisputeClaim)
 	r.Post("/claims/{id}/resolve", h.ResolveClaim)
 	r.Post("/claims/dmca-takedown", h.SubmitDMCATakedown)
@@ -339,10 +340,23 @@ func (h *Handler) ListClaims(w http.ResponseWriter, r *http.Request) {
 	identity.WriteJSON(w, http.StatusOK, list)
 }
 
+func validClaimAction(action string) bool {
+	switch action {
+	case "monetize", "track", "block":
+		return true
+	default:
+		return false
+	}
+}
+
 func (h *Handler) CreateClaim(w http.ResponseWriter, r *http.Request) {
 	user := identity.GetUserFromContext(r.Context())
 	if user == nil {
 		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+	if !isRightsRole(user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_ROLE", "Filing claims requires a rights-holder role")
 		return
 	}
 	var payload struct {
@@ -353,6 +367,14 @@ func (h *Handler) CreateClaim(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid copyright claim")
+		return
+	}
+	if !validClaimAction(payload.Action) {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Action must be monetize, track, or block")
+		return
+	}
+	if _, ok := h.Store.Videos[payload.VideoID]; !ok {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Claimed video not found")
 		return
 	}
 
@@ -370,4 +392,34 @@ func (h *Handler) CreateClaim(w http.ResponseWriter, r *http.Request) {
 
 	h.Store.Claims[claim.ID] = claim
 	identity.WriteJSON(w, http.StatusCreated, claim)
+}
+
+// UpdateClaimAction changes a claim's enforcement policy in place. Only the
+// reporting rights holder or an operator may do so; everyone else keeps
+// read-only visibility through claimVisible.
+func (h *Handler) UpdateClaimAction(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if user == nil {
+		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	claim, ok := h.Store.Claims[id]
+	if !ok {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Copyright claim not found")
+		return
+	}
+	if claim.ReporterUserID != user.ID && !isOperator(user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Only the reporting rights holder or an operator can change policy")
+		return
+	}
+	var payload struct {
+		Action string `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || !validClaimAction(payload.Action) {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Action must be monetize, track, or block")
+		return
+	}
+	claim.ClaimAction = payload.Action
+	identity.WriteJSON(w, http.StatusOK, claim)
 }

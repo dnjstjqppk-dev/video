@@ -14,6 +14,11 @@ export default {
     }
     const url = new URL(request.url);
     const target = upstream + url.pathname + url.search;
+    // WebSocket upgrade passthrough (live chat): forward the request as-is
+    // so the 101 Switching Protocols handshake reaches the API hub.
+    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+      return fetch(new Request(target, request));
+    }
     const headers = new Headers(request.headers);
     headers.set('Host', new URL(upstream).host);
     headers.set('X-Forwarded-Proto', 'https');

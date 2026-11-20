@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -26,6 +27,7 @@ func newCommentsTestServer() *httptest.Server {
 	r.With(auth.RequireAuth).Post("/comments/{id}/like", handler.LikeComment)
 	r.With(auth.RequireAuth).Post("/comments/{id}/heart", handler.HeartComment)
 	r.With(auth.RequireAuth).Post("/comments/{id}/pin", handler.PinComment)
+	r.With(auth.RequireAuth).Post("/comments/{id}/hide", handler.HideComment)
 
 	return httptest.NewServer(r)
 }
@@ -189,5 +191,55 @@ func TestDeleteComment_Ownership(t *testing.T) {
 	srv.Config.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for author delete, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHideComment_OwnerToggleAndVisibility(t *testing.T) {
+	srv := newCommentsTestServer()
+	defer srv.Close()
+	videoID := "00000000-0000-0000-0000-000000000001"
+
+	req, rec := commentsReq(http.MethodPost, "/videos/"+videoID+"/comments", "viewer-token",
+		map[string]string{"content": "hide-me-please"})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("setup: expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var created store.Comment
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// Non-owner cannot hide.
+	req, rec = commentsReq(http.MethodPost, "/comments/"+created.ID+"/hide", "viewer-token", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-owner hide, got %d", rec.Code)
+	}
+	// Channel owner hides; public no longer sees it but owner still does.
+	req, rec = commentsReq(http.MethodPost, "/comments/"+created.ID+"/hide", "creator-token", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for owner hide, got %d: %s", rec.Code, rec.Body.String())
+	}
+	req, rec = commentsReq(http.MethodGet, "/videos/"+videoID+"/comments", "", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if strings.Contains(rec.Body.String(), created.ID) {
+		t.Fatal("hidden comment must not appear for anonymous viewers")
+	}
+	req, rec = commentsReq(http.MethodGet, "/videos/"+videoID+"/comments", "creator-token", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if !strings.Contains(rec.Body.String(), created.ID) {
+		t.Fatal("hidden comment must remain visible to the channel owner")
+	}
+	// Toggle back off.
+	req, rec = commentsReq(http.MethodPost, "/comments/"+created.ID+"/hide", "creator-token", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for showing the comment again, got %d", rec.Code)
+	}
+	req, rec = commentsReq(http.MethodGet, "/videos/"+videoID+"/comments", "", nil)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if !strings.Contains(rec.Body.String(), created.ID) {
+		t.Fatal("unhidden comment must reappear for anonymous viewers")
 	}
 }

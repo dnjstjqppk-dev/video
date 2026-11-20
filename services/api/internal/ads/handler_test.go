@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"globalvideoplatform/services/api/internal/identity"
@@ -49,5 +50,33 @@ func TestAdDecisionAndCampaignRoutes(t *testing.T) {
 	router.ServeHTTP(rec3, req3)
 	if rec3.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK from /campaigns for advertiser, got %d", rec3.Code)
+	}
+}
+
+func TestCreateCampaign_RejectsNegativeBudgets(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+
+	s := store.NewMemoryStore()
+	h := NewHandler(s)
+	auth := identity.NewAuthMiddleware(s)
+	router := auth.Authenticate(h.Routes(auth))
+	tok := "advertiser" + "-token"
+	post := func(body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/campaigns", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+tok)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	if rec := post(`{"name":""}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty name, got %d", rec.Code)
+	}
+	if rec := post(`{"name":"x","dailyBudget":-5}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for negative budget, got %d", rec.Code)
+	}
+	if rec := post(`{"name":"x","totalBudget":100,"dailyBudget":10,"cpmBidCents":5,"cpcBidCents":1}`); rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for valid campaign, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

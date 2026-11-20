@@ -215,6 +215,7 @@ export interface Comment {
   replyCount: number;
   isPinned: boolean;
   isHeartedByCreator: boolean;
+  isHidden?: boolean;
   isChannelOwner?: boolean;
   parentId?: string;
   replies?: Comment[];

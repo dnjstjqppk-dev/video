@@ -156,3 +156,88 @@ func TestDMCATakedownAndCounterNoticeWorkflow(t *testing.T) {
 		t.Fatalf("expected 200 for counter-notice, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestCreateClaim_RequiresRightsRole(t *testing.T) {
+	srv, _ := newCopyrightTestServer()
+	defer srv.Close()
+	body := map[string]string{
+		"videoId": "00000000-0000-0000-0000-000000000001",
+		"assetId": "asset-x",
+		"action":  "block",
+	}
+	for _, token := range []string{"creator-token", "viewer-token"} {
+		req, rec := copyReq(http.MethodPost, "/copyright/claims", token, body)
+		srv.Config.Handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("expected 403 for %s filing a claim, got %d", token, rec.Code)
+		}
+	}
+	req, rec := copyReq(http.MethodPost, "/copyright/claims", "admin-token", body)
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for operator filing a claim, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreateClaim_ValidatesPayload(t *testing.T) {
+	srv, _ := newCopyrightTestServer()
+	defer srv.Close()
+	req, rec := copyReq(http.MethodPost, "/copyright/claims", "admin-token", map[string]string{
+		"videoId": "99999999-9999-9999-9999-999999999999",
+		"action":  "block",
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown video, got %d", rec.Code)
+	}
+	req, rec = copyReq(http.MethodPost, "/copyright/claims", "admin-token", map[string]string{
+		"videoId": "00000000-0000-0000-0000-000000000001",
+		"action":  "nuke",
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad action, got %d", rec.Code)
+	}
+}
+
+func TestUpdateClaimAction_AuthzAndUpdate(t *testing.T) {
+	srv, memStore := newCopyrightTestServer()
+	defer srv.Close()
+	req, rec := copyReq(http.MethodPost, "/copyright/claims", "admin-token", map[string]string{
+		"videoId": "00000000-0000-0000-0000-000000000001",
+		"action":  "track",
+	})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("setup: expected 201, got %d", rec.Code)
+	}
+	var created store.CopyrightClaim
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode created claim: %v", err)
+	}
+	// Claimed channel owner can read but not change policy.
+	req, rec = copyReq(http.MethodPatch, "/copyright/claims/"+created.ID, "creator-token",
+		map[string]string{"action": "block"})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-reporter policy change, got %d", rec.Code)
+	}
+	req, rec = copyReq(http.MethodPatch, "/copyright/claims/"+created.ID, "admin-token",
+		map[string]string{"action": "explode"})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad action, got %d", rec.Code)
+	}
+	req, rec = copyReq(http.MethodPatch, "/copyright/claims/"+created.ID, "admin-token",
+		map[string]string{"action": "block"})
+	srv.Config.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for reporter policy change, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if memStore.Claims[created.ID].ClaimAction != "block" {
+		t.Fatalf("claim action = %q, want block", memStore.Claims[created.ID].ClaimAction)
+	}
+	if len(memStore.Claims) != 2 {
+		t.Fatalf("policy change must update in place, claims = %d", len(memStore.Claims))
+	}
+}

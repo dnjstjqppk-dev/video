@@ -137,6 +137,7 @@ type Comment struct {
 	ReplyCount     int        `json:"reply_count"`
 	IsPinned       bool       `json:"is_pinned"`
 	IsHearted      bool       `json:"is_hearted"`
+	IsHidden       bool       `json:"is_hidden"`
 	IsChannelOwner bool       `json:"is_channel_owner"`
 	ParentID       string     `json:"parent_id,omitempty"`
 	Replies        []*Comment `json:"replies,omitempty"`
@@ -752,8 +753,8 @@ func (s *MemoryStore) seedDefaults() {
 			{ID: "c4", Title: "Adaptive Bitrate with Shaka", StartTimeSeconds: 580, EndTimeSeconds: 754},
 		},
 		Captions: []VideoCaption{
-			{ID: "cap1", Language: "ko", Label: "한국어", VttURL: "https://example.com/ko.vtt"},
-			{ID: "cap2", Language: "en", Label: "English", VttURL: "https://example.com/en.vtt"},
+			{ID: "cap1", Language: "ko", Label: "한국어", VttURL: "data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A10.000%0A%EB%8D%B0%EB%AA%A8%20%EC%9E%90%EB%A7%89%EC%9E%85%EB%8B%88%EB%8B%A4"},
+			{ID: "cap2", Language: "en", Label: "English", VttURL: "data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A10.000%0ADemo%20subtitle"},
 		},
 		PublishedAt: now.Add(-72 * time.Hour),
 		CreatedAt:   now.Add(-72 * time.Hour),

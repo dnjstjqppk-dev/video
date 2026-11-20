@@ -15,9 +15,9 @@ const rtmpsUrl = ref('rtmps://ingest.gvp.media:443/live')
 const srtUrl = ref('srt://ingest.gvp.media:9000?streamid=live_main_01&latency=120')
 const streamKey = ref('sk_live_kr_98a7bc65d4e3f210_secret')
 const showStreamKey = ref(false)
+const rotateError = ref<string | null>(null)
 const dvrEnabled = ref(true)
 const lowLatencyMode = ref<'ultra_low' | 'normal'>('ultra_low')
-const slowModeSeconds = ref(5)
 const liveViewers = ref(14820)
 const copyToast = ref('')
 
@@ -40,7 +40,8 @@ let ws: WebSocket | null = null
 
 onMounted(() => {
   try {
-    const wsUrl = `${config.public.wsBaseUrl || 'ws://localhost:8080'}/v1/live-streams/${streamId.value}/ws`
+    // Chat hub lives in the API itself; :8080 belongs to another process.
+    const wsUrl = `${config.public.wsBaseUrl || 'ws://127.0.0.1:18092'}/v1/live-streams/${streamId.value}/ws`
     ws = new WebSocket(wsUrl)
     ws.onmessage = (event) => {
       try {
@@ -89,11 +90,13 @@ function copyToClipboard(text: string, label: string) {
 }
 
 async function rotateKey() {
+  rotateError.value = null
   try {
     const res = await api.rotateLiveStreamKey(streamId.value)
     streamKey.value = res.streamKey
-  } catch {
-    streamKey.value = `sk_live_kr_${Math.random().toString(36).slice(2, 14)}_rotated`
+  } catch (e: unknown) {
+    // Never fabricate a key: a failed rotation must stay visible.
+    rotateError.value = e instanceof Error ? e.message : '키 재발급에 실패했습니다. 인제스트가 프로비저닝되지 않았습니다.'
   }
 }
 
@@ -265,6 +268,9 @@ async function toggleBroadcast() {
               Rotate Key
             </button>
           </div>
+          <p v-if="rotateError" role="alert" class="mt-2 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-3 py-2 text-xs font-medium text-[var(--gvp-live)]">
+            {{ rotateError }}
+          </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-6 border-t border-[var(--gvp-border)] pt-4 text-xs">
@@ -290,7 +296,7 @@ async function toggleBroadcast() {
       <div class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5">
         <div class="flex items-center justify-between border-b border-[var(--gvp-border)] pb-3">
           <h2 class="text-sm font-semibold text-[var(--gvp-text)]">실시간 채팅 모더레이션</h2>
-          <span class="text-xs text-[var(--gvp-text-secondary)] tabular-nums">Slow Mode: {{ slowModeSeconds }}s</span>
+          <span class="text-xs text-[var(--gvp-text-secondary)] tabular-nums">Slow Mode: off (API 미지원)</span>
         </div>
 
         <div class="mt-4 max-h-[380px] space-y-2.5 overflow-y-auto text-xs">

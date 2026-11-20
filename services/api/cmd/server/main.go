@@ -177,6 +177,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/like", commH.LikeComment)
 		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/heart", commH.HeartComment)
 		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/pin", commH.PinComment)
+		v1.With(authMiddleware.RequireAuth).Post("/comments/{id}/hide", commH.HideComment)
 
 		// Uploads
 		v1.Mount("/uploads", uploadH.Routes(authMiddleware))
@@ -210,7 +211,8 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		v1.With(authMiddleware.RequireAuth).Get("/partners/settlements/earnings-summary", settleH.GetEarnings)
 		v1.With(authMiddleware.RequireAuth).Post("/partners/settlements/payout", settleH.RequestPayout)
 		v1.With(authMiddleware.RequireAuth).Get("/partners/rights/claims", copyH.ListClaims)
-		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/claims", copyH.CreateClaim)
+		v1.With(authMiddleware.RequireRole("rights_holder", "rights_owner", "partner_manager", "mcn_manager", "partner_admin", "super_admin", "platform_admin", "moderator")).Post("/partners/rights/claims", copyH.CreateClaim)
+		v1.With(authMiddleware.RequireAuth).Patch("/partners/rights/claims/{id}", copyH.UpdateClaimAction)
 		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/claims/{id}/dispute", copyH.DisputeClaim)
 		v1.With(authMiddleware.RequireRole("super_admin", "platform_admin", "moderator")).Post("/partners/rights/claims/{id}/resolve", copyH.ResolveClaim)
 		v1.With(authMiddleware.RequireAuth).Post("/partners/rights/dmca-takedown", copyH.SubmitDMCATakedown)

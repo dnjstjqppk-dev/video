@@ -396,18 +396,21 @@ async function initShakaPlayer() {
 
   // Signed playback token: lets Shaka fetch gated HLS through the
   // gateway without Authorization headers (falls back to the bare URL).
+  // Live pages pass a stream id, not a video id: skip the VOD lookup there.
   let streamUrl = props.hlsMasterUrl
   let drmKeys: Record<string, string> | null = null
-  try {
-    const pb = await api.getPlaybackInfo(props.videoId)
-    if (pb.playbackToken && streamUrl) {
-      streamUrl += (streamUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(pb.playbackToken)
+  if (!props.isLive) {
+    try {
+      const pb = await api.getPlaybackInfo(props.videoId)
+      if (pb.playbackToken && streamUrl) {
+        streamUrl += (streamUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(pb.playbackToken)
+      }
+      if (pb.drm?.keyId && pb.drm?.key) {
+        drmKeys = { [pb.drm.keyId]: pb.drm.key }
+      }
+    } catch {
+      // Public content or offline playback info: use the bare URL.
     }
-    if (pb.drm?.keyId && pb.drm?.key) {
-      drmKeys = { [pb.drm.keyId]: pb.drm.key }
-    }
-  } catch {
-    // Public content or offline playback info: use the bare URL.
   }
 
   try {

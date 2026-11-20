@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { LiveChatMessage } from '@gvp/shared-types'
+import { hasLoginCookie } from '@gvp/ts-api-client'
 import { useAppStore } from '~/stores/app'
 
 const route = useRoute()
@@ -7,6 +8,10 @@ const streamId = computed(() => String(route.params.id || 'live_main_01'))
 const appStore = useAppStore()
 const api = useApi()
 const config = useRuntimeConfig()
+
+const { data: stream, pending: streamPending, error: streamError } = await useAsyncData(`live-${streamId.value}`, async () => {
+  return await api.getLiveStream(streamId.value)
+})
 
 useSeoMeta({
   title: () => `[LIVE] ${streamId.value} — vravra`,
@@ -38,11 +43,7 @@ async function voteInLivePoll(idx: number) {
   if (!opt) return
   pollError.value = null
   try {
-    const apiBase = config.public.apiBaseUrl || 'http://localhost:8080'
-    await $fetch(`${apiBase}/v1/live-streams/${streamId.value}/polls/vote`, {
-      method: 'POST',
-      body: { option_index: idx },
-    })
+    await api.voteLivePoll(streamId.value, idx)
     activePoll.value.userVotedIndex = idx
     opt.votes += 1
     activePoll.value.totalVotes += 1
@@ -83,7 +84,8 @@ function scheduleReconnect() {
 
 function connectLiveChatSocket() {
   try {
-    const wsBase = config.public.wsBaseUrl || 'ws://localhost:8080'
+    // Chat hub lives in the API itself; :8080 belongs to another process.
+    const wsBase = config.public.wsBaseUrl || 'ws://127.0.0.1:18092'
     const userQuery = `userId=${encodeURIComponent(appStore.currentUser?.id || 'usr_demo_01')}&displayName=${encodeURIComponent(appStore.currentUser?.displayName || '김민준')}`
     const wsUrl = `${wsBase}/v1/live-streams/${streamId.value}/ws?${userQuery}`
     ws = new WebSocket(wsUrl)
@@ -194,8 +196,30 @@ function sendChatMessage() {
   superChatAmount.value = 0
 }
 
-onMounted(async () => {
+let chatStarted = false
+function startChatOnce() {
+  if (chatStarted) return
+  chatStarted = true
   connectLiveChatSocket()
+}
+
+onMounted(async () => {
+  // Wait for the session when logged in so the first frame carries the
+  // real user instead of the demo fallback (anonymous starts at once).
+  if (!hasLoginCookie() || appStore.currentUser) {
+    startChatOnce()
+  } else {
+    const stop = watch(() => appStore.currentUser, (u) => {
+      if (u) {
+        stop()
+        startChatOnce()
+      }
+    })
+    setTimeout(() => {
+      stop()
+      startChatOnce()
+    }, 5000)
+  }
   try {
     const poll = await api.getActiveLivePoll(streamId.value)
     if (poll) {
@@ -215,16 +239,27 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mx-auto max-w-[1720px] bg-[var(--gvp-surface)] px-4 py-5 text-[var(--gvp-text)] lg:px-8">
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <div v-if="streamPending" class="grid grid-cols-1 gap-6 xl:grid-cols-12" aria-label="로딩 중">
+      <div class="aspect-video animate-pulse rounded-lg bg-[var(--gvp-elevated)] xl:col-span-8" />
+      <div class="h-[640px] animate-pulse rounded-lg bg-[var(--gvp-elevated)] xl:col-span-4" />
+    </div>
+    <div v-else-if="streamError || !stream" class="mx-auto max-w-xl rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-10 text-center">
+      <h1 class="text-lg font-bold text-[var(--gvp-text)]">방송을 찾을 수 없습니다</h1>
+      <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">종료되었거나 존재하지 않는 방송입니다.</p>
+      <NuxtLink to="/" class="mt-6 inline-block rounded-md bg-[var(--gvp-brand)] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]">
+        홈으로 돌아가기
+      </NuxtLink>
+    </div>
+    <div v-else class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <!-- Live HLS Player + Info -->
       <div class="xl:col-span-8">
         <ClientOnly>
           <VideoPlayer
             :video-id="streamId"
-            channel-id="ch_tech_kr"
-            title="[LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A"
-            hls-master-url="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-            poster-url="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80"
+            :channel-id="stream.channelId"
+            :title="stream.title"
+            :hls-master-url="stream.playbackUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'"
+            :poster-url="stream.thumbnailUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80'"
             :is-live="true"
           />
         </ClientOnly>
@@ -241,13 +276,10 @@ onBeforeUnmount(() => {
               <span v-else class="text-xs font-semibold text-[var(--gvp-text-secondary)]">
                 시청자 수 집계 중
               </span>
-              <span class="rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--gvp-success)] tabular-nums">
-                6.8 Mbps · 60 fps · 2.0s GOP · 0% Loss
-              </span>
-              <span class="text-xs text-[var(--gvp-text-secondary)]">· RTMPS Ingest → LL-HLS Edge</span>
+              <span class="text-xs text-[var(--gvp-text-secondary)]">· {{ stream.status === 'live' ? 'LIVE' : stream.status }}</span>
             </div>
             <h1 class="mt-2 text-lg font-bold text-[var(--gvp-text)]">
-              [LIVE] 2026 Global Architecture Summit — Keynote & Live Q&A
+              {{ stream.title }}
             </h1>
           </div>
           <div class="flex items-center gap-2">
@@ -263,10 +295,10 @@ onBeforeUnmount(() => {
               <span>라이브 관제실 (Studio Live Room)</span>
             </a>
             <NuxtLink
-              to="/channels/ch_tech_kr"
+              :to="`/channels/${stream.channelId}`"
               class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-4 py-2 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
             >
-              GVP Tech Engineering
+              채널 보기
             </NuxtLink>
           </div>
         </div>
@@ -392,7 +424,7 @@ onBeforeUnmount(() => {
             <input
               v-model="chatInput"
               type="text"
-              placeholder="Send a live chat message..."
+              :placeholder="appStore.locale === 'ko' ? '실시간 채팅 메시지 보내기...' : 'Send a live chat message...'"
               class="flex-1 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-brand)]"
             />
             <button

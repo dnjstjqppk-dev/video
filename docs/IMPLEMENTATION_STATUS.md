@@ -208,6 +208,8 @@ browser -> console workers (web/studio/partners/admin, /api)
    파트너/저작권/정산 면의 역할 게이트·소유권 스코프·감사 로그 + 침투 테스트 11건. 조직 멤버십 모델 기반 ABAC는 후속(신뢰 경계 문서화됨).
 19. 반응형 8해상도 + WCAG 2.2 AA + 플레이어 단축키/자막/챕터/PiP.
 20. 부하(k6 1k CCU)·복구(PITR/DLQ)·SLO·비용 실측.
+26. 광고 디시전 영속화 (PG write-through + 하이드레이트): 재시작을 가로지르는 이벤트가 UNKNOWN_DECISION 400을 내는 것은 fail-closed 정상 동작이나
+    상용에서는 과금 근거 유실이다. 캠페인/크리에이티브 선행 영속 포함. (2026-11-20 QA에서 메커니즘 입증, dev 재시작 노이즈로만 관찰됨)
 
 ### P2 — 고도화
 

@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import type { AdCampaign } from '@gvp/shared-types'
+import type { AdCampaign, UserProfile } from '@gvp/shared-types'
 import { AdFormat, CampaignStatus } from '@gvp/shared-types'
 import GvpEmptyState from '@gvp/ui/src/components/GvpEmptyState.vue'
 
 const api = usePartnerApi()
+const sessionUser = useState<UserProfile | null>('partner-session', () => null)
+// Mirrors the API mount guard: only these roles may create campaigns.
+const canCreate = computed(() =>
+  ['advertiser', 'partner_manager', 'platform_admin'].includes(sessionUser.value?.role || '')
+)
 
 useSeoMeta({
   title: 'Advertiser Console — Ad Campaigns, CPM/CPC Bidding & Pacing'
@@ -43,6 +48,21 @@ function onCreativeFileChange(event: Event) {
 async function createCampaign() {
   errorMessage.value = null
   successMessage.value = null
+
+  if (!newCampaignName.value.trim()) {
+    errorMessage.value = '캠페인 이름을 입력하세요.'
+    return
+  }
+  for (const [label, v] of [['일예산', dailyBudget.value], ['총예산', totalBudget.value], ['CPM 입찰가', cpmBid.value], ['CPC 입찰가', cpcBid.value]] as const) {
+    if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) {
+      errorMessage.value = `${label}은(는) 0보다 큰 숫자여야 합니다.`
+      return
+    }
+  }
+  if (totalBudget.value < dailyBudget.value) {
+    errorMessage.value = '총예산은 일예산보다 크거나 같아야 합니다.'
+    return
+  }
 
   const payload: Partial<AdCampaign> = {
     name: newCampaignName.value,
@@ -116,7 +136,10 @@ async function submitForReview(cmp: AdCampaign) {
     </div>
 
     <!-- Create Campaign Form -->
-    <form class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6" @submit.prevent="createCampaign">
+    <p v-if="!canCreate" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-xs text-[var(--gvp-text-secondary)]">
+      캠페인 생성은 광고주·파트너 매니저 역할만 가능합니다. (현재 목록은 읽기 전용으로 보고 있습니다)
+    </p>
+    <form v-else class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6" @submit.prevent="createCampaign">
       <h2 class="text-sm font-semibold text-[var(--gvp-text)]">신규 광고 캠페인 생성 (<code class="font-mono text-xs text-[var(--gvp-text-secondary)]">POST /v1/partners/campaigns</code>)</h2>
       <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div class="md:col-span-2">
@@ -144,6 +167,16 @@ async function submitForReview(cmp: AdCampaign) {
           <input
             v-model.number="dailyBudget"
             type="number"
+            min="1"
+            class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
+          />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-[var(--gvp-text)]">Total Budget (KRW)</label>
+          <input
+            v-model.number="totalBudget"
+            type="number"
+            min="1"
             class="mt-1 w-full rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] px-3 py-2 text-sm text-[var(--gvp-text)] tabular-nums focus:border-[var(--gvp-focus)] focus:bg-[var(--gvp-surface)] focus:outline-none"
           />
         </div>
@@ -269,6 +302,15 @@ async function submitForReview(cmp: AdCampaign) {
               >
                 Submit for review
               </button>
+              <span v-else-if="cmp.status === 'pending_review'" class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-warning)]">
+                Under review
+              </span>
+              <span v-else-if="cmp.status === 'rejected'" class="rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-live)]">
+                Rejected
+              </span>
+              <span v-else class="rounded-md border border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-success)]">
+                Approved
+              </span>
             </td>
           </tr>
         </tbody>

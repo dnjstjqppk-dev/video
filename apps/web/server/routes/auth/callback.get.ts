@@ -3,34 +3,28 @@ export default defineEventHandler(async (event) => {
   const oidc = config.oidc as { issuer?: string; clientId?: string; clientSecret?: string }
 
   if (!oidc?.issuer || !oidc?.clientId) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'OIDC provider is not configured for this environment'
-    })
+    return authError(event, 503, 'oidc_unconfigured', 'OIDC provider is not configured for this environment')
   }
 
   const query = getQuery(event)
   if (query.error) {
-    throw createError({
-      statusCode: 401,
-      statusMessage: `OIDC authorization failed: ${String(query.error)}`
-    })
+    return authError(event, 401, 'oidc_denied', `OIDC authorization failed: ${String(query.error)}`)
   }
 
   const stored = getCookie(event, 'gvp_oauth')
   deleteCookie(event, 'gvp_oauth', { path: '/' })
   if (!stored || !query.code || !query.state) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing OAuth state' })
+    return authError(event, 400, 'oauth_state', 'Missing OAuth state')
   }
 
   let parsed: { state?: string; verifier?: string; redirectUri?: string }
   try {
     parsed = JSON.parse(stored)
   } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid OAuth state' })
+    return authError(event, 400, 'oauth_state', 'Invalid OAuth state')
   }
   if (!parsed.state || parsed.state !== query.state || !parsed.verifier || !parsed.redirectUri) {
-    throw createError({ statusCode: 400, statusMessage: 'OAuth state mismatch' })
+    return authError(event, 400, 'oauth_state', 'OAuth state mismatch')
   }
 
   const tokenRes = await $fetch<{
@@ -51,7 +45,7 @@ export default defineEventHandler(async (event) => {
   }).catch(() => null)
 
   if (!tokenRes?.access_token) {
-    throw createError({ statusCode: 502, statusMessage: 'OIDC token exchange failed' })
+    return authError(event, 502, 'token_exchange', 'OIDC token exchange failed')
   }
 
   setCookie(event, 'gvp_session', tokenRes.access_token, {

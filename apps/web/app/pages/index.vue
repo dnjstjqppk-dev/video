@@ -208,8 +208,8 @@ function formatViews(count: number): string {
             <h2 class="text-lg font-bold text-[var(--gvp-text)] sm:text-xl">
               {{ feedAd.creative.title }}
             </h2>
-            <p class="mt-1 text-xs text-[var(--gvp-text-secondary)] sm:text-sm">
-              {{ feedAd.creative.category }} · {{ feedAd.creative.callToAction }}
+            <p v-if="feedAd.creative.category" class="mt-1 text-xs text-[var(--gvp-text-secondary)] sm:text-sm">
+              {{ feedAd.creative.category }}
             </p>
           </div>
         </div>

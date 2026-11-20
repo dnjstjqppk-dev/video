@@ -10,6 +10,47 @@ import (
 	"globalvideoplatform/services/api/internal/store"
 )
 
+func TestCreateContract(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+
+	s := store.NewMemoryStore()
+	h := NewHandler(s)
+	auth := identity.NewAuthMiddleware(s)
+	router := auth.Authenticate(h.Routes(auth))
+	call := func(token, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/contracts", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	// Non-managers cannot link channels.
+	if rec := call("advertiser-token", `{"channelId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"}`); rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for advertiser link, got %d", rec.Code)
+	}
+	if rec := call("creator-token", `{"channelId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"}`); rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for creator link, got %d", rec.Code)
+	}
+	// Unknown channel and bad split rejected.
+	if rec := call("admin-token", `{"channelId":"99999999-9999-9999-9999-999999999999"}`); rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown channel, got %d", rec.Code)
+	}
+	if rec := call("admin-token", `{"channelId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","creatorSplitPct":150}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for bad split, got %d", rec.Code)
+	}
+	// Happy path with default 85/15 split.
+	rec := call("admin-token", `{"channelId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 for link, got %d: %s", rec.Code, rec.Body.String())
+	}
+	// Duplicate active link rejected.
+	if rec := call("admin-token", `{"channelId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"}`); rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for duplicate link, got %d", rec.Code)
+	}
+}
+
 func TestPartnerEndpoints(t *testing.T) {
 	t.Setenv("GVP_ENV", "test")
 	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")

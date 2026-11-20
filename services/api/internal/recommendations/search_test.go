@@ -113,6 +113,42 @@ func TestSearchMembersOnlyEntitlement(t *testing.T) {
 	}
 }
 
+// Multi-word queries match any word (title weighted) instead of the raw
+// phrase, with all-word matches ranked first.
+func TestSearchMultiWordRecallAndRanking(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+	s := seedSearchStore()
+	s.Videos["vid-s-engine"] = &store.Video{
+		ID: "vid-s-engine", ChannelID: "ch-search-test",
+		Title:       "Building a Distributed Video Engine at Scale",
+		Description: "deep dive", Visibility: "public", Status: "READY",
+	}
+	s.Videos["vid-s-engine-desc"] = &store.Video{
+		ID: "vid-s-engine-desc", ChannelID: "ch-search-test",
+		Title:       "Unrelated title here",
+		Description: "mentions video engine once",
+		Visibility:  "public", Status: "READY",
+	}
+	router := searchRouter(s)
+
+	ids := searchIDs(t, router, "/search?q=go%20video%20engine", "")
+	if !containsID(ids, "vid-s-engine") {
+		t.Fatalf("multi-word query must recall partial title match, got %v", ids)
+	}
+	rank := func(id string) int {
+		for i, v := range ids {
+			if v == id {
+				return i
+			}
+		}
+		return len(ids)
+	}
+	if rank("vid-s-engine") >= rank("vid-s-engine-desc") {
+		t.Fatalf("title matches must outrank description-only matches, got %v", ids)
+	}
+}
+
 // P0-4: autocomplete never suggests non-public titles.
 func TestSearchSuggestionsExcludeNonPublic(t *testing.T) {
 	t.Setenv("GVP_ENV", "test")

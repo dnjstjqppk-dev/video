@@ -33,6 +33,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.Get("/me", h.GetPartnerMe)
 	r.Get("/channels", h.GetChannels)
 	r.Get("/contracts", h.GetContracts)
+	r.Post("/contracts", h.CreateContract)
 	r.Patch("/contracts/{id}", h.RevokeContract)
 
 	return r
@@ -68,6 +69,9 @@ func (h *Handler) GetPartnerMe(w http.ResponseWriter, r *http.Request) {
 	}
 	campaigns := 0
 	for _, c := range h.Store.Campaigns {
+		if c.Status != "active" {
+			continue
+		}
 		if managerSeesAll(user) || c.AdvertiserID == user.ID {
 			campaigns++
 		}
@@ -183,4 +187,69 @@ func (h *Handler) RevokeContract(w http.ResponseWriter, r *http.Request) {
 		"timestamp": now.Format(time.RFC3339),
 	})
 	identity.WriteJSON(w, http.StatusOK, contract)
+}
+
+// CreateContract links a channel into the MCN roster (manager-side only).
+func (h *Handler) CreateContract(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	if !managerSeesAll(user) {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_ROLE", "Linking channels requires a partner manager role")
+		return
+	}
+	var payload struct {
+		ChannelID       string `json:"channelId"`
+		CreatorSplitPct *int   `json:"creatorSplitPct"`
+		PartnerType     string `json:"partnerType"`
+		ValidUntil      string `json:"validUntil"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload.ChannelID == "" {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "channelId is required")
+		return
+	}
+	channel, ok := h.Store.Channels[payload.ChannelID]
+	if !ok || channel == nil {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Channel not found")
+		return
+	}
+	split := 85
+	if payload.CreatorSplitPct != nil {
+		split = *payload.CreatorSplitPct
+	}
+	if split < 0 || split > 100 {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "creatorSplitPct must be 0-100")
+		return
+	}
+	for _, c := range h.Store.Contracts {
+		if c.ChannelID == payload.ChannelID && c.Status == "active" {
+			identity.WriteError(w, r, http.StatusConflict, "ALREADY_LINKED", "Channel already has an active contract")
+			return
+		}
+	}
+	now := time.Now()
+	contract := &store.PartnerContract{
+		ID:               uuid.NewString(),
+		ChannelID:        channel.ID,
+		ChannelName:      channel.Name,
+		ChannelHandle:    channel.Handle,
+		PartnerType:      "MCN",
+		CreatorSplitPct:  split,
+		PartnerSplitPct:  100 - split,
+		RevenueShareRate: float64(split) / 100,
+		Status:           "active",
+		ValidUntil:       payload.ValidUntil,
+		CreatedAt:        now,
+	}
+	if payload.PartnerType != "" {
+		contract.PartnerType = payload.PartnerType
+	}
+	h.Store.Contracts[contract.ID] = contract
+	h.Store.AuditLogs = append(h.Store.AuditLogs, map[string]interface{}{
+		"id":        "audit-" + uuid.NewString(),
+		"actorId":   user.ID,
+		"action":    "CREATE_PARTNER_CONTRACT",
+		"target":    contract.ID,
+		"ip":        r.RemoteAddr,
+		"timestamp": now.Format(time.RFC3339),
+	})
+	identity.WriteJSON(w, http.StatusCreated, contract)
 }

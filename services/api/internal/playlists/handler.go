@@ -28,7 +28,9 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 		pr.Use(auth.RequireAuth)
 		pr.Post("/", h.CreatePlaylist)
 		pr.Patch("/{id}", h.UpdatePlaylist)
+		pr.Delete("/{id}", h.DeletePlaylist)
 		pr.Post("/{id}/items", h.AddItem)
+		pr.Get("/", h.ListPlaylists)
 	})
 
 	return r
@@ -125,6 +127,35 @@ func (h *Handler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) {
 	pl.UpdatedAt = time.Now()
 
 	identity.WriteJSON(w, http.StatusOK, pl)
+}
+
+func (h *Handler) ListPlaylists(w http.ResponseWriter, r *http.Request) {
+	user := identity.GetUserFromContext(r.Context())
+	list := make([]*store.Playlist, 0)
+	for _, pl := range h.Store.Playlists {
+		if user != nil && (pl.OwnerID == user.ID || user.Role == "super_admin") {
+			list = append(list, pl)
+		}
+	}
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": list})
+}
+
+func (h *Handler) DeletePlaylist(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	pl, ok := h.Store.Playlists[id]
+	if !ok {
+		identity.WriteError(w, r, http.StatusNotFound, "NOT_FOUND", "Playlist not found")
+		return
+	}
+
+	user := identity.GetUserFromContext(r.Context())
+	if pl.OwnerID != user.ID && user.Role != "super_admin" {
+		identity.WriteError(w, r, http.StatusForbidden, "FORBIDDEN_RESOURCE", "Cannot delete another user's playlist")
+		return
+	}
+
+	delete(h.Store.Playlists, id)
+	identity.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request) {

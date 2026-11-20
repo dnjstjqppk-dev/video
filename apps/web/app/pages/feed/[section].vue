@@ -9,7 +9,8 @@ const titles: Record<string, string> = {
   history: '시청 기록', saved: '나중에 볼 동영상', liked: '좋아요 표시한 동영상', subscriptions: '구독',
   trending: '인기 급상승', music: '음악', gaming: '게임', tech: '테크/개발',
 }
-if (!titles[section.value]) throw createError({ statusCode: 404, statusMessage: 'Page not found' })
+// Unknown sections render an inline 404 (SSR throw trips a 500 path).
+const isKnownSection = computed(() => !!titles[section.value])
 const apiSections = new Set(['subscriptions', 'trending', 'music', 'gaming', 'tech'])
 const isApiSection = computed(() => apiSections.has(section.value))
 const query = ref('')
@@ -49,6 +50,14 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
 
 <template>
   <section class="mx-auto max-w-6xl bg-[var(--gvp-canvas)] px-4 py-8 text-[var(--gvp-text)] sm:px-8">
+    <div v-if="!isKnownSection" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] py-20 text-center">
+      <h1 class="text-lg font-bold text-[var(--gvp-text)]">보관함을 찾을 수 없습니다</h1>
+      <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">요청하신 주소는 존재하지 않거나 이동되었습니다.</p>
+      <NuxtLink to="/" class="mt-6 inline-block rounded-md bg-[var(--gvp-brand)] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[var(--gvp-brand-hover)]">
+        홈으로 돌아가기
+      </NuxtLink>
+    </div>
+    <template v-else>
     <div class="flex flex-wrap items-start justify-between gap-5 border-b border-[var(--gvp-border)] pb-6">
       <div>
         <h1 class="text-2xl font-bold text-[var(--gvp-text)] sm:text-3xl">{{ titles[section] }}</h1>
@@ -169,5 +178,6 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
         </button>
       </article>
     </div>
+    </template>
   </section>
 </template>

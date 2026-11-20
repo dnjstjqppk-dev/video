@@ -82,6 +82,39 @@ async function removeComment(cmt: Comment) {
     actingIds.value.delete(cmt.id)
   }
 }
+
+async function toggleHide(cmt: Comment) {
+  actionError.value = null
+  actingIds.value.add(cmt.id)
+  try {
+    const res = await api.hideComment(cmt.id)
+    cmt.isHidden = res.isHidden
+  } catch (e: unknown) {
+    actionError.value = e instanceof Error ? e.message : '댓글 숨기기 처리에 실패했습니다.'
+  } finally {
+    actingIds.value.delete(cmt.id)
+  }
+}
+
+const replyingTo = ref<string | null>(null)
+const replyText = ref('')
+
+async function submitReply(cmt: Comment) {
+  const text = replyText.value.trim()
+  if (!text || actingIds.value.has(cmt.id)) return
+  actionError.value = null
+  actingIds.value.add(cmt.id)
+  try {
+    await api.addComment(cmt.videoId, text, cmt.id)
+    replyText.value = ''
+    replyingTo.value = null
+    await refresh()
+  } catch (e: unknown) {
+    actionError.value = e instanceof Error ? e.message : '답글 등록에 실패했습니다.'
+  } finally {
+    actingIds.value.delete(cmt.id)
+  }
+}
 </script>
 
 <template>
@@ -163,6 +196,9 @@ async function removeComment(cmt: Comment) {
             <span v-if="cmt.isHeartedByCreator" class="rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--gvp-live)]" title="크리에이터 하트">
               Creator Hearted
             </span>
+            <span v-if="cmt.isHidden" class="rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--gvp-warning)]" title="작성자와 채널 소유자에게만 표시됩니다">
+              Hidden
+            </span>
           </div>
 
           <p class="mt-0.5 font-mono text-[11px] text-[var(--gvp-text-secondary)]">on video: {{ cmt.videoId }}</p>
@@ -189,10 +225,42 @@ async function removeComment(cmt: Comment) {
             <button
               type="button"
               :disabled="actingIds.has(cmt.id)"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
+              @click="toggleHide(cmt)"
+            >
+              {{ cmt.isHidden ? '숨기기 해제' : '숨기기' }}
+            </button>
+            <button
+              type="button"
+              :disabled="actingIds.has(cmt.id)"
+              class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-text)] bg-[var(--gvp-surface)] border border-[var(--gvp-border-strong)] rounded-md hover:bg-[var(--gvp-canvas)] transition-colors disabled:opacity-40"
+              @click="replyingTo = replyingTo === cmt.id ? null : cmt.id"
+            >
+              답글
+            </button>
+            <button
+              type="button"
+              :disabled="actingIds.has(cmt.id)"
               class="inline-flex items-center justify-center h-9 px-4 text-sm font-medium text-[var(--gvp-live)] bg-[var(--gvp-live-soft)] border border-[var(--gvp-live)] rounded-md hover:bg-[var(--gvp-live-soft)] transition-colors disabled:opacity-40"
               @click="removeComment(cmt)"
             >
               삭제
+            </button>
+          </div>
+          <div v-if="replyingTo === cmt.id" class="mt-3 flex items-start gap-2">
+            <textarea
+              v-model="replyText"
+              rows="2"
+              placeholder="답글을 입력하세요..."
+              class="flex-1 rounded-md border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-3 py-2 text-xs text-[var(--gvp-text)] outline-none focus:border-[var(--gvp-focus)]"
+            />
+            <button
+              type="button"
+              :disabled="!replyText.trim() || actingIds.has(cmt.id)"
+              class="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-[var(--gvp-brand)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--gvp-brand-hover)] disabled:opacity-40"
+              @click="submitReply(cmt)"
+            >
+              등록
             </button>
           </div>
         </div>

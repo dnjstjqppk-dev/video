@@ -1,20 +1,10 @@
 <script setup lang="ts">
 const api = usePartnerApi()
-const activeOrg = useState<{ id: string; name: string; type: string }>('partner-org', () => ({
-  id: '',
-  name: '',
-  type: ''
-}))
-
 useSeoMeta({
   title: 'Partner Organization Overview'
 })
 
-const { data: overview, pending: overviewPending, error: overviewError } = await useAsyncData('partner-overview', async () => {
-  const res = await api.getPartnerOverview()
-  activeOrg.value = { ...res.organization }
-  return res
-})
+const { data: overview, pending: overviewPending, error: overviewError } = await useAsyncData('partner-overview', () => api.getPartnerOverview())
 </script>
 
 <template>

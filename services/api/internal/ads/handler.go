@@ -710,6 +710,10 @@ func (h *Handler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Invalid campaign data")
 		return
 	}
+	if payload.TotalBudgetCents < 0 || payload.DailyBudgetCents < 0 || payload.CpmBidCents < 0 || payload.CpcBidCents < 0 {
+		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "Budgets and bids must not be negative")
+		return
+	}
 	user := identity.GetUserFromContext(r.Context())
 	if user == nil {
 		identity.WriteError(w, r, http.StatusUnauthorized, "UNAUTHENTICATED", "Authentication required")

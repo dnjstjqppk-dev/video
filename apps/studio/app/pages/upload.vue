@@ -73,6 +73,13 @@ const phaseLabel = computed(() => {
 
 function pickFile(file: File | undefined) {
   if (!file) return
+  // The picker suggests video/*, but drag-and-drop and some browsers let
+  // anything through: reject declared non-video types here (ffprobe is the
+  // final gate for empty-type files).
+  if (file.type && !file.type.startsWith('video/')) {
+    uploadError.value = `동영상 파일만 업로드할 수 있습니다 (${file.type}).`
+    return
+  }
   selectedFile.value = file
   selectedFileName.value = file.name
   selectedFileSizeBytes.value = file.size
