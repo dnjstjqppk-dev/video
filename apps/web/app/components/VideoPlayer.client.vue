@@ -58,6 +58,12 @@ const selectedSpeed = ref<number>(1)
 const selectedAudioTrack = ref<string>('ko-KR (Original)')
 const activeCaptionLang = ref<string>('off')
 const showSettingsMenu = ref(false)
+const settingsView = ref<'main' | 'quality' | 'speed' | 'captions' | 'sleep'>('main')
+const availableQualities = ref<string[]>(['Auto'])
+const controlsVisible = ref(true)
+const isBuffering = ref(false)
+const playerError = ref<string | null>(null)
+let idleTimer: ReturnType<typeof setTimeout> | null = null
 const isFullscreen = ref(false)
 const isPiP = ref(false)
 const playbackSessionId = ref(`pbs_${Math.random().toString(36).slice(2, 11)}_${Date.now()}`)
@@ -321,9 +327,8 @@ function finishAdAndStartVideo() {
   initShakaPlayer()
 }
 
-const qualityOptions = ['Auto', '2160p', '1440p', '1080p', '720p', '480p']
-const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2]
-const audioTracks = ['ko-KR (Original)', 'en-US (Dubbed)']
+const speedMenuOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+const speedLabel = (s: number) => (s === 1 ? 'Normal' : `${s}`)
 
 let shakaInstance: any = null
 let progressTimer: ReturnType<typeof setInterval> | null = null
@@ -379,6 +384,8 @@ async function emitTelemetry(eventType: AnalyticsPlaybackEvent['event_type']) {
 async function initShakaPlayer() {
   const videoEl = videoRef.value
   if (!videoEl) return
+  playerError.value = null
+  isBuffering.value = true
 
   // Restore saved watch progress
   const savedSeconds = appStore.getWatchProgress(props.videoId)
@@ -409,6 +416,12 @@ async function initShakaPlayer() {
     shaka.polyfill.installAll()
     if (shaka.Player.isBrowserSupported()) {
       shakaInstance = new shaka.Player(videoEl)
+      shakaInstance.addEventListener('error', (event: any) => {
+        const detail = event?.detail
+        const sev = (shaka as any)?.util?.Error?.Severity
+        if (detail && sev && detail.severity === sev.RECOVERABLE) return
+        onPlayerError(detail?.code ? `shaka-${detail.code}` : 'shaka-error')
+      })
       const drmServers: Record<string, string> = {}
       const widevineUrl = (config.public.widevineLicenseUrl as string) || ''
       const fairplayUrl = (config.public.fairplayLicenseUrl as string) || ''
@@ -441,6 +454,19 @@ async function initShakaPlayer() {
     }
   }
 
+  // Real quality ladder for the settings menu (Auto + detected rungs).
+  try {
+    const tracks = (shakaInstance?.getVariantTracks?.() || []) as any[]
+    const heights = Array.from(new Set<number>(
+      tracks.map(t => t.height).filter((h: any): h is number => typeof h === 'number')
+    )).sort((a, b) => b - a)
+    if (heights.length) availableQualities.value = ['Auto', ...heights.map(h => `${h}p`)]
+  } catch {
+    // Keep Auto-only when tracks are unreadable.
+  }
+  applyCaptionLang()
+  isBuffering.value = false
+
   // Autoplay-next arrivals (and explicit ?autoplay=1 links) start playing
   // once the stream is attached; a rejected play() just leaves the video
   // paused under the browser's autoplay policy.
@@ -468,6 +494,7 @@ function togglePlay() {
     videoEl.pause()
     isPlaying.value = false
   }
+  pokeControls()
 }
 
 function seekRelative(deltaSeconds: number) {
@@ -591,10 +618,96 @@ async function toggleFullscreen() {
   }
 }
 
+// YouTube-style chrome: controls overlay the picture and auto-hide while
+// playing. They stay up when paused, while the settings menu is open, or
+// shortly after any interaction.
+function pokeControls() {
+  controlsVisible.value = true
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    if (isPlaying.value && !showSettingsMenu.value) controlsVisible.value = false
+  }, 3000)
+}
+
+function hideControlsSoon() {
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    if (isPlaying.value && !showSettingsMenu.value) controlsVisible.value = false
+  }, 400)
+}
+
+function openSettings() {
+  settingsView.value = 'main'
+  showSettingsMenu.value = true
+  pokeControls()
+}
+
+function applyCaptionLang() {
+  const tracks = videoRef.value?.textTracks
+  if (!tracks) return
+  for (let i = 0; i < tracks.length; i++) {
+    const track = tracks[i]
+    if (!track) continue
+    track.mode = activeCaptionLang.value !== 'off' && track.language === activeCaptionLang.value
+      ? 'showing'
+      : 'disabled'
+  }
+}
+
+function selectCaption(lang: string) {
+  activeCaptionLang.value = lang
+  applyCaptionLang()
+  settingsView.value = 'main'
+}
+
+function preferredCaptionLang(): string {
+  const caps = props.captions || []
+  if (caps.some(c => c.language === 'ko')) return 'ko'
+  return caps[0]?.language || 'ko'
+}
+
+function onPlayerError(code: string) {
+  if (playerError.value) return
+  isBuffering.value = false
+  isPlaying.value = false
+  playerError.value = code
+  controlsVisible.value = true
+}
+
+function retryPlayback() {
+  playerError.value = null
+  initShakaPlayer()
+}
+
+// Chapter segments for the YouTube-style segmented seekbar. Without
+// chapters the whole duration is one segment.
+const chapterSegments = computed(() => {
+  const dur = duration.value > 0 ? duration.value : 1
+  const list = [...(props.chapters || [])].sort((a, b) => a.startTimeSeconds - b.startTimeSeconds)
+  if (!list.length) return [{ start: 0, end: dur }]
+  return list.map((c, i) => {
+    const next = i + 1 < list.length ? list[i + 1] : undefined
+    return {
+      start: Math.max(0, Math.min(c.startTimeSeconds, dur)),
+      end: next ? Math.max(0, Math.min(next.startTimeSeconds, dur)) : dur
+    }
+  })
+})
+
+function segFlex(seg: { start: number; end: number }) {
+  return Math.max(seg.end - seg.start, 0.001)
+}
+
+function segFill(seg: { start: number; end: number }) {
+  if (seg.end <= seg.start) return 0
+  return Math.max(0, Math.min(100, ((currentTime.value - seg.start) / (seg.end - seg.start)) * 100))
+}
+
 // TASK-124 ~ TASK-129: Full Keyboard Accessibility & YouTube Shortcuts
 function handleKeydown(event: KeyboardEvent) {
   const tag = (event.target as HTMLElement)?.tagName?.toLowerCase()
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+  pokeControls()
 
   const key = event.key.toLowerCase()
 
@@ -676,7 +789,8 @@ function handleKeydown(event: KeyboardEvent) {
   // Captions toggle
   else if (key === 'c') {
     event.preventDefault()
-    activeCaptionLang.value = activeCaptionLang.value === 'off' ? 'ko' : 'off'
+    activeCaptionLang.value = activeCaptionLang.value === 'off' ? preferredCaptionLang() : 'off'
+    applyCaptionLang()
   }
   // Stats for Nerds toggle (Shift+S)
   else if (event.shiftKey && key === 's') {
@@ -747,6 +861,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  if (idleTimer) clearTimeout(idleTimer)
   if (progressTimer) clearInterval(progressTimer)
   if (adCountdownInterval) clearInterval(adCountdownInterval)
   if (sleepTimerHandle) clearTimeout(sleepTimerHandle)
@@ -781,7 +896,11 @@ defineExpose({
 
     <div
       ref="playerContainerRef"
-      class="group relative flex flex-col overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] select-none"
+      class="group relative flex flex-col overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-black select-none"
+      :class="{ 'cursor-none': !controlsVisible && isPlaying && !playerError }"
+      @mousemove="pokeControls"
+      @touchstart.passive="pokeControls"
+      @mouseleave="hideControlsSoon"
     >
       <!-- 16:9 Video Frame -->
       <div class="relative aspect-video w-full overflow-hidden bg-black">
@@ -860,9 +979,14 @@ defineExpose({
           playsinline
           crossorigin="anonymous"
           @click="togglePlay"
+          @dblclick="toggleFullscreen"
           @timeupdate="onVideoTimeUpdate"
-          @play="isPlaying = true"
-          @pause="isPlaying = false"
+          @play="isPlaying = true; isBuffering = false; pokeControls()"
+          @pause="isPlaying = false; isBuffering = false; pokeControls()"
+          @waiting="isBuffering = true"
+          @stalled="isBuffering = true"
+          @canplay="isBuffering = false"
+          @error="onPlayerError('media-error')"
           @ended="emitTelemetry('complete'); emit('ended')"
         >
           <track
@@ -882,12 +1006,34 @@ defineExpose({
           <span>LIVE ABR</span>
         </div>
 
-        <!-- Active Caption Overlay Banner -->
+        <!-- Buffering Spinner -->
         <div
-          v-if="activeCaptionLang !== 'off'"
-          class="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-surface)]/95 px-4 py-1.5 text-center text-sm font-medium text-[var(--gvp-text)] shadow-sm"
+          v-if="isBuffering && !playerError"
+          data-testid="player-spinner"
+          class="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
         >
-          [{{ activeCaptionLang.toUpperCase() }}] {{ title }} — {{ currentChapter?.title || 'Subtitles Active' }}
+          <span class="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-white" aria-label="Buffering" />
+        </div>
+
+        <!-- Fatal Error Overlay -->
+        <div
+          v-if="playerError"
+          data-testid="player-error"
+          class="absolute inset-0 z-40 flex items-center justify-center bg-black/85 p-6"
+        >
+          <div class="max-w-sm text-center">
+            <p class="text-base font-semibold text-white">재생 중 오류가 발생했습니다</p>
+            <p class="mt-1 font-mono text-xs text-white/50">{{ playerError }} · {{ videoId.slice(0, 8) }}</p>
+            <div class="mt-4 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                class="rounded-full bg-white px-6 py-2 text-sm font-bold text-black transition hover:bg-white/80"
+                @click="retryPlayback"
+              >
+                다시 시도
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- TASK-138: Stats for Nerds (전문 통계 오버레이) -->
@@ -934,339 +1080,339 @@ defineExpose({
             <span class="text-[10px] text-[var(--gvp-text-secondary)]">Shift+S: close | J/K/L: seek</span>
           </div>
         </div>
-      </div>
 
-      <!-- Bottom Light Utility Controls Bar -->
-      <div class="relative border-t border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-4 py-3 text-[var(--gvp-text)]">
-        <!-- TASK-122: Timeline Scrub Bar with Storyboard Sheet Hover Preview -->
+        <!-- YouTube-style Control Overlay: gradient scrim, auto-hiding -->
         <div
-          class="player-seekbar relative mb-3 h-2 w-full cursor-pointer rounded-md bg-[var(--gvp-elevated)] transition-all"
-          role="slider"
-          tabindex="0"
-          aria-label="Seek"
-          aria-valuemin="0"
-          :aria-valuemax="Math.round(duration)"
-          :aria-valuenow="Math.round(currentTime)"
-          :aria-valuetext="`${formatTime(currentTime)} of ${formatTime(duration)}`"
-          @click="seekToPosition"
-          @keydown="onSeekKeydown"
-          @mousemove="onTimelineMouseMove"
-          @mouseleave="onTimelineMouseLeave"
+          class="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-2 pt-10 transition-opacity duration-200"
+          :class="{ 'pointer-events-none opacity-0': !controlsVisible }"
         >
-          <!-- Floating Storyboard Preview Tooltip -->
+          <!-- Seekbar -->
           <div
-            v-if="isTimelineHovering && duration > 0"
-            class="pointer-events-none absolute bottom-5 z-30 -translate-x-1/2 flex flex-col items-center gap-1 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-1.5 shadow-sm"
-            :style="{ left: `${hoverPreviewX}px` }"
+            v-if="!isLive"
+            class="group/bar relative h-4 w-full cursor-pointer"
+            role="slider"
+            tabindex="0"
+            aria-label="Seek"
+            aria-valuemin="0"
+            :aria-valuemax="Math.round(duration)"
+            :aria-valuenow="Math.round(currentTime)"
+            :aria-valuetext="`${formatTime(currentTime)} of ${formatTime(duration)}`"
+            @click="seekToPosition"
+            @keydown="onSeekKeydown"
+            @mousemove="onTimelineMouseMove"
+            @mouseleave="onTimelineMouseLeave"
           >
-            <!-- Storyboard Thumbnail Frame -->
-            <div class="relative h-20 w-36 overflow-hidden rounded-md border border-[var(--gvp-border)] bg-black">
-              <img
-                v-if="posterUrl"
-                :src="posterUrl"
-                alt="Storyboard frame preview"
-                class="h-full w-full object-cover opacity-90"
-              />
-              <div class="absolute inset-x-0 bottom-0 bg-[var(--gvp-surface)]/95 px-1.5 py-0.5 text-center">
-                <span class="font-mono text-xs font-bold text-[var(--gvp-text)] tabular-nums">
-                  {{ formatTime(hoverTimeSeconds) }}
-                </span>
+            <div
+              v-if="isTimelineHovering && duration > 0"
+              class="pointer-events-none absolute bottom-6 z-30 flex -translate-x-1/2 flex-col items-center gap-1 rounded-lg border border-white/20 bg-black/95 p-1.5"
+              :style="{ left: `${hoverPreviewX}px` }"
+            >
+              <div class="relative h-20 w-36 overflow-hidden rounded-md bg-black">
+                <img
+                  v-if="posterUrl"
+                  :src="posterUrl"
+                  alt="Storyboard frame preview"
+                  class="h-full w-full object-cover opacity-90"
+                />
+                <div class="absolute inset-x-0 bottom-0 bg-black/80 px-1.5 py-0.5 text-center">
+                  <span class="font-mono text-xs font-bold tabular-nums text-white">
+                    {{ formatTime(hoverTimeSeconds) }}
+                  </span>
+                </div>
               </div>
+              <span v-if="hoverChapter" class="max-w-[150px] truncate text-[10px] font-medium text-white/70">
+                {{ hoverChapter.title }}
+              </span>
             </div>
-            <!-- Chapter title on hover -->
-            <span v-if="hoverChapter" class="max-w-[150px] truncate text-[10px] font-medium text-[var(--gvp-text-secondary)]">
-              {{ hoverChapter.title }}
-            </span>
+            <div class="absolute inset-x-0 bottom-0.5 h-[3px] transition-all group-hover/bar:h-[5px]">
+              <div class="absolute inset-0 rounded-full bg-white/20" />
+              <div
+                class="absolute inset-y-0 left-0 rounded-full bg-white/40"
+                :style="{ width: `${bufferedPercent}%` }"
+              />
+              <div class="absolute inset-0 flex gap-[2px]">
+                <div
+                  v-for="(seg, i) in chapterSegments"
+                  :key="i"
+                  class="relative h-full"
+                  :style="{ flexGrow: segFlex(seg) }"
+                >
+                  <div
+                    class="absolute inset-y-0 left-0 bg-[var(--gvp-brand)]"
+                    :style="{ width: `${segFill(seg)}%` }"
+                  />
+                </div>
+              </div>
+              <div
+                class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--gvp-brand)] opacity-0 transition-opacity group-hover/bar:opacity-100"
+                :style="{ left: `${progressPercent}%` }"
+              />
+            </div>
           </div>
 
-          <!-- Buffered Bar -->
-          <div
-            class="absolute inset-y-0 left-0 rounded-md bg-[var(--gvp-border-strong)]"
-            :style="{ width: `${bufferedPercent}%` }"
-          />
-          <!-- Current Playback Bar -->
-          <div
-            class="absolute inset-y-0 left-0 rounded-md bg-[var(--gvp-brand)]"
-            :style="{ width: `${progressPercent}%` }"
-          />
-          <!-- Chapter Segment Tick Markers -->
-          <template v-for="chapter in chapters" :key="chapter.id">
-            <div
-              v-if="chapter.startTimeSeconds > 0 && duration > 0"
-              class="absolute top-0 h-full w-0.5 bg-[var(--gvp-surface)]"
-              :style="{ left: `${(chapter.startTimeSeconds / duration) * 100}%` }"
-              :title="chapter.title"
-            />
-          </template>
-        </div>
-
-        <!-- Controls Row -->
-        <div class="flex flex-wrap items-center justify-between gap-2 text-[var(--gvp-text)]">
-          <!-- Left Controls: Play/Pause, -10s/+10s, Volume, Time, Active Chapter -->
-          <div class="flex items-center gap-2.5">
+          <!-- Control Row -->
+          <div class="flex items-center gap-0.5 text-white">
             <button
               type="button"
-              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-brand)] p-1.5 text-white transition hover:bg-[var(--gvp-brand-hover)]"
+              class="rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100"
               :aria-label="isPlaying ? 'Pause (k)' : 'Play (k)'"
               @click="togglePlay"
             >
-              <svg v-if="!isPlaying" class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+              <svg v-if="!isPlaying" class="h-6 w-6 fill-current" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
-              <svg v-else class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+              <svg v-else class="h-6 w-6 fill-current" viewBox="0 0 24 24">
                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
               </svg>
             </button>
-
-            <button
-              type="button"
-              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] tabular-nums"
-              title="Rewind 10s (j)"
-              @click="seekRelative(-10)"
-            >
-              -10s
-            </button>
-            <button
-              type="button"
-              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] tabular-nums"
-              title="Forward 10s (l)"
-              @click="seekRelative(10)"
-            >
-              +10s
-            </button>
-
-            <!-- Volume -->
-            <div class="flex items-center gap-1.5">
-              <button
-                type="button"
-                class="rounded-md p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
-                title="Mute (m)"
-                :aria-label="isMuted ? 'Unmute (m)' : 'Mute (m)'"
-                :aria-pressed="isMuted"
-                @click="toggleMute"
-              >
-                <svg v-if="isMuted || volume === 0" class="h-4 w-4 fill-current text-[var(--gvp-live)]" viewBox="0 0 24 24">
-                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-                </svg>
-                <svg v-else class="h-4 w-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
-                </svg>
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                :value="isMuted ? 0 : volume"
-                aria-label="Volume"
-                class="hidden h-1 w-16 accent-blue-600 sm:block"
-                @input="setVolume"
-              />
-            </div>
-
-            <span class="font-mono text-xs font-medium text-[var(--gvp-text-secondary)] tabular-nums">
-              {{ formatTime(currentTime) }} / {{ isLive ? 'LIVE' : formatTime(duration) }}
-            </span>
-
-            <span
-              v-if="currentChapter"
-              class="hidden truncate rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-0.5 text-xs font-medium text-[var(--gvp-text)] md:inline-block"
-            >
-              {{ currentChapter.title }}
-            </span>
-          </div>
-
-          <!-- Right Controls: Stable Volume Pill, Captions, Quality/Speed, PiP, Fullscreen -->
-          <div class="relative flex items-center gap-2">
-            <!-- Stable Volume Quick Pill (TASK-114) -->
-            <button
-              type="button"
-              class="hidden sm:flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition"
-              :class="isStableVolumeEnabled ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)]'"
-              title="Stable Volume: Normalizes loudness to -14 LUFS"
-              @click="toggleStableVolume"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-              <span class="text-[11px]">{{ isStableVolumeEnabled ? 'Stable Vol' : 'Vol Normal' }}</span>
-            </button>
-
-            <!-- Next video + autoplay-next toggle -->
             <button
               v-if="hasNext"
               type="button"
               title="다음 영상"
               aria-label="다음 영상"
-              class="rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
+              class="rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100"
               @click="emit('request-next')"
             >
-              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6l8.5 6L6 18V6zm9 0h2v12h-2V6z" /></svg>
+              <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24"><path d="M6 6l8.5 6L6 18V6zm9 0h2v12h-2V6z" /></svg>
             </button>
-            <button
-              type="button"
-              :title="autoplayNext ? '자동재생 켜짐' : '자동재생 꺼짐'"
-              :aria-pressed="autoplayNext"
-              class="rounded-md border px-2 py-1 text-[11px] font-bold transition"
-              :class="autoplayNext ? 'border-[var(--gvp-brand)] bg-[var(--gvp-brand)] text-white' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text-secondary)]'"
-              @click="emit('toggle-autoplay-next')"
-            >
-              {{ autoplayNext ? '자동재생 ON' : '자동재생 OFF' }}
-            </button>
-
-            <!-- Subtitle Toggle -->
-            <button
-              type="button"
-              class="rounded-md border px-2.5 py-1 text-xs font-semibold transition"
-              :class="activeCaptionLang !== 'off' ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
-              @click="activeCaptionLang = activeCaptionLang === 'off' ? 'ko' : activeCaptionLang === 'ko' ? 'en' : 'off'"
-            >
-              CC: {{ activeCaptionLang.toUpperCase() }}
-            </button>
-
-            <!-- Quality Badge + Settings Trigger -->
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1 text-xs font-semibold text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] tabular-nums"
-              @click="showSettingsMenu = !showSettingsMenu"
-            >
-              <span>{{ selectedQuality }}</span>
-              <span class="text-[var(--gvp-brand-hover)]">{{ selectedSpeed }}x</span>
-            </button>
-
-            <!-- Settings Popover -->
-            <div
-              v-if="showSettingsMenu"
-              class="absolute bottom-11 right-0 z-40 w-72 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3.5 text-xs text-[var(--gvp-text)] shadow-sm"
-            >
-              <!-- ABR Quality Selection -->
-              <div class="mb-3">
-                <p class="mb-1.5 font-semibold text-[var(--gvp-text-secondary)]">화질 선택 (ABR Quality)</p>
-                <div class="grid grid-cols-3 gap-1">
-                  <button
-                    v-for="q in qualityOptions"
-                    :key="q"
-                    type="button"
-                    class="rounded-md border px-2 py-1 font-medium transition tabular-nums"
-                    :class="selectedQuality === q ? 'border-[var(--gvp-focus)] bg-[var(--gvp-brand)] text-white' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
-                    @click="changeQuality(q)"
-                  >
-                    {{ q }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Playback Speed Selection -->
-              <div class="mb-3">
-                <p class="mb-1.5 font-semibold text-[var(--gvp-text-secondary)]">재생 속도 (Speed)</p>
-                <div class="grid grid-cols-3 gap-1">
-                  <button
-                    v-for="spd in speedOptions"
-                    :key="spd"
-                    type="button"
-                    class="rounded-md border px-2 py-1 font-medium transition tabular-nums"
-                    :class="selectedSpeed === spd ? 'border-[var(--gvp-brand)] bg-[var(--gvp-brand)] text-white font-bold' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
-                    @click="changeSpeed(spd)"
-                  >
-                    {{ spd }}x
-                  </button>
-                </div>
-              </div>
-
-              <!-- Audio Experience & Stable Volume Toggle (TASK-114) -->
-              <div class="mb-3 border-t border-[var(--gvp-border)] pt-2.5">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="font-semibold text-[var(--gvp-text)]">안정적인 볼륨 (Stable Volume)</p>
-                    <p class="text-[10px] text-[var(--gvp-text-secondary)]">급격한 음량 변화를 방지 (-14 LUFS)</p>
-                  </div>
-                  <button
-                    type="button"
-                    class="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition"
-                    :class="isStableVolumeEnabled ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
-                    @click="toggleStableVolume"
-                  >
-                    {{ isStableVolumeEnabled ? 'ON' : 'OFF' }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Ambient Mode Toggle (TASK-131) -->
-              <div class="mb-3 border-t border-[var(--gvp-border)] pt-2.5">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="font-semibold text-[var(--gvp-text)]">앰비언트 모드 (Ambient Frame)</p>
-                    <p class="text-[10px] text-[var(--gvp-text-secondary)]">영상 주변 프레임 강조 효과</p>
-                  </div>
-                  <button
-                    type="button"
-                    class="rounded-md border px-2.5 py-1 text-[11px] font-semibold transition"
-                    :class="isAmbientModeEnabled ? 'border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] text-[var(--gvp-brand-hover)]' : 'border-[var(--gvp-border)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
-                    @click="isAmbientModeEnabled = !isAmbientModeEnabled"
-                  >
-                    {{ isAmbientModeEnabled ? 'ON' : 'OFF' }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Sleep Timer (TASK-137) -->
-              <div class="mb-3 border-t border-[var(--gvp-border)] pt-2.5">
-                <p class="mb-1 font-semibold text-[var(--gvp-text-secondary)]">수면 타이머 (Sleep Timer)</p>
-                <div class="grid grid-cols-4 gap-1 text-[11px]">
-                  <button
-                    v-for="opt in (['off', '15', '30', '60'] as const)"
-                    :key="opt"
-                    type="button"
-                    class="rounded-md border px-1.5 py-1 text-center font-medium transition tabular-nums"
-                    :class="sleepTimerOption === opt ? 'border-[var(--gvp-brand)] bg-[var(--gvp-brand)] text-white' : 'border-[var(--gvp-border)] bg-[var(--gvp-canvas)] text-[var(--gvp-text)] hover:bg-[var(--gvp-elevated)]'"
-                    @click="setSleepTimer(opt)"
-                  >
-                    {{ opt === 'off' ? 'Off' : `${opt}분` }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Stats for Nerds Trigger (TASK-138) -->
-              <div class="border-t border-[var(--gvp-border)] pt-2.5">
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between rounded-md border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2.5 py-1.5 text-left font-medium text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]"
-                  @click="showStatsForNerds = !showStatsForNerds; showSettingsMenu = false; updateNerdStats()"
-                >
-                  <span>전문 통계 (Stats for Nerds)</span>
-                  <span class="font-mono text-[10px] text-[var(--gvp-text-secondary)]">Shift+S</span>
-                </button>
+            <div class="group/vol flex items-center">
+              <button
+                type="button"
+                class="rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100"
+                title="Mute (m)"
+                :aria-label="isMuted ? 'Unmute (m)' : 'Mute (m)'"
+                :aria-pressed="isMuted"
+                @click="toggleMute"
+              >
+                <svg v-if="isMuted || volume === 0" class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                </svg>
+                <svg v-else class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+                </svg>
+              </button>
+              <div class="w-0 overflow-hidden transition-all duration-200 group-hover/vol:w-16 [@media(hover:none)]:w-16">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  :value="isMuted ? 0 : volume"
+                  aria-label="Volume"
+                  class="h-1 w-16 cursor-pointer accent-white"
+                  @input="setVolume"
+                />
               </div>
             </div>
-
-            <!-- PiP -->
+            <span v-if="isLive" class="flex items-center gap-1.5 px-2 text-xs font-semibold">
+              <span class="h-1.5 w-1.5 rounded-full bg-[var(--gvp-brand)]" /> LIVE
+            </span>
+            <span v-else class="px-1 text-xs tabular-nums">
+              {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+            </span>
+            <span class="flex-1" />
             <button
               type="button"
-              class="rounded-md p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
-              title="Picture-in-Picture (i)"
-              aria-label="Picture-in-Picture (i)"
+              title="자막 (c)"
+              aria-label="자막"
+              class="relative rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100"
+              @click="showSettingsMenu = true; settingsView = 'captions'; pokeControls()"
+            >
+              <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                <path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H9.5v-.5h-2v3h2v-.5H11v1c0 .55-.45 1-1 1H7.5c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1H10c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2v-.5H18v1c0 .55-.45 1-1 1h-2.5c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1H17c.55 0 1 .45 1 1v1z" />
+              </svg>
+              <span
+                v-if="activeCaptionLang !== 'off'"
+                class="absolute inset-x-2 bottom-1 h-0.5 rounded bg-white"
+              />
+            </button>
+            <button
+              type="button"
+              data-testid="player-settings-toggle"
+              title="설정"
+              aria-label="설정"
+              class="rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100"
+              @click="openSettings"
+            >
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3.2" />
+                <g v-for="n in 8" :key="n" :transform="`rotate(${n * 45} 12 12)`">
+                  <line x1="12" y1="2.5" x2="12" y2="6" stroke-linecap="round" />
+                </g>
+              </svg>
+            </button>
+            <button
+              type="button"
+              title="미니플레이어 (i)"
+              aria-label="미니플레이어 (i)"
+              class="hidden rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100 sm:block"
               @click="togglePiP"
             >
-              <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+              <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
                 <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z" />
               </svg>
             </button>
-
-            <!-- Fullscreen -->
             <button
               type="button"
-              class="rounded-md p-1.5 text-[var(--gvp-text)] transition hover:bg-[var(--gvp-elevated)]"
-              title="Fullscreen (f)"
-              aria-label="Fullscreen (f)"
+              title="시어터 모드 (t)"
+              aria-label="시어터 모드 (t)"
+              class="hidden rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100 sm:block"
+              @click="emit('toggle-theater')"
+            >
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <line x1="15" y1="5" x2="15" y2="19" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              title="전체화면 (f)"
+              aria-label="전체화면 (f)"
+              class="rounded-full p-2 opacity-90 transition hover:bg-white/10 hover:opacity-100"
               @click="toggleFullscreen"
             >
-              <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+              <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
                 <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
               </svg>
             </button>
           </div>
         </div>
+
+        <!-- Settings Menu -->
+        <div
+          v-if="showSettingsMenu"
+          v-click-outside="() => (showSettingsMenu = false)"
+          data-testid="player-settings"
+          class="absolute bottom-[76px] right-3 z-30 max-h-[70%] w-72 overflow-y-auto rounded-xl bg-black/95 py-2 text-sm text-white shadow-2xl"
+        >
+          <template v-if="settingsView === 'main'">
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="settingsView = 'quality'">
+              <span>화질</span>
+              <span class="flex items-center gap-1 text-white/60">{{ selectedQuality === 'Auto' ? '자동' : selectedQuality }}
+                <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
+              </span>
+            </button>
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="settingsView = 'speed'">
+              <span>재생 속도</span>
+              <span class="flex items-center gap-1 text-white/60">{{ speedLabel(selectedSpeed) }}
+                <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
+              </span>
+            </button>
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="settingsView = 'captions'">
+              <span>자막</span>
+              <span class="flex items-center gap-1 text-white/60">{{ activeCaptionLang === 'off' ? '꺼짐' : activeCaptionLang.toUpperCase() }}
+                <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
+              </span>
+            </button>
+            <div class="mx-4 my-1 border-t border-white/10" />
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="emit('toggle-autoplay-next')">
+              <span>자동재생</span>
+              <span class="flex h-5 w-9 items-center rounded-full p-0.5 transition" :class="autoplayNext ? 'justify-end bg-white' : 'justify-start bg-white/30'">
+                <span class="h-4 w-4 rounded-full" :class="autoplayNext ? 'bg-black' : 'bg-white'" />
+              </span>
+            </button>
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="toggleStableVolume">
+              <span>안정적인 볼륨</span>
+              <span class="flex h-5 w-9 items-center rounded-full p-0.5 transition" :class="isStableVolumeEnabled ? 'justify-end bg-white' : 'justify-start bg-white/30'">
+                <span class="h-4 w-4 rounded-full" :class="isStableVolumeEnabled ? 'bg-black' : 'bg-white'" />
+              </span>
+            </button>
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="isAmbientModeEnabled = !isAmbientModeEnabled">
+              <span>앰비언트 모드</span>
+              <span class="flex h-5 w-9 items-center rounded-full p-0.5 transition" :class="isAmbientModeEnabled ? 'justify-end bg-white' : 'justify-start bg-white/30'">
+                <span class="h-4 w-4 rounded-full" :class="isAmbientModeEnabled ? 'bg-black' : 'bg-white'" />
+              </span>
+            </button>
+            <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10" @click="settingsView = 'sleep'">
+              <span>수면 타이머</span>
+              <span class="flex items-center gap-1 text-white/60">{{ sleepTimerOption === 'off' ? '꺼짐' : `${sleepTimerOption}분` }}
+                <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" /></svg>
+              </span>
+            </button>
+            <button
+              type="button"
+              class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/10"
+              @click="showStatsForNerds = !showStatsForNerds; showSettingsMenu = false; updateNerdStats()"
+            >
+              <span>통계 정보</span>
+              <span class="font-mono text-[10px] text-white/60">Shift+S</span>
+            </button>
+          </template>
+          <template v-else>
+            <div class="flex items-center gap-1 border-b border-white/10 px-2 py-1.5">
+              <button type="button" aria-label="뒤로" class="rounded-full p-1.5 hover:bg-white/10" @click="settingsView = 'main'">
+                <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
+              </button>
+              <span class="text-sm font-semibold">
+                {{ settingsView === 'quality' ? '화질' : settingsView === 'speed' ? '재생 속도' : settingsView === 'captions' ? '자막' : '수면 타이머' }}
+              </span>
+            </div>
+            <template v-if="settingsView === 'quality'">
+              <button
+                v-for="q in availableQualities"
+                :key="q"
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-white/10"
+                @click="changeQuality(q); settingsView = 'main'"
+              >
+                <svg v-if="selectedQuality === q" class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                <span v-else class="h-4 w-4" />
+                <span>{{ q === 'Auto' ? '자동' : q }}</span>
+              </button>
+            </template>
+            <template v-else-if="settingsView === 'speed'">
+              <button
+                v-for="spd in speedMenuOptions"
+                :key="spd"
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-white/10"
+                @click="changeSpeed(spd); settingsView = 'main'"
+              >
+                <svg v-if="selectedSpeed === spd" class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                <span v-else class="h-4 w-4" />
+                <span>{{ speedLabel(spd) }}</span>
+              </button>
+            </template>
+            <template v-else-if="settingsView === 'captions'">
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-white/10"
+                @click="selectCaption('off')"
+              >
+                <svg v-if="activeCaptionLang === 'off'" class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                <span v-else class="h-4 w-4" />
+                <span>꺼짐</span>
+              </button>
+              <button
+                v-for="cap in (captions || [])"
+                :key="cap.id"
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-white/10"
+                @click="selectCaption(cap.language)"
+              >
+                <svg v-if="activeCaptionLang === cap.language" class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                <span v-else class="h-4 w-4" />
+                <span>{{ cap.label || cap.language }}</span>
+              </button>
+            </template>
+            <template v-else-if="settingsView === 'sleep'">
+              <button
+                v-for="opt in (['off', '15', '30', '60'] as const)"
+                :key="opt"
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-white/10"
+                @click="setSleepTimer(opt); settingsView = 'main'"
+              >
+                <svg v-if="sleepTimerOption === opt" class="h-4 w-4 fill-current" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                <span v-else class="h-4 w-4" />
+                <span>{{ opt === 'off' ? '꺼짐' : `${opt}분` }}</span>
+              </button>
+            </template>
+          </template>
+        </div>
       </div>
+
+
     </div>
   </div>
 </template>

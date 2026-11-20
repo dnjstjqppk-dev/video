@@ -243,6 +243,7 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 			video.AiTool = ""
 			video.AiReviewStatus = ""
 			video.AiReviewNote = ""
+			h.Store.RefreshSeriesOriginalFlag(video.SeriesID)
 		}
 	}
 	if aiTool != nil {
@@ -268,6 +269,7 @@ func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 
 	video.Status = "DELETED"
 	h.Store.PersistVideo(video)
+	h.Store.RefreshSeriesOriginalFlag(video.SeriesID)
 	identity.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 

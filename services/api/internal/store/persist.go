@@ -121,6 +121,23 @@ func (s *MemoryStore) PersistVideo(v *Video) {
 	}
 }
 
+// PersistVideoViewCount bumps only the persisted view counter (best
+// effort). Counting a view must not rewrite the video row.
+func (s *MemoryStore) PersistVideoViewCount(videoID string) {
+	if !s.persistEnabled() || videoID == "" {
+		return
+	}
+	if !validUUID(videoID) {
+		slog.Warn("View-count write-through skipped: non-UUID fixture id", "video_id", videoID)
+		return
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	if err := s.DB.BumpVideoViewCount(ctx, videoID); err != nil {
+		slog.Warn("View-count write-through failed", "video_id", videoID, "error", err)
+	}
+}
+
 // PersistSeries writes a series row through to PostgreSQL (best effort).
 func (s *MemoryStore) PersistSeries(sr *Series) {
 	if !s.persistEnabled() || sr == nil {

@@ -24,6 +24,36 @@ func (s *MemoryStore) EpisodesForSeries(seriesID string) []*Video {
 	return out
 }
 
+// SeriesHasApprovedAIEpisode reports whether the series holds at least one
+// approved AI episode (deleted videos excluded). AiOriginal mirrors it.
+func (s *MemoryStore) SeriesHasApprovedAIEpisode(seriesID string) bool {
+	for _, v := range s.EpisodesForSeries(seriesID) {
+		if v != nil && v.AiGenerated && v.AiReviewStatus == "approved" {
+			return true
+		}
+	}
+	return false
+}
+
+// RefreshSeriesOriginalFlag re-derives AiOriginal from the current episodes
+// and persists the series when the flag changes. Call it after every
+// transition that can add or remove a qualifying episode: attach (both the
+// old and the new series on moves), detach, review decisions, AI unflagging,
+// and deletion.
+func (s *MemoryStore) RefreshSeriesOriginalFlag(seriesID string) {
+	if seriesID == "" {
+		return
+	}
+	srs, ok := s.Series[seriesID]
+	if !ok || srs == nil {
+		return
+	}
+	if want := s.SeriesHasApprovedAIEpisode(seriesID); srs.AiOriginal != want {
+		srs.AiOriginal = want
+		s.PersistSeries(srs)
+	}
+}
+
 // ToSeriesEpisode projects a video onto its series-episode list entry.
 func ToSeriesEpisode(v *Video) SeriesEpisode {
 	thumb := v.ThumbnailURL

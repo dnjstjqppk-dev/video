@@ -17,6 +17,7 @@ const (
 	aiOwnerToken = "77777777-7777-7777-7777-777777777777"
 	aiEpisode1   = "00000000-0000-0000-0000-0000000000a1"
 	aiEpisode2   = "00000000-0000-0000-0000-0000000000a2"
+	aiEpisode3   = "00000000-0000-0000-0000-0000000000a3"
 	aiPending    = "00000000-0000-0000-0000-0000000000a4"
 	humanVideo   = "00000000-0000-0000-0000-000000000001"
 	aiSeriesID   = "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e5e"
@@ -150,6 +151,48 @@ func TestReviewAI_ApprovalFlagsParentSeries(t *testing.T) {
 	}
 	if !memStore.Series[aiSeriesID].AiOriginal {
 		t.Fatal("approving an episode must flag its series as an AI Original")
+	}
+}
+
+func TestReviewAI_RejectClearsFlagWhenLastApprovedLeaves(t *testing.T) {
+	router, memStore := newVideosRouter()
+	memStore.Videos[aiEpisode2].SeriesID = ""
+	memStore.Videos[aiEpisode3].SeriesID = ""
+	memStore.Videos[aiEpisode1].AiReviewStatus = "pending"
+	rec := aiReq(t, router, http.MethodPost, "/videos/"+aiEpisode1+"/ai-review", "admin-token",
+		map[string]string{"decision": "rejected", "note": "off-brief"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("reject: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if memStore.Series[aiSeriesID].AiOriginal {
+		t.Fatal("rejecting the last approved episode must clear the series flag")
+	}
+}
+
+func TestUpdateVideo_UnflagClearsSeriesFlag(t *testing.T) {
+	router, memStore := newVideosRouter()
+	memStore.Videos[aiEpisode2].SeriesID = ""
+	memStore.Videos[aiEpisode3].SeriesID = ""
+	rec := aiReq(t, router, http.MethodPatch, "/videos/"+aiEpisode1, aiOwnerToken,
+		map[string]interface{}{"ai_generated": false})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unflag: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if memStore.Series[aiSeriesID].AiOriginal {
+		t.Fatal("unflagging the last approved episode must clear the series flag")
+	}
+}
+
+func TestDeleteVideo_ClearsSeriesFlag(t *testing.T) {
+	router, memStore := newVideosRouter()
+	memStore.Videos[aiEpisode2].SeriesID = ""
+	memStore.Videos[aiEpisode3].SeriesID = ""
+	rec := aiReq(t, router, http.MethodDelete, "/videos/"+aiEpisode1, aiOwnerToken, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("delete: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if memStore.Series[aiSeriesID].AiOriginal {
+		t.Fatal("deleting the last approved episode must clear the series flag")
 	}
 }
 

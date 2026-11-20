@@ -29,6 +29,22 @@ func pgCtx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 10*time.Second)
 }
 
+// pgCleanup deletes exactly the rows a round-trip test created (caller
+// passes {table, column, id} in FK-safe order) so the throwaway database
+// never leaks fixtures into hydrated serving.
+func pgCleanup(t *testing.T, pg *PostgresStore, rows ...[3]string) {
+	t.Helper()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		for _, r := range rows {
+			if _, err := pg.DB.ExecContext(ctx, "DELETE FROM "+r[0]+" WHERE "+r[1]+" = $1", r[2]); err != nil {
+				t.Errorf("cleanup %s.%s=%s: %v", r[0], r[1], r[2], err)
+			}
+		}
+	})
+}
+
 // P1-13: job status mapping across the memory/persistence boundary.
 func TestMediaJobStatusMapping(t *testing.T) {
 	cases := map[string][2]string{
@@ -104,6 +120,12 @@ func TestPostgresMediaJobRoundTrip(t *testing.T) {
 	if !found {
 		t.Fatal("saved job missing after load")
 	}
+	pgCleanup(t, pg,
+		[3]string{"media_jobs", "id", job.ID},
+		[3]string{"videos", "id", vidID},
+		[3]string{"channels", "id", chID},
+		[3]string{"users", "id", ownerID},
+	)
 }
 
 // P0-1: users persist to the real migration schema (users + user_profiles)
@@ -142,6 +164,7 @@ func TestPostgresUserRoundTrip(t *testing.T) {
 	if !ok || hydrated.Email != u.Email || hydrated.DisplayName != u.DisplayName {
 		t.Fatalf("hydrated user missing or wrong: %+v", hydrated)
 	}
+	pgCleanup(t, pg, [3]string{"users", "id", id})
 }
 
 // P0-1: channels and videos persist with FK integrity and rehydrate.
@@ -189,6 +212,11 @@ func TestPostgresChannelVideoRoundTrip(t *testing.T) {
 	if _, ok := mem.Channels[chID]; !ok {
 		t.Fatal("hydrated channel missing")
 	}
+	pgCleanup(t, pg,
+		[3]string{"videos", "id", vidID},
+		[3]string{"channels", "id", chID},
+		[3]string{"users", "id", ownerID},
+	)
 }
 
 // P0-1: payment transactions and ledger entries persist atomically and rehydrate.
@@ -241,6 +269,70 @@ func TestPostgresTransactionRoundTrip(t *testing.T) {
 	if debits != credits || debits != 5000 {
 		t.Fatalf("ledger must balance at 5000, got debit=%d credit=%d", debits, credits)
 	}
+	pgCleanup(t, pg,
+		[3]string{"ledger_entries", "transaction_id", txID},
+		[3]string{"payment_transactions", "id", txID},
+		[3]string{"users", "id", userID},
+	)
+}
+
+// View counting must bump only the counter: a full-row rewrite would freeze
+// seed content in PostgreSQL and shadow later seed updates on hydrate.
+func TestPostgresBumpVideoViewCount_TouchesCounterOnly(t *testing.T) {
+	pg := pgTestStore(t)
+	ctx, cancel := pgCtx()
+	defer cancel()
+
+	ownerID := uuid.NewString()
+	if err := pg.SaveUser(ctx, &User{
+		ID: ownerID, Email: "vc-" + ownerID[:8] + "@test.local", Username: "vc" + ownerID[:8],
+		Role: "creator", SubscriptionTier: "free", IsActive: true, DisplayName: "VC",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+	chID := uuid.NewString()
+	if err := pg.SaveChannel(ctx, &Channel{
+		ID: chID, OwnerID: ownerID, Handle: "@vc" + chID[:8], Name: "VC Ch",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveChannel: %v", err)
+	}
+	vidID := uuid.NewString()
+	if err := pg.SaveVideo(ctx, &Video{
+		ID: vidID, ChannelID: chID, Title: "Counter Probe", Visibility: "public",
+		Status: "READY", CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveVideo: %v", err)
+	}
+	pgCleanup(t, pg,
+		[3]string{"videos", "id", vidID},
+		[3]string{"channels", "id", chID},
+		[3]string{"users", "id", ownerID},
+	)
+	if err := pg.BumpVideoViewCount(ctx, vidID); err != nil {
+		t.Fatalf("bump 1: %v", err)
+	}
+	if err := pg.BumpVideoViewCount(ctx, vidID); err != nil {
+		t.Fatalf("bump 2: %v", err)
+	}
+	videos, err := pg.LoadVideos(ctx)
+	if err != nil {
+		t.Fatalf("LoadVideos: %v", err)
+	}
+	for _, v := range videos {
+		if v.ID != vidID {
+			continue
+		}
+		if v.ViewCount != 2 {
+			t.Fatalf("view_count = %d, want 2", v.ViewCount)
+		}
+		if v.Title != "Counter Probe" {
+			t.Fatalf("title rewritten by counter bump: %q", v.Title)
+		}
+		return
+	}
+	t.Fatal("probe video missing after bump")
 }
 
 // AI home ground + DRM: the 00013/00014 columns and the series table
@@ -324,4 +416,10 @@ func TestPostgresAIVideoSeriesRoundTrip(t *testing.T) {
 	if gotS == nil || !gotS.AiOriginal || gotS.Title != "AI RT" {
 		t.Fatalf("saved series %s missing or wrong: %+v", sID, gotS)
 	}
+	pgCleanup(t, pg,
+		[3]string{"videos", "id", vidID},
+		[3]string{"series", "id", sID},
+		[3]string{"channels", "id", chID},
+		[3]string{"users", "id", ownerID},
+	)
 }

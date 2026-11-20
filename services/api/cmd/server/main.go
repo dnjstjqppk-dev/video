@@ -66,8 +66,9 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	r.Use(rateLimiter.Middleware)
 
 	// CORS Configuration for Nuxt 4 web consoles & mobile Dio
+	// *.workers.dev covers the preview consoles until the brand.com cutover.
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*", "https://*.brand.com"},
+		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*", "https://*.brand.com", "https://*.workers.dev"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Request-Id", "X-Idempotency-Key", "X-Webhook-Signature"},
 		ExposedHeaders:   []string{"Link", "X-Request-Id", "ETag"},

@@ -541,6 +541,12 @@ type MemoryStore struct {
 	Contracts       map[string]*PartnerContract
 }
 
+// demoStreamURL is the playable fixture behind every seed video: a public,
+// CORS-open HLS test stream. Seeds are demo metadata, not catalog content —
+// real uploads always carry their own gateway URLs. If this fixture dies,
+// swap the constant (playback of real videos is unaffected).
+const demoStreamURL = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+
 func NewMemoryStore() *MemoryStore {
 	return NewMemoryStoreWithDB(nil)
 }
@@ -727,7 +733,7 @@ func (s *MemoryStore) seedDefaults() {
 		Status:          "READY",
 		DurationSeconds: 754,
 		ThumbnailURL:    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800",
-		HlsMasterURL:    "https://media.gvp.media/hls/00000000-0000-0000-0000-000000000001/master.m3u8",
+		HlsMasterURL:    demoStreamURL,
 		ViewCount:       125430,
 		LikeCount:       8920,
 		DislikeCount:    45,
@@ -735,9 +741,9 @@ func (s *MemoryStore) seedDefaults() {
 		Tags:            []string{"go", "video", "streaming", "architecture", "hls"},
 		Category:        "Technology",
 		Sources: []VideoSource{
-			{Quality: "1080p", ManifestURL: "https://media.gvp.media/hls/00000000-0000-0000-0000-000000000001/1080p.m3u8", Width: 1920, Height: 1080, Bitrate: 4500000},
-			{Quality: "720p", ManifestURL: "https://media.gvp.media/hls/00000000-0000-0000-0000-000000000001/720p.m3u8", Width: 1280, Height: 720, Bitrate: 2500000},
-			{Quality: "480p", ManifestURL: "https://media.gvp.media/hls/00000000-0000-0000-0000-000000000001/480p.m3u8", Width: 854, Height: 480, Bitrate: 1200000},
+			{Quality: "1080p", ManifestURL: demoStreamURL, Width: 1920, Height: 1080, Bitrate: 4500000},
+			{Quality: "720p", ManifestURL: demoStreamURL, Width: 1280, Height: 720, Bitrate: 2500000},
+			{Quality: "480p", ManifestURL: demoStreamURL, Width: 854, Height: 480, Bitrate: 1200000},
 		},
 		Chapters: []VideoChapter{
 			{ID: "c1", Title: "System Overview", StartTimeSeconds: 0, EndTimeSeconds: 120},
@@ -767,7 +773,7 @@ func (s *MemoryStore) seedDefaults() {
 		Status:          "READY",
 		DurationSeconds: 42,
 		ThumbnailURL:    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600",
-		HlsMasterURL:    "https://media.gvp.media/hls/00000000-0000-0000-0000-000000000004/master.m3u8",
+		HlsMasterURL:    demoStreamURL,
 		ViewCount:       358900,
 		LikeCount:       24100,
 		DislikeCount:    120,
@@ -849,7 +855,7 @@ func (s *MemoryStore) seedDefaults() {
 			Status:          "READY",
 			DurationSeconds: ep.dur,
 			ThumbnailURL:    ep.thumb,
-			HlsMasterURL:    "https://media.gvp.media/hls/" + ep.id + "/master.m3u8",
+			HlsMasterURL:    demoStreamURL,
 			ViewCount:       int64(ep.views),
 			LikeCount:       int64(ep.likes),
 			CommentCount:    128,
@@ -878,7 +884,7 @@ func (s *MemoryStore) seedDefaults() {
 		Status:          "READY",
 		DurationSeconds: 58,
 		ThumbnailURL:    "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600",
-		HlsMasterURL:    "https://media.gvp.media/hls/00000000-0000-0000-0000-0000000000a4/master.m3u8",
+		HlsMasterURL:    demoStreamURL,
 		ViewCount:       9200,
 		LikeCount:       640,
 		CommentCount:    21,
@@ -1014,7 +1020,7 @@ func (s *MemoryStore) seedDefaults() {
 		StreamKey:      "live_summit_2026_key",
 		RtmpsIngestURL: "rtmps://live.gvp.media:443/live/",
 		SrtIngestURL:   "srt://live.gvp.media:10000",
-		PlaybackHlsURL: "https://media.gvp.media/live/stream_summit_2026/master.m3u8",
+		PlaybackHlsURL: demoStreamURL,
 		ViewerCount:    14820,
 		CreatedAt:      now.Add(-2 * time.Hour),
 	}

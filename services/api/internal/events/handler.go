@@ -52,7 +52,7 @@ func (h *Handler) RecordAnalyticsEvent(w http.ResponseWriter, r *http.Request) {
 		}
 		if v, ok := h.Store.Videos[event.VideoID]; ok && h.Store.CountView(store.ViewerKey(r, viewerID), event.VideoID) {
 			v.ViewCount++
-			h.Store.PersistVideo(v)
+			h.Store.PersistVideoViewCount(event.VideoID)
 			h.Store.NoteCountedView(v)
 			counted = true
 		}

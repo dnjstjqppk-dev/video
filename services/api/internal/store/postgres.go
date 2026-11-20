@@ -233,6 +233,20 @@ func (p *PostgresStore) SaveChannel(ctx context.Context, c *Channel) error {
 	return nil
 }
 
+// BumpVideoViewCount increments only the view counter. View counting must
+// never rewrite the whole row: a full upsert would freeze seed content in
+// PostgreSQL and shadow later seed updates on every restart hydrate.
+func (p *PostgresStore) BumpVideoViewCount(ctx context.Context, videoID string) error {
+	if !validUUID(videoID) {
+		return fmt.Errorf("video id %q is not a UUID", videoID)
+	}
+	if _, err := p.DB.ExecContext(ctx,
+		"UPDATE videos SET view_count = view_count + 1 WHERE id = $1", videoID); err != nil {
+		return fmt.Errorf("bump view_count: %w", err)
+	}
+	return nil
+}
+
 // SaveVideo inserts or updates a video in PostgreSQL.
 func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 	if v == nil {

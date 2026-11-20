@@ -220,3 +220,83 @@ func TestSeries_ForbiddenForOtherOwner(t *testing.T) {
 		t.Fatalf("expected 403, got %d", rec.Code)
 	}
 }
+
+const (
+	aiOwnerToken   = "77777777-7777-7777-7777-777777777777"
+	aiChannelID    = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	aiSeedSeriesID = "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e5e"
+	aiShortID      = "00000000-0000-0000-0000-0000000000a4"
+	aiEp2ID        = "00000000-0000-0000-0000-0000000000a2"
+	aiEp3ID        = "00000000-0000-0000-0000-0000000000a3"
+)
+
+func createAISeries(t *testing.T, router http.Handler) string {
+	t.Helper()
+	rec := seriesReq(t, router, http.MethodPost, "/series/", aiOwnerToken, map[string]string{
+		"channel_id": aiChannelID, "title": "Flag Probe", "status": "ongoing",
+	})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	return decodeBody(t, rec)["series"].(map[string]interface{})["id"].(string)
+}
+
+func attachEp(t *testing.T, router http.Handler, seriesID, videoID string, season, ep int) {
+	t.Helper()
+	rec := seriesReq(t, router, http.MethodPost, "/series/"+seriesID+"/episodes", aiOwnerToken,
+		map[string]interface{}{"video_id": videoID, "season_no": season, "episode_no": ep})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("attach %s: expected 200, got %d: %s", videoID, rec.Code, rec.Body.String())
+	}
+}
+
+// Approving before attaching is the normal studio flow: the join must flag
+// the series even though no review happens at attach time.
+func TestAttachEpisode_FlagsOriginalWhenApprovedAIJoins(t *testing.T) {
+	router, memStore := newSeriesRouter()
+	memStore.Videos[aiShortID].AiReviewStatus = "approved"
+	id := createAISeries(t, router)
+	if memStore.Series[id].AiOriginal {
+		t.Fatal("new series must start non-original")
+	}
+	attachEp(t, router, id, aiShortID, 1, 1)
+	if !memStore.Series[id].AiOriginal {
+		t.Fatal("attaching an approved AI video must flag the series")
+	}
+}
+
+// Re-attaching moves the video: the donor series loses the flag when its
+// last qualifying episode leaves, and the receiver gains it.
+func TestAttachEpisode_MoveRefreshesBothSeries(t *testing.T) {
+	router, memStore := newSeriesRouter()
+	for _, vid := range []string{aiEp2ID, aiEp3ID} {
+		rec := seriesReq(t, router, http.MethodDelete,
+			"/series/"+aiSeedSeriesID+"/episodes/"+vid, aiOwnerToken, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("detach %s: expected 200, got %d", vid, rec.Code)
+		}
+	}
+	id := createAISeries(t, router)
+	attachEp(t, router, id, testAIVideoID, 1, 1)
+	if memStore.Series[aiSeedSeriesID].AiOriginal {
+		t.Fatal("donor series must lose the flag when its last approved AI episode moves out")
+	}
+	if !memStore.Series[id].AiOriginal {
+		t.Fatal("receiving series must gain the flag")
+	}
+}
+
+func TestDetachEpisode_ClearsFlagWhenLastApprovedLeaves(t *testing.T) {
+	router, memStore := newSeriesRouter()
+	memStore.Videos[aiShortID].AiReviewStatus = "approved"
+	id := createAISeries(t, router)
+	attachEp(t, router, id, aiShortID, 1, 1)
+	rec := seriesReq(t, router, http.MethodDelete,
+		"/series/"+id+"/episodes/"+aiShortID, aiOwnerToken, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("detach: expected 200, got %d", rec.Code)
+	}
+	if memStore.Series[id].AiOriginal {
+		t.Fatal("series must lose the flag when its last approved AI episode detaches")
+	}
+}

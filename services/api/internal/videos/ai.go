@@ -73,11 +73,6 @@ func (h *Handler) ReviewAI(w http.ResponseWriter, r *http.Request) {
 	video.AiReviewStatus = payload.Decision
 	video.AiReviewNote = security.SanitizeUserText(payload.Note, 2000)
 	h.Store.PersistVideo(video)
-	if payload.Decision == "approved" && video.SeriesID != "" {
-		if s := h.Store.Series[video.SeriesID]; s != nil && !s.AiOriginal {
-			s.AiOriginal = true
-			h.Store.PersistSeries(s)
-		}
-	}
+	h.Store.RefreshSeriesOriginalFlag(video.SeriesID)
 	identity.WriteJSON(w, http.StatusOK, video)
 }

@@ -248,12 +248,19 @@ func (h *Handler) AttachEpisode(w http.ResponseWriter, r *http.Request) {
 		identity.WriteError(w, r, http.StatusBadRequest, "INVALID_ARGUMENT", "season_no (1-99) and episode_no (1-999) are required")
 		return
 	}
+	oldSeriesID := video.SeriesID
 	video.SeriesID = s.ID
 	video.SeasonNo = payload.SeasonNo
 	video.EpisodeNo = payload.EpisodeNo
 	h.Store.PersistVideo(video)
 	s.UpdatedAt = time.Now()
 	h.Store.PersistSeries(s)
+	// Approving before attaching is the normal studio flow, and re-attaching
+	// moves the video: refresh both sides so neither flag goes stale.
+	h.Store.RefreshSeriesOriginalFlag(s.ID)
+	if oldSeriesID != "" && oldSeriesID != s.ID {
+		h.Store.RefreshSeriesOriginalFlag(oldSeriesID)
+	}
 	identity.WriteJSON(w, http.StatusOK, h.seriesDetail(s))
 }
 
@@ -279,5 +286,6 @@ func (h *Handler) DetachEpisode(w http.ResponseWriter, r *http.Request) {
 	h.Store.PersistVideo(video)
 	s.UpdatedAt = time.Now()
 	h.Store.PersistSeries(s)
+	h.Store.RefreshSeriesOriginalFlag(s.ID)
 	identity.WriteJSON(w, http.StatusOK, h.seriesDetail(s))
 }

@@ -13,7 +13,7 @@
 
 ### Watch page (`/watch/:id`)
 
-- Adaptive player: quality selector, speed (`0.5x`-`2.0x` in the UI; `0.25x` via the hidden `Shift+</>` shortcut), captions, chapter
+- Adaptive player: overlay controls with auto-hide, segmented chapter seekbar, settings menu (quality from real ABR rungs, speed `0.25x`-`2.0x`, captions, autoplay, stable volume, ambient, sleep timer, stats), captions, chapter
   bar, mini player (PiP, `I`), theater mode (`T`), fullscreen and shortcuts (`Space`, `K`,
   `J`, `L`, `M`, `F`, `C`, `0`-`9`, `,`/`.` frame step, `Shift+S` stats HUD).
 - Below the player: subscribe with notification options, like/dislike, share,
