@@ -1,6 +1,8 @@
 package security
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"strings"
 	"unicode/utf8"
 )
@@ -26,6 +28,20 @@ func SanitizeUserText(input string, maxRunes int) string {
 		stripped = strings.TrimSpace(string(runes[:maxRunes]))
 	}
 	return stripped
+}
+
+// GenerateDRMKey mints a random 128-bit content key ID + key (hex) for one
+// protected video. Dev-grade custody: production must move this to a KMS.
+func GenerateDRMKey() (keyIDHex, keyHex string, err error) {
+	id := make([]byte, 16)
+	if _, err := rand.Read(id); err != nil {
+		return "", "", err
+	}
+	key := make([]byte, 16)
+	if _, err := rand.Read(key); err != nil {
+		return "", "", err
+	}
+	return hex.EncodeToString(id), hex.EncodeToString(key), nil
 }
 
 // MaxVideoTags bounds the tag list stored per video.

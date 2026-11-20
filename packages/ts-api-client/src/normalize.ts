@@ -23,6 +23,10 @@ import type {
   ModerationCase,
   PartnerContract,
   NotificationItem,
+  Series,
+  SeriesDetail,
+  SeriesEpisode,
+  SeriesContext,
 } from '@gvp/shared-types';
 
 type RecordAny = Record<string, any>;
@@ -207,6 +211,71 @@ export function mapVideo(raw: unknown): Video {
     scheduledAt: r.scheduledAt ? asString(r.scheduledAt) : undefined,
     createdAt,
     updatedAt: asString(r.updatedAt, createdAt),
+    aiGenerated: Boolean(r.aiGenerated),
+    aiTool: r.aiTool ? asString(r.aiTool) : undefined,
+    aiReviewStatus: asString(r.aiReviewStatus) as '' | 'pending' | 'approved' | 'rejected',
+    aiReviewNote: r.aiReviewNote ? asString(r.aiReviewNote) : undefined,
+    seriesId: r.seriesId ? asString(r.seriesId) : undefined,
+    seasonNo: asNumber(r.seasonNo) || undefined,
+    episodeNo: asNumber(r.episodeNo) || undefined,
+    seriesContext: isPlainObject(r.seriesContext) ? mapSeriesContext(r.seriesContext) : undefined,
+  };
+}
+
+export function mapSeriesEpisode(raw: unknown): SeriesEpisode {
+  const r = toCamelDeep<RecordAny>(raw as RecordAny);
+  return {
+    videoId: asString(r.videoId),
+    title: asString(r.title),
+    thumbnailUrl: asString(r.thumbnailUrl),
+    durationSeconds: asNumber(r.durationSeconds ?? r.durationSec),
+    seasonNo: asNumber(r.seasonNo),
+    episodeNo: asNumber(r.episodeNo),
+    viewCount: asNumber(r.viewCount),
+    visibility: asString(r.visibility),
+    status: asString(r.status),
+    aiGenerated: Boolean(r.aiGenerated),
+    aiTool: r.aiTool ? asString(r.aiTool) : undefined,
+  };
+}
+
+export function mapSeries(raw: unknown): Series {
+  const r = toCamelDeep<RecordAny>(raw as RecordAny);
+  const createdAt = asString(r.createdAt);
+  return {
+    id: asString(r.id),
+    channelId: asString(r.channelId),
+    title: asString(r.title),
+    description: r.description ? asString(r.description) : undefined,
+    coverUrl: r.coverUrl ? asString(r.coverUrl) : undefined,
+    status: asString(r.status, 'ongoing') as 'ongoing' | 'completed',
+    aiOriginal: Boolean(r.aiOriginal),
+    createdAt,
+    updatedAt: asString(r.updatedAt, createdAt),
+  };
+}
+
+export function mapSeriesDetail(raw: unknown): SeriesDetail {
+  const r = toCamelDeep<RecordAny>(raw as RecordAny);
+  return {
+    series: mapSeries(r.series),
+    episodes: asArray(r.episodes).map(mapSeriesEpisode),
+    episodeCount: asNumber(r.episodeCount, asArray(r.episodes).length),
+  };
+}
+
+export function mapSeriesContext(raw: unknown): SeriesContext {
+  const r = toCamelDeep<RecordAny>(raw as RecordAny);
+  return {
+    id: asString(r.id),
+    title: asString(r.title),
+    status: asString(r.status),
+    aiOriginal: Boolean(r.aiOriginal),
+    episodeTotal: asNumber(r.episodeTotal),
+    episodeIndex: asNumber(r.episodeIndex) || undefined,
+    seasonNo: asNumber(r.seasonNo),
+    episodeNo: asNumber(r.episodeNo),
+    nextEpisode: isPlainObject(r.nextEpisode) ? mapSeriesEpisode(r.nextEpisode) : undefined,
   };
 }
 
@@ -224,6 +293,11 @@ export function mapPlayback(raw: unknown): PlaybackInfo {
     adBreakPoints: asArray<number>(r.adBreakPoints),
     isMembersOnly: Boolean(r.isMembersOnly),
     hasAccess: r.hasAccess !== false,
+    drmProtected: Boolean(r.drmProtected),
+    drm: r.drm && typeof r.drm === 'object'
+      ? { keyId: asString((r.drm as RecordAny).keyId), key: asString((r.drm as RecordAny).key) }
+      : undefined,
+    series: isPlainObject(r.series) ? mapSeriesContext(r.series) : undefined,
   };
 }
 

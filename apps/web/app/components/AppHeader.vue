@@ -9,7 +9,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <header class="gvp-glass sticky top-0 z-40 flex h-14 items-center justify-between gap-2 bg-[var(--gvp-surface)] px-3 sm:px-4">
+  <header class="gvp-glass sticky top-0 z-40 flex h-14 items-center justify-between gap-2 px-3 sm:px-4">
     <div class="flex shrink-0 items-center gap-2">
       <button type="button" aria-label="사이드바 전환" @click="store.toggleSidebar()"
         class="hidden h-9 w-9 items-center justify-center rounded-full text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)] md:inline-flex">

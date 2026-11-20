@@ -31,6 +31,16 @@
   },
   {
     "method": "DELETE",
+    "path": "/v1/series/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
+    "path": "/v1/series/{id}/episodes/{videoId}",
+    "auth": "Auth"
+  },
+  {
+    "method": "DELETE",
     "path": "/v1/subscriptions/{channelId}",
     "auth": "Auth"
   },
@@ -102,6 +112,11 @@
   {
     "method": "GET",
     "path": "/v1/admin/ads/delivery-diagnostics",
+    "auth": "Role(super_admin, platform_admin)"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/admin/ai-reviews",
     "auth": "Role(super_admin, platform_admin)"
   },
   {
@@ -201,6 +216,11 @@
   },
   {
     "method": "GET",
+    "path": "/v1/ai-originals",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
     "path": "/v1/channels/{id}",
     "auth": "Public"
   },
@@ -228,6 +248,11 @@
     "method": "GET",
     "path": "/v1/feed/subscriptions",
     "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/hls/{videoID}/*",
+    "auth": "Auth"
   },
   {
     "method": "GET",
@@ -323,6 +348,16 @@
     "method": "GET",
     "path": "/v1/search/suggestions",
     "auth": "Public"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/series/",
+    "auth": "Auth"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/series/{id}",
+    "auth": "Auth"
   },
   {
     "method": "GET",
@@ -457,6 +492,11 @@
   {
     "method": "PATCH",
     "path": "/v1/playlists/{id}",
+    "auth": "Auth"
+  },
+  {
+    "method": "PATCH",
+    "path": "/v1/series/{id}",
     "auth": "Auth"
   },
   {
@@ -716,6 +756,16 @@
   },
   {
     "method": "POST",
+    "path": "/v1/series/",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/series/{id}/episodes",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
     "path": "/v1/studio/videos/{id}/edit-jobs",
     "auth": "Auth"
   },
@@ -737,6 +787,16 @@
   {
     "method": "POST",
     "path": "/v1/uploads/{id}/parts",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/videos/{id}/ai-review",
+    "auth": "Auth"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/videos/{id}/ai-submit",
     "auth": "Auth"
   },
   {

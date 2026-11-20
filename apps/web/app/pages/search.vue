@@ -67,7 +67,7 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl bg-[var(--gvp-surface)] px-4 py-6 text-[var(--gvp-text)]">
+  <div class="mx-auto max-w-6xl bg-[var(--gvp-canvas)] px-4 py-6 text-[var(--gvp-text)]">
     <!-- Filter & Sort Bar -->
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--gvp-border)] pb-4">
       <div class="flex flex-wrap items-center gap-2">
@@ -124,7 +124,7 @@ const typeFilters: Array<{ id: 'all' | 'video' | 'shorts' | 'live' | 'channel' |
         {{ appStore.locale === 'ko' ? '검색 중 오류가 발생했습니다.' : 'Search failed. Please retry.' }}
       </p>
     </div>
-    <div v-else-if="results.length === 0" class="mt-5 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+    <div v-else-if="results.length === 0" class="mt-5 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-12 text-center">
       <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? `"${query}"에 대한 결과가 없습니다.` : `No results for "${query}".` }}
       </p>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { hasLoginCookie } from '@gvp/ts-api-client'
 const props = defineProps<{ channelId: string; initialCount: number }>()
 const emit = defineEmits<{ (e: 'change', v: { subscribed: boolean; count: number }): void }>()
 const api = useApi()
@@ -19,6 +20,9 @@ watch(() => props.initialCount, v => { count.value = v })
 watch(() => props.channelId, () => { subscribed.value = false; notifyLevel.value = 'all'; void sync() })
 
 async function sync() {
+  // Client-only (onMounted): anonymous visitors stay unsubscribed without
+  // a doomed subscription lookup.
+  if (!hasLoginCookie()) return
   try {
     const sub = await api.getSubscription(props.channelId)
     subscribed.value = sub.subscribed

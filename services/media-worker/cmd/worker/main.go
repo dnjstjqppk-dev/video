@@ -41,7 +41,7 @@ type RenditionProfile struct {
 var StandardLadder = []RenditionProfile{
 	{Name: "240p", Width: 426, Height: 240, VideoBitrate: "400k", AudioBitrate: "64k", FrameRate: 30, Codec: "avc1.4d4015"},
 	{Name: "360p", Width: 640, Height: 360, VideoBitrate: "800k", AudioBitrate: "96k", FrameRate: 30, Codec: "avc1.4d401e"},
-	{Name: "480p", Width: 854, Height: 480, VideoBitrate: "1400k", AudioBitrate: "128k", FrameRate: 30, Codec: "avc1.4d401f"},
+	{Name: "480p", Width: 848, Height: 480, VideoBitrate: "1400k", AudioBitrate: "128k", FrameRate: 30, Codec: "avc1.4d401f"},
 	{Name: "720p", Width: 1280, Height: 720, VideoBitrate: "2800k", AudioBitrate: "128k", FrameRate: 60, Codec: "avc1.4d4020"},
 	{Name: "1080p", Width: 1920, Height: 1080, VideoBitrate: "5000k", AudioBitrate: "192k", FrameRate: 60, Codec: "avc1.64002a"},
 	{Name: "1440p", Width: 2560, Height: 1440, VideoBitrate: "9000k", AudioBitrate: "192k", FrameRate: 60, Codec: "avc1.640032"},
@@ -57,6 +57,11 @@ type TranscodeJob struct {
 	SourceURL   string
 	Attempt     int
 	MaxAttempts int
+	// DRM content protection: when DrmProtected, rungs are packaged with
+	// CENC cbcs using the provided raw key (dev ClearKey custody).
+	DrmProtected bool
+	DrmKeyID     string
+	DrmKeyHex    string
 }
 
 type ProbeMetadata struct {
@@ -576,7 +581,14 @@ func (w *MediaWorker) processReal(job TranscodeJob) error {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return fail(err)
 	}
-	artifacts, err := RunTranscode(context.Background(), inputPath, outDir, ladder, meta.DurationSeconds)
+	var drm *DrmParams
+	if job.DrmProtected {
+		if job.DrmKeyID == "" || job.DrmKeyHex == "" {
+			return fail(fmt.Errorf("DRM job is missing key material"))
+		}
+		drm = &DrmParams{KeyID: job.DrmKeyID, Key: job.DrmKeyHex}
+	}
+	artifacts, err := RunTranscode(context.Background(), inputPath, outDir, ladder, meta.DurationSeconds, drm)
 	if err != nil {
 		return fail(err)
 	}

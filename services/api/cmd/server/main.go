@@ -32,6 +32,7 @@ import (
 	"globalvideoplatform/services/api/internal/policies"
 	"globalvideoplatform/services/api/internal/recommendations"
 	"globalvideoplatform/services/api/internal/security"
+	"globalvideoplatform/services/api/internal/series"
 	"globalvideoplatform/services/api/internal/settlements"
 	"globalvideoplatform/services/api/internal/store"
 	"globalvideoplatform/services/api/internal/studio"
@@ -149,6 +150,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 	subH := subscriptions.NewHandler(memStore)
 	payH := payments.NewHandler(memStore)
 	policiesH := policies.NewHandler(memStore)
+	seriesH := series.NewHandler(memStore)
 
 	// API v1 Routing Tree
 	r.Route("/v1", func(v1 chi.Router) {
@@ -167,6 +169,7 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 
 		// Videos & Playback
 		v1.Mount("/videos", videoH.Routes(authMiddleware))
+		v1.Mount("/hls", videoH.HLSRoutes())
 		v1.Get("/videos/{id}/comments", commH.GetComments)
 		v1.With(authMiddleware.RequireAuth).Post("/videos/{id}/comments", commH.AddComment)
 		v1.With(authMiddleware.RequireAuth).Delete("/comments/{id}", commH.DeleteComment)
@@ -181,6 +184,10 @@ func buildRouter(memStore *store.MemoryStore) http.Handler {
 		v1.Mount("/feed", recomH.Routes(authMiddleware))
 		v1.Get("/search", recomH.Search)
 		v1.Get("/search/suggestions", recomH.SearchSuggestions)
+		v1.Get("/ai-originals", recomH.GetOriginals)
+
+		// Series (AI Originals binge structure, general-purpose)
+		v1.Mount("/series", seriesH.Routes(authMiddleware))
 
 		// Live Streams
 		v1.Mount("/live-streams", liveH.Routes(authMiddleware))

@@ -7,12 +7,14 @@ const showAllSubs = ref(false)
 const ko = computed(() => store.locale === 'ko')
 const mini = computed(() => store.sidebarCollapsed)
 const home = 'M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5.5v-6.5h-5V22H4a1 1 0 0 1-1-1V10.5z'
-const shorts = 'M10 14.65v-5.3L15 12l-5 2.65z'
+const shorts = 'M13 2L3 14h7l-1 8 10-12h-7l1-8z'
 const subIc = 'M4 6h16v2H4zm2-4h12v2H6zm14 8H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2z'
+const aiIc = 'M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7L12 2zm7 11l1.1 3.1L23 17l-2.9.9L19 21l-1.1-3.1L15 17l2.9-.9L19 13z'
 const main = computed(() => [
   { path: '/', label: ko.value ? '홈' : 'Home', icon: home },
   { path: '/shorts', label: ko.value ? '숏폼' : 'Shorts', icon: shorts },
   { path: '/feed/subscriptions', label: ko.value ? '구독' : 'Subscriptions', icon: subIc },
+  { path: '/ai', label: ko.value ? 'AI Originals' : 'AI Originals', icon: aiIc },
 ])
 const you = computed(() => [
   { path: '/feed/history', label: ko.value ? '시청 기록' : 'History' },
@@ -37,7 +39,7 @@ onMounted(() => {
 <template>
   <aside :aria-label="ko ? '탐색 메뉴' : 'Navigation'"
     :class="mini ? 'w-[72px] px-2' : 'w-60 px-3'"
-    class="sticky top-14 z-30 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto border-r border-[var(--gvp-border)] bg-[var(--gvp-surface)] transition-all md:block">
+    class="sticky top-14 z-30 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-y-auto bg-[var(--gvp-canvas)] transition-all md:block">
     <nav class="mt-3 flex flex-col gap-0.5">
       <NuxtLink v-for="it in main" :key="it.path" :to="it.path" :title="mini ? it.label : undefined"
         :class="[route.path === it.path ? 'bg-[var(--gvp-elevated)] font-semibold text-[var(--gvp-text)]' : 'text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] hover:text-[var(--gvp-text)]', mini ? 'flex-col gap-1 px-1 py-2.5 text-[10px]' : 'gap-3 px-3 py-2 text-sm']"

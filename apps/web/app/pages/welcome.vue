@@ -57,7 +57,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl bg-[var(--gvp-surface)] px-4 py-16 text-[var(--gvp-text)] sm:px-6">
+  <div class="mx-auto max-w-2xl bg-[var(--gvp-canvas)] px-4 py-16 text-[var(--gvp-text)] sm:px-6">
     <p class="text-xs font-bold uppercase tracking-wider text-[var(--gvp-brand-hover)]">Welcome</p>
     <h1 class="mt-2 text-3xl font-extrabold text-[var(--gvp-text)]">
       {{ appStore.locale === 'ko' ? 'vravra 시작하기' : 'Get started with vravra' }}
@@ -73,7 +73,7 @@ onMounted(() => {
       />
     </ol>
 
-    <div class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6" role="status">
+    <div class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6" role="status">
       <p class="text-xs font-bold text-[var(--gvp-brand-hover)] tabular-nums">Step {{ step + 1 }} / {{ steps.length }}</p>
       <h2 class="mt-1 text-xl font-bold text-[var(--gvp-text)]">{{ steps[step]?.title }}</h2>
       <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">{{ steps[step]?.body }}</p>

@@ -8,6 +8,10 @@ const appStore = useAppStore()
 const library = useLibraryStore()
 const api = useApi()
 const ko = computed(() => appStore.locale === 'ko'); const menuOpen = ref(false); const hovering = ref(false)
+// Watch progress lives in localStorage, which SSR cannot see: render the
+// bar only after mount so hydration matches the server HTML.
+const isMounted = ref(false)
+onMounted(() => { isMounted.value = true })
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 const progress = computed(() => {
   const p = appStore.getWatchProgress(props.video.id); const d = props.video.durationSeconds
@@ -56,8 +60,9 @@ async function report() {
     <NuxtLink :to="`/watch/${video.id}`" class="relative aspect-video w-full overflow-hidden bg-[var(--gvp-elevated)] transition-[border-radius]" :class="hovering ? 'rounded' : 'rounded-xl'" @mouseenter="onEnter" @mouseleave="onLeave" @focus="onEnter" @blur="onLeave">
       <video v-if="hovering && video.previewUrl" :src="video.previewUrl" muted loop autoplay playsinline class="h-full w-full object-cover" />
       <img v-else :src="video.thumbnailUrl" :alt="video.title" class="h-full w-full object-cover" loading="lazy" />
+      <AiBadge v-if="video.aiGenerated" :tool="video.aiTool" :approved="video.aiReviewStatus === 'approved'" class="absolute left-2 top-2" />
       <span class="absolute bottom-2 right-2 rounded bg-black/80 px-1 py-0.5 text-xs font-medium text-white tabular-nums">{{ formatTimecode(video.durationSeconds) }}</span>
-      <div v-if="progress > 0" class="absolute inset-x-0 bottom-0 h-[3px] bg-white/25"><div class="h-full bg-[var(--gvp-brand)]" :style="{ width: `${progress}%` }" /></div>
+      <div v-if="isMounted && progress > 0" class="absolute inset-x-0 bottom-0 h-[3px] bg-white/25"><div class="h-full bg-[var(--gvp-brand)]" :style="{ width: `${progress}%` }" /></div>
     </NuxtLink>
     <div class="mt-3 flex items-start justify-between gap-2">
       <NuxtLink :to="`/channels/${video.channelId}`" class="shrink-0" :aria-label="video.channel?.name">

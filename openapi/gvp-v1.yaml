@@ -675,6 +675,95 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /series/{id}:
+    delete:
+      tags: [series]
+      summary: "Delete series"
+      operationId: DeleteSeriesById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags: [series]
+      summary: "Get series"
+      operationId: GetSeriesById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [series]
+      summary: "Update series"
+      operationId: UpdateSeriesById
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /series/{id}/episodes/{videoId}:
+    delete:
+      tags: [series]
+      summary: "Delete series episodes"
+      operationId: DeleteSeriesByIdEpisodesByVideoId
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /subscriptions/{channelId}:
     delete:
       tags: [subscriptions]
@@ -955,6 +1044,22 @@ paths:
       tags: [admin]
       summary: "Get admin ads delivery diagnostics"
       operationId: GetAdminAdsDeliveryDiagnostics
+      x-census: {generated: true, detail: pending}
+      x-auth: "Role(super_admin, platform_admin)"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/ai-reviews:
+    get:
+      tags: [admin]
+      summary: "Get admin ai reviews"
+      operationId: GetAdminAiReviews
       x-census: {generated: true, detail: pending}
       x-auth: "Role(super_admin, platform_admin)"
       responses:
@@ -1270,6 +1375,20 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /ai-originals:
+    get:
+      tags: [ai-originals]
+      summary: "Get ai originals"
+      operationId: GetAiOriginals
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /channels/{id}/subscription:
     get:
       tags: [channels]
@@ -1318,6 +1437,26 @@ paths:
       responses:
         '200':
           description: Success
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /hls/{videoID}/*:
+    get:
+      tags: [hls]
+      summary: "Get hls *"
+      operationId: GetHlsByVideoID*
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: videoID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
   /live-streams/{id}:
@@ -1648,6 +1787,37 @@ paths:
           description: Success
         '404':
           $ref: '#/components/responses/NotFound'
+  /series/:
+    get:
+      tags: [series]
+      summary: "Get series"
+      operationId: GetSeries
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      responses:
+        '200':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [series]
+      summary: "Create series"
+      operationId: CreateSeries
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /studio/analytics:
     get:
       tags: [studio]
@@ -2540,6 +2710,32 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+  /series/{id}/episodes:
+    post:
+      tags: [series]
+      summary: "Create series episodes"
+      operationId: CreateSeriesByIdEpisodes
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /uploads/:
     post:
       tags: [uploads]
@@ -2558,6 +2754,58 @@ paths:
           description: Success
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/ai-review:
+    post:
+      tags: [videos]
+      summary: "Create videos ai review"
+      operationId: CreateVideosByIdAiReview
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{id}/ai-submit:
+    post:
+      tags: [videos]
+      summary: "Create videos ai submit"
+      operationId: CreateVideosByIdAiSubmit
+      x-census: {generated: true, detail: pending}
+      x-auth: "Auth"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Success
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /videos/{id}/thumbnail:
     post:
       tags: [videos]

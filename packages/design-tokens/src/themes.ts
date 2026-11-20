@@ -1,4 +1,4 @@
-/** True OLED Dark cinema (default) + daytime Light themes.
+/** Daytime Light (default) + True OLED Dark cinema themes.
  * Keys map 1:1 to spec vars in tokens.css. */
 export interface SurfaceTheme {
   canvas: string
@@ -30,10 +30,10 @@ export const darkTheme: SurfaceTheme = {
 
 export const lightTheme: SurfaceTheme = {
   canvas: '#FFFFFF',
-  surface: '#F4F4F6',
-  elevated: '#EAECEF',
+  surface: '#F7F7F8',
+  elevated: '#F2F2F2',
   overlay: 'rgba(15, 15, 16, 0.45)',
-  borderSubtle: '#E5E7EB',
+  borderSubtle: '#E8E9EB',
   borderStrong: '#D4D4D8',
   textPrimary: '#0F0F0F',
   textSecondary: '#606060',

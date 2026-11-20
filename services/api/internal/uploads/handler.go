@@ -81,6 +81,7 @@ func (h *Handler) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
 		MimeType      string   `json:"mimeType"`
 		VideoType     string   `json:"videoType"` // standard, shorts
 		Tags          []string `json:"tags"`
+		DrmProtected  bool     `json:"drmProtected"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -167,6 +168,16 @@ func (h *Handler) CreateUploadSession(w http.ResponseWriter, r *http.Request) {
 		Tags:            security.SanitizeTags(payload.Tags),
 		Category:        "General",
 		CreatedAt:       now,
+	}
+	if payload.DrmProtected {
+		keyID, keyHex, err := security.GenerateDRMKey()
+		if err != nil {
+			identity.WriteError(w, r, http.StatusInternalServerError, "UNAVAILABLE", "Could not initialize protection")
+			return
+		}
+		video.DrmProtected = true
+		video.DrmKeyID = keyID
+		video.DrmKeyHex = keyHex
 	}
 	h.Store.Videos[videoID] = video
 	h.Store.PersistVideo(video)

@@ -1,5 +1,5 @@
 /* vravra design tokens (SSOT). Brand accents are shared; surfaces flip
-   with [data-theme]. Apps default to dark (cinema); light is daytime. */
+   with [data-theme]. Apps default to light (daytime); dark is cinema. */
 :root {
   --color-brand-crimson: #ff2e4c;
   --color-brand-crimson-hover: #e0223e;
@@ -14,9 +14,9 @@
   --color-danger: #ef4444;
 
   --bg-canvas: #ffffff;
-  --bg-surface: #f4f4f6;
-  --bg-elevated: #eaecef;
-  --border-hairline: #e5e7eb;
+  --bg-surface: #f7f7f8;
+  --bg-elevated: #f2f2f2;
+  --border-hairline: #e8e9eb;
   --border-strong: #d4d4d8;
   --text-primary: #0f0f0f;
   --text-secondary: #606060;

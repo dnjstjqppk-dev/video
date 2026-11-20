@@ -26,7 +26,20 @@ interface StudioContentRow {
   durationSeconds: number
   ageRestricted: boolean
   publishedAt: string
+  aiGenerated: boolean
+  aiTool: string
+  aiReviewStatus: '' | 'pending' | 'approved' | 'rejected'
+  submittingAi: boolean
+  confirmAiOff: boolean
+  savingAi: boolean
   selected: boolean
+}
+
+const aiReviewLabel: Record<StudioContentRow['aiReviewStatus'], string> = {
+  '': '미제출',
+  pending: '심사 중',
+  approved: '선정됨',
+  rejected: '반려됨'
 }
 
 const activeTab = ref<'all' | 'video' | 'shorts' | 'live'>('all')
@@ -59,7 +72,48 @@ function toRow(v: Video): StudioContentRow {
     durationSeconds: v.durationSeconds,
     ageRestricted: v.isAgeRestricted,
     publishedAt: v.publishedAt || v.createdAt,
+    aiGenerated: v.aiGenerated === true,
+    aiTool: v.aiTool || '',
+    aiReviewStatus: (v.aiReviewStatus || '') as StudioContentRow['aiReviewStatus'],
+    submittingAi: false,
+    confirmAiOff: false,
+    savingAi: false,
     selected: false
+  }
+}
+
+async function toggleAiFlag(row: StudioContentRow) {
+  if (row.savingAi) return
+  // Unflagging drops the video (and its review) from Originals: confirm first.
+  if (row.aiGenerated && row.aiReviewStatus !== '' && !row.confirmAiOff) {
+    row.confirmAiOff = true
+    return
+  }
+  row.savingAi = true
+  rowError.value = null
+  try {
+    const updated = await api.updateVideo(row.id, { aiGenerated: !row.aiGenerated } as Partial<Video>)
+    row.aiGenerated = updated.aiGenerated === true
+    row.aiReviewStatus = (updated.aiReviewStatus || '') as StudioContentRow['aiReviewStatus']
+    row.confirmAiOff = false
+  } catch (e: unknown) {
+    rowError.value = e instanceof Error ? e.message : 'AI 표시 변경에 실패했습니다.'
+  } finally {
+    row.savingAi = false
+  }
+}
+
+async function submitAiReview(row: StudioContentRow) {
+  if (row.submittingAi) return
+  row.submittingAi = true
+  rowError.value = null
+  try {
+    const updated = await api.submitAIReview(row.id)
+    row.aiReviewStatus = (updated.aiReviewStatus || 'pending') as StudioContentRow['aiReviewStatus']
+  } catch (e: unknown) {
+    rowError.value = e instanceof Error ? e.message : 'Originals 심사 제출에 실패했습니다.'
+  } finally {
+    row.submittingAi = false
   }
 }
 
@@ -281,6 +335,7 @@ function formatDate(iso: string) {
             <th scope="col" class="px-4 py-2.5">동영상</th>
             <th scope="col" class="px-4 py-2.5">공개 상태</th>
             <th scope="col" class="px-4 py-2.5">제한사항</th>
+            <th scope="col" class="px-4 py-2.5">AI Originals</th>
             <th scope="col" class="px-4 py-2.5">날짜</th>
             <th scope="col" class="px-4 py-2.5 text-right">조회수</th>
             <th scope="col" class="px-4 py-2.5 text-right">댓글</th>
@@ -323,6 +378,44 @@ function formatDate(iso: string) {
             <td class="px-4 py-3 text-xs">
               <span v-if="restrictionOf(row)" class="inline-flex items-center rounded-md border border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] px-2 py-0.5 font-medium text-[var(--gvp-warning)]">{{ restrictionOf(row) }}</span>
               <span v-else class="text-[var(--gvp-text-muted)]">없음</span>
+            </td>
+            <td class="whitespace-nowrap px-4 py-3 text-xs">
+              <span v-if="!row.aiGenerated" class="inline-flex items-center gap-1.5">
+                <span class="text-[var(--gvp-text-muted)]">일반</span>
+                <button
+                  type="button"
+                  :disabled="row.savingAi"
+                  class="inline-flex h-7 items-center rounded-full border border-[var(--gvp-border-strong)] px-2.5 font-medium hover:bg-[var(--gvp-canvas)] disabled:opacity-50"
+                  @click="toggleAiFlag(row)"
+                >{{ row.savingAi ? '저장 중…' : 'AI로 표시' }}</button>
+              </span>
+              <span v-else class="inline-flex items-center gap-1.5">
+                <span
+                  class="inline-flex items-center rounded-md border px-2 py-0.5 font-medium"
+                  :class="row.aiReviewStatus === 'approved'
+                    ? 'border-[var(--gvp-success)] bg-[var(--gvp-success-soft)] text-[var(--gvp-success)]'
+                    : row.aiReviewStatus === 'pending'
+                      ? 'border-[var(--gvp-warning)] bg-[var(--gvp-warning-soft)] text-[var(--gvp-warning)]'
+                      : row.aiReviewStatus === 'rejected'
+                        ? 'border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] text-[var(--gvp-live)]'
+                        : 'border-[var(--gvp-border-strong)] bg-[var(--gvp-elevated)] text-[var(--gvp-text-secondary)]'"
+                  :title="row.aiTool || undefined"
+                >AI · {{ aiReviewLabel[row.aiReviewStatus] }}</span>
+                <button
+                  v-if="(row.aiReviewStatus === '' || row.aiReviewStatus === 'rejected') && row.status === VideoProcessingStatus.READY"
+                  type="button"
+                  :disabled="row.submittingAi"
+                  class="inline-flex h-7 items-center rounded-full bg-[var(--gvp-studio)] px-2.5 font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  @click="submitAiReview(row)"
+                >{{ row.submittingAi ? '제출 중…' : '심사 제출' }}</button>
+                <button
+                  type="button"
+                  :disabled="row.savingAi"
+                  class="inline-flex h-7 items-center rounded-full border px-2.5 font-medium disabled:opacity-50"
+                  :class="row.confirmAiOff ? 'border-[var(--gvp-live)] text-[var(--gvp-live)]' : 'border-[var(--gvp-border-strong)] hover:bg-[var(--gvp-canvas)]'"
+                  @click="toggleAiFlag(row)"
+                >{{ row.savingAi ? '저장 중…' : row.confirmAiOff ? '정말 해제?' : 'AI 해제' }}</button>
+              </span>
             </td>
             <td class="whitespace-nowrap px-4 py-3 text-xs text-[var(--gvp-text-secondary)] tabular-nums">{{ formatDate(row.publishedAt) }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm text-[var(--gvp-text)] tabular-nums">{{ row.views.toLocaleString() }}</td>

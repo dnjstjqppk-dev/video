@@ -121,6 +121,38 @@ func (s *MemoryStore) PersistVideo(v *Video) {
 	}
 }
 
+// PersistSeries writes a series row through to PostgreSQL (best effort).
+func (s *MemoryStore) PersistSeries(sr *Series) {
+	if !s.persistEnabled() || sr == nil {
+		return
+	}
+	if !validUUID(sr.ID) {
+		slog.Warn("Series write-through skipped: non-UUID id", "series_id", sr.ID)
+		return
+	}
+	if !s.ensureChannelRow(sr.ChannelID) {
+		slog.Warn("Series write-through skipped: channel row unavailable", "series_id", sr.ID)
+		return
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	if err := s.DB.SaveSeries(ctx, sr); err != nil {
+		slog.Warn("Series write-through failed", "series_id", sr.ID, "error", err)
+	}
+}
+
+// DeletePersistedSeries removes a series row from PostgreSQL (best effort).
+func (s *MemoryStore) DeletePersistedSeries(id string) {
+	if !s.persistEnabled() || !validUUID(id) {
+		return
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	if err := s.DB.DeleteSeries(ctx, id); err != nil {
+		slog.Warn("Series delete-through failed", "series_id", id, "error", err)
+	}
+}
+
 // PersistUser writes a user row through to PostgreSQL (best effort).
 func (s *MemoryStore) PersistUser(u *User) {
 	if !s.persistEnabled() || u == nil {

@@ -71,7 +71,7 @@ onMounted(() => {
     <form class="flex w-full gap-1.5" @submit.prevent="submit()">
       <input ref="inputEl" v-model="query" type="search" role="combobox" :aria-expanded="open" aria-label="검색"
         placeholder="동영상, 쇼츠, 라이브, 채널 검색... ( / )" @focus="open = true; fetchSug(); fetchTrending()" @input="fetchSug(); open = true" @keydown="onKey"
-        class="h-10 w-full rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-surface)] px-4 text-sm text-[var(--gvp-text)] placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)] focus:outline-none" />
+        class="h-10 w-full rounded-full border border-[var(--gvp-border-strong)] bg-[var(--gvp-canvas)] px-4 text-sm text-[var(--gvp-text)] placeholder:text-[var(--gvp-text-muted)] focus:border-[var(--gvp-focus)] focus:outline-none" />
       <button type="submit" aria-label="검색 실행" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--gvp-brand)] text-white hover:bg-[var(--gvp-brand-hover)]">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
       </button>

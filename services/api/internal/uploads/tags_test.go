@@ -26,6 +26,7 @@ func TestCreateUploadSession_StoresSanitizedTags(t *testing.T) {
 		"mimeType":      "video/mp4",
 		"videoType":     "standard",
 		"tags":          []string{" go ", "", "go", "<b>x</b>", "hls"},
+		"drmProtected":  true,
 	}
 	req, rec := uploadReq(http.MethodPost, "/uploads", "creator-token", body)
 	router.ServeHTTP(rec, req)
@@ -47,5 +48,9 @@ func TestCreateUploadSession_StoresSanitizedTags(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("expected tags %v, got %v", want, got)
 		}
+	}
+	v := s.Videos[out.VideoID]
+	if !v.DrmProtected || len(v.DrmKeyID) != 32 || len(v.DrmKeyHex) != 32 {
+		t.Fatalf("expected minted drm keys, got %+v", v)
 	}
 }

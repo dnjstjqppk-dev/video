@@ -33,6 +33,11 @@ func seedVisibilityStore() *store.MemoryStore {
 	mk("vid-unlisted", "unlisted")
 	mk("vid-private", "private")
 	mk("vid-members", "members_only")
+	mk("vid-drm", "public")
+	drm := s.Videos["vid-drm"]
+	drm.DrmProtected = true
+	drm.DrmKeyID = "00112233445566778899aabbccddeeff"
+	drm.DrmKeyHex = "ffeeddccbbaa99887766554433221100"
 	return s
 }
 
@@ -83,6 +88,42 @@ func TestPlaybackTokenSignedAndVerifiable(t *testing.T) {
 	}
 	if err := VerifyPlaybackToken(body.PlaybackToken, "vid-other"); err == nil {
 		t.Fatal("token must be bound to its video id")
+	}
+}
+
+func TestPlaybackDrmKeysDelivered(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+	router := playbackRouter(seedVisibilityStore())
+
+	rec := getPlayback(t, router, "vid-drm", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for drm playback, got %d", rec.Code)
+	}
+	var body struct {
+		DrmProtected bool `json:"drm_protected"`
+		Drm          *struct {
+			KeyID string `json:"key_id"`
+			Key   string `json:"key"`
+		} `json:"drm"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode playback: %v", err)
+	}
+	if !body.DrmProtected || body.Drm == nil || body.Drm.KeyID == "" || body.Drm.Key == "" {
+		t.Fatalf("expected drm keys delivered: %+v", body)
+	}
+
+	rec = getPlayback(t, router, "vid-pub", "")
+	var plain struct {
+		DrmProtected bool      `json:"drm_protected"`
+		Drm          *struct{} `json:"drm"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &plain); err != nil {
+		t.Fatalf("failed to decode playback: %v", err)
+	}
+	if plain.DrmProtected || plain.Drm != nil {
+		t.Fatalf("plain video must not carry drm: %+v", plain)
 	}
 }
 

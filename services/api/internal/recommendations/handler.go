@@ -3,6 +3,7 @@ package recommendations
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -36,7 +37,9 @@ func (h *Handler) GetHomeFeed(w http.ResponseWriter, r *http.Request) {
 	var feed []*store.Video
 
 	for _, v := range h.Store.Videos {
-		if v.Visibility == "public" && v.Status == "READY" && v.VideoType != "shorts" {
+		// Shelf split: AI-made videos live in the AI Originals rail, not
+		// the general home feed, so the main shelf stays human-made.
+		if v.Visibility == "public" && v.Status == "READY" && v.VideoType != "shorts" && !v.AiGenerated {
 			if category != "" && category != "all" && !strings.EqualFold(v.Category, category) {
 				continue
 			}
@@ -52,7 +55,9 @@ func (h *Handler) GetShortsFeed(w http.ResponseWriter, r *http.Request) {
 	page, limit := identity.ParsePagination(r, 10)
 	var shorts []*store.Video
 	for _, v := range h.Store.Videos {
-		if v.Visibility == "public" && v.Status == "READY" && v.VideoType == "shorts" {
+		// Shelf split: AI shorts surface in AI Originals, not the
+		// general shorts feed.
+		if v.Visibility == "public" && v.Status == "READY" && v.VideoType == "shorts" && !v.AiGenerated {
 			shorts = append(shorts, v)
 		}
 	}
@@ -79,6 +84,50 @@ func (h *Handler) GetSubscriptionsFeed(w http.ResponseWriter, r *http.Request) {
 
 	window, total := identity.PaginateSlice(feed, page, limit)
 	identity.WriteJSON(w, http.StatusOK, identity.PageEnvelope(window, total, page, limit))
+}
+
+// GetOriginals serves the AI Originals shelf: approved AI videos plus
+// AI Original series. Public. ?type=videos|series|all (default all).
+func (h *Handler) GetOriginals(w http.ResponseWriter, r *http.Request) {
+	which := r.URL.Query().Get("type")
+	if which == "" {
+		which = "all"
+	}
+	videoType := r.URL.Query().Get("video_type")
+	page, limit := identity.ParsePagination(r, 24)
+
+	var approved []*store.Video
+	if which == "all" || which == "videos" {
+		for _, v := range h.Store.Videos {
+			if !v.AiGenerated || v.AiReviewStatus != "approved" {
+				continue
+			}
+			if v.Visibility != "public" || v.Status != "READY" {
+				continue
+			}
+			if videoType != "" && v.VideoType != videoType {
+				continue
+			}
+			approved = append(approved, v)
+		}
+		sort.Slice(approved, func(i, j int) bool { return approved[i].PublishedAt.After(approved[j].PublishedAt) })
+	}
+	var originals []*store.Series
+	if which == "all" || which == "series" {
+		for _, s := range h.Store.Series {
+			if s.AiOriginal {
+				originals = append(originals, s)
+			}
+		}
+		sort.Slice(originals, func(i, j int) bool { return originals[i].UpdatedAt.After(originals[j].UpdatedAt) })
+	}
+
+	videoWindow, videoTotal := identity.PaginateSlice(approved, page, limit)
+	seriesWindow, seriesTotal := identity.PaginateSlice(originals, page, limit)
+	identity.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"videos": identity.PageEnvelope(videoWindow, videoTotal, page, limit),
+		"series": identity.PageEnvelope(seriesWindow, seriesTotal, page, limit),
+	})
 }
 
 func (h *Handler) Feedback(w http.ResponseWriter, r *http.Request) {

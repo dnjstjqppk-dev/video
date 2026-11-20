@@ -62,7 +62,7 @@ async function activatePremium() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl bg-[var(--gvp-surface)] px-4 py-12 text-[var(--gvp-text)]">
+  <div class="mx-auto max-w-5xl bg-[var(--gvp-canvas)] px-4 py-12 text-[var(--gvp-text)]">
     <div class="text-center">
       <span class="rounded-md border border-[var(--gvp-accent)] bg-[var(--gvp-info-soft)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--gvp-brand-hover)]">
         vravra Premium
@@ -115,7 +115,7 @@ async function activatePremium() {
     </div>
 
     <!-- Checkout Action -->
-    <div class="mt-8 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center">
+    <div class="mt-8 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6 text-center">
       <div v-if="checkoutComplete" class="text-[var(--gvp-success)]">
         <p class="text-lg font-bold">Welcome to vravra Premium</p>
         <p class="mt-1 text-xs text-[var(--gvp-text-secondary)]">

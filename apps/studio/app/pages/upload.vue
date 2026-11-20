@@ -14,6 +14,9 @@ const title = ref('')
 const description = ref('')
 const category = ref('일반')
 const tagsText = ref('')
+const drmProtected = ref(false)
+const aiGenerated = ref(false)
+const aiTool = ref('')
 
 function parseTags(): string[] {
   return tagsText.value.split(',').map(t => t.trim()).filter(t => t !== '')
@@ -99,7 +102,7 @@ async function saveDetails() {
   detailsNotice.value = null
   detailsFailed.value = null
   try {
-    await api.updateVideo(videoId.value, { title: title.value, description: description.value, category: category.value, tags: parseTags() } as never)
+    await api.updateVideo(videoId.value, { title: title.value, description: description.value, category: category.value, tags: parseTags(), aiGenerated: aiGenerated.value, aiTool: aiTool.value.trim() } as never)
     detailsNotice.value = '세부정보가 저장되었습니다.'
   } catch { detailsFailed.value = '세부정보 저장에 실패했습니다.' } finally { detailsBusy.value = false }
 }
@@ -127,7 +130,8 @@ async function startMultipartUpload() {
       fileSizeBytes: selectedFile.value.size,
       mimeType: selectedFile.value.type || 'video/mp4',
       videoType: videoType.value,
-      tags: parseTags()
+      tags: parseTags(),
+      drmProtected: drmProtected.value || undefined
     })
     uploadId.value = session.uploadId
     videoId.value = session.videoId
@@ -418,6 +422,9 @@ onBeforeUnmount(() => {
             v-model:video-type="videoType"
             v-model:category="category"
             v-model:tags-text="tagsText"
+            v-model:drm-protected="drmProtected"
+            v-model:ai-generated="aiGenerated"
+            v-model:ai-tool="aiTool"
             :type-locked="!!uploadId"
           />
           <section aria-label="재생목록" class="mt-6 border-t border-[var(--gvp-border)] pt-4">

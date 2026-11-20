@@ -2,7 +2,7 @@
 """Generate the API route census and synchronize the OpenAPI specification.
 
 Inputs (all committed, reviewable):
-  1. ROUTES below: chi.Walk dump of services/api (2026-11-19, 155 routes).
+  1. ROUTES below: chi.Walk dump of services/api (2026-11-20, 167 routes).
      Refresh: temporarily add a chi.Walk test in services/api/cmd/server,
      run `go test ./cmd/server/ -run TestZZDumpRoutes -v`, paste, delete.
   2. tests/openapi/gvp-v1.yaml: 36 hand-detailed paths + components.
@@ -27,7 +27,7 @@ ROUTES_JSON = ROOT / "docs" / "api" / "routes.json"
 OPENAPI = ROOT / "openapi" / "gvp-v1.yaml"
 
 # ---------------------------------------------------------------------------
-# 1. Verified route dump (chi.Walk, 2026-11-17). `/*/` is chi's mount artifact
+# 1. Verified route dump (chi.Walk, 2026-11-20). `/*/` is chi's mount artifact
 #    for the users router mounted at "/": the real paths are `/v1/me...`.
 # ---------------------------------------------------------------------------
 ROUTES_RAW = """
@@ -37,6 +37,8 @@ DELETE /v1/*/me/history
 DELETE /v1/*/me/sessions/{id}
 DELETE /v1/channels/{id}/subscribe
 DELETE /v1/comments/{id}
+DELETE /v1/series/{id}
+DELETE /v1/series/{id}/episodes/{videoId}
 DELETE /v1/subscriptions/{channelId}
 DELETE /v1/videos/{id}
 DELETE /v1/videos/{id}/captions/{capId}
@@ -52,6 +54,7 @@ GET /v1/*/me/mfa
 GET /v1/*/me/sessions
 GET /v1/*/me/strikes
 GET /v1/admin/ads/delivery-diagnostics
+GET /v1/admin/ai-reviews
 GET /v1/admin/audit-logs
 GET /v1/admin/dashboard
 GET /v1/admin/finance/settlements
@@ -71,12 +74,14 @@ GET /v1/advertiser/alerts
 GET /v1/advertiser/campaigns
 GET /v1/advertiser/campaigns/{id}
 GET /v1/advertiser/reports
+GET /v1/ai-originals
 GET /v1/channels/{id}
 GET /v1/channels/{id}/subscription
 GET /v1/channels/{id}/videos
 GET /v1/feed/home
 GET /v1/feed/shorts
 GET /v1/feed/subscriptions
+GET /v1/hls/{videoID}/*
 GET /v1/live-streams/
 GET /v1/live-streams/{id}
 GET /v1/live-streams/{id}/chat
@@ -96,6 +101,8 @@ GET /v1/payments/transactions
 GET /v1/playlists/{id}
 GET /v1/search
 GET /v1/search/suggestions
+GET /v1/series/
+GET /v1/series/{id}
 GET /v1/studio/analytics
 GET /v1/studio/analytics/realtime
 GET /v1/studio/claims
@@ -123,6 +130,7 @@ PATCH /v1/channels/{id}
 PATCH /v1/channels/{id}/subscribe
 PATCH /v1/partners/contracts/{id}
 PATCH /v1/playlists/{id}
+PATCH /v1/series/{id}
 PATCH /v1/videos/{id}
 POST /v1/*/me/blocked-users
 POST /v1/*/me/delete-request
@@ -174,11 +182,15 @@ POST /v1/payments/webhooks/{provider}
 POST /v1/payments/{orderId}/refund
 POST /v1/playlists/
 POST /v1/playlists/{id}/items
+POST /v1/series/
+POST /v1/series/{id}/episodes
 POST /v1/studio/videos/{id}/edit-jobs
 POST /v1/subscriptions/{channelId}
 POST /v1/uploads/
 POST /v1/uploads/{id}/complete
 POST /v1/uploads/{id}/parts
+POST /v1/videos/{id}/ai-review
+POST /v1/videos/{id}/ai-submit
 POST /v1/videos/{id}/captions
 POST /v1/videos/{id}/comments
 POST /v1/videos/{id}/elements

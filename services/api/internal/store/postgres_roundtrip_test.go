@@ -242,3 +242,86 @@ func TestPostgresTransactionRoundTrip(t *testing.T) {
 		t.Fatalf("ledger must balance at 5000, got debit=%d credit=%d", debits, credits)
 	}
 }
+
+// AI home ground + DRM: the 00013/00014 columns and the series table
+// persist and rehydrate, and the migrated schema verifies clean.
+func TestPostgresAIVideoSeriesRoundTrip(t *testing.T) {
+	pg := pgTestStore(t)
+	ctx, cancel := pgCtx()
+	defer cancel()
+	if err := pg.VerifySchema(ctx); err != nil {
+		t.Fatalf("VerifySchema: %v", err)
+	}
+
+	ownerID := uuid.NewString()
+	if err := pg.SaveUser(ctx, &User{
+		ID: ownerID, Email: "ai-" + ownerID[:8] + "@test.local", Username: "ai" + ownerID[:8],
+		Role: "creator", SubscriptionTier: "free", IsActive: true, DisplayName: "AI",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+	chID := uuid.NewString()
+	if err := pg.SaveChannel(ctx, &Channel{
+		ID: chID, OwnerID: ownerID, Handle: "@ai" + chID[:8], Name: "AI Ch",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveChannel: %v", err)
+	}
+	now := time.Now().UTC()
+	sID := uuid.NewString()
+	if err := pg.SaveSeries(ctx, &Series{
+		ID: sID, ChannelID: chID, Title: "AI RT", Status: "ongoing",
+		AiOriginal: true, CreatedAt: now, UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("SaveSeries: %v", err)
+	}
+	vidID := uuid.NewString()
+	if err := pg.SaveVideo(ctx, &Video{
+		ID: vidID, ChannelID: chID, Title: "AI RT E1", Visibility: "public",
+		Status: "READY", AiGenerated: true, AiTool: "roundtrip", AiReviewStatus: "approved",
+		SeriesID: sID, SeasonNo: 1, EpisodeNo: 1,
+		DrmProtected: true, DrmKeyID: "kid-rt", DrmKeyHex: "aabbcc",
+		CreatedAt: now,
+	}); err != nil {
+		t.Fatalf("SaveVideo: %v", err)
+	}
+
+	videos, err := pg.LoadVideos(ctx)
+	if err != nil {
+		t.Fatalf("LoadVideos: %v", err)
+	}
+	var got *Video
+	for _, v := range videos {
+		if v.ID == vidID {
+			got = v
+			break
+		}
+	}
+	if got == nil {
+		t.Fatalf("saved AI video %s missing from LoadVideos (%d rows)", vidID, len(videos))
+	}
+	if !got.AiGenerated || got.AiTool != "roundtrip" || got.AiReviewStatus != "approved" {
+		t.Fatalf("AI fields lost: %+v", got)
+	}
+	if got.SeriesID != sID || got.SeasonNo != 1 || got.EpisodeNo != 1 {
+		t.Fatalf("series slot lost: %+v", got)
+	}
+	if !got.DrmProtected || got.DrmKeyID != "kid-rt" || got.DrmKeyHex != "aabbcc" {
+		t.Fatalf("DRM fields lost: %+v", got)
+	}
+	allSeries, err := pg.LoadSeries(ctx)
+	if err != nil {
+		t.Fatalf("LoadSeries: %v", err)
+	}
+	var gotS *Series
+	for _, s := range allSeries {
+		if s.ID == sID {
+			gotS = s
+			break
+		}
+	}
+	if gotS == nil || !gotS.AiOriginal || gotS.Title != "AI RT" {
+		t.Fatalf("saved series %s missing or wrong: %+v", sID, gotS)
+	}
+}

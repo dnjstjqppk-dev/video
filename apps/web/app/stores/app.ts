@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { UserProfile } from '@gvp/shared-types'
-import type { ApiClient } from '@gvp/ts-api-client'
+import { hasLoginCookie, type ApiClient } from '@gvp/ts-api-client'
 
 export const useAppStore = defineStore('gvp-web-app', () => {
   const sidebarCollapsed = ref(false)
@@ -14,6 +14,13 @@ export const useAppStore = defineStore('gvp-web-app', () => {
   const myChannelId = ref<string | null>(null)
 
   async function fetchSession(api: ApiClient) {
+    // Anonymous visitors have no session to look up: skip the /me round
+    // trip (and its 401 console noise) once the DOM proves logged out.
+    if (typeof document !== 'undefined' && !hasLoginCookie()) {
+      currentUser.value = null
+      authError.value = null
+      return
+    }
     authLoading.value = true
     authError.value = null
     try {

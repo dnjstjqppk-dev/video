@@ -50,12 +50,15 @@ func dispatchBackoff(attempt int) time.Duration {
 }
 
 type transcodeDispatch struct {
-	JobID       string `json:"jobId"`
-	VideoID     string `json:"videoId"`
-	SourceR2Key string `json:"sourceR2Key"`
-	SourceURL   string `json:"sourceUrl,omitempty"`
-	Attempt     int    `json:"attempt"`
-	MaxAttempts int    `json:"maxAttempts"`
+	JobID        string `json:"jobId"`
+	VideoID      string `json:"videoId"`
+	SourceR2Key  string `json:"sourceR2Key"`
+	SourceURL    string `json:"sourceUrl,omitempty"`
+	Attempt      int    `json:"attempt"`
+	MaxAttempts  int    `json:"maxAttempts"`
+	DrmProtected bool   `json:"drmProtected,omitempty"`
+	DrmKeyID     string `json:"drmKeyId,omitempty"`
+	DrmKeyHex    string `json:"drmKeyHex,omitempty"`
 }
 
 type transcodeArtifactRef struct {
@@ -124,11 +127,14 @@ func (h *Handler) dispatchTranscodeJob(job *store.MediaJob, video *store.Video, 
 		sourceURL = presigned
 	}
 	body, err := json.Marshal(transcodeDispatch{
-		JobID:       job.ID,
-		VideoID:     video.ID,
-		SourceR2Key: session.R2Key,
-		SourceURL:   sourceURL,
-		MaxAttempts: 3,
+		JobID:        job.ID,
+		VideoID:      video.ID,
+		SourceR2Key:  session.R2Key,
+		SourceURL:    sourceURL,
+		MaxAttempts:  3,
+		DrmProtected: video.DrmProtected,
+		DrmKeyID:     video.DrmKeyID,
+		DrmKeyHex:    video.DrmKeyHex,
 	})
 	if err != nil {
 		slog.Error("Transcode dispatch encode failed", "jobId", job.ID, "error", err)

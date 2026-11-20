@@ -35,12 +35,12 @@ key actions (subscribe, live, upload, hero metrics).
 | `--color-premiere-amber` | `#FF9F1C` | Premiere signals |
 | `--color-success` / `--color-warning` | `#10B981` / `#F59E0B` | Status semantics |
 
-| Surface | Light (daytime) | Dark (default cinema) |
+| Surface | Light (default daytime) | Dark (cinema) |
 | :--- | :--- | :--- |
 | `--bg-canvas` | `#FFFFFF` | `#0A0A0C` |
-| `--bg-surface` | `#F4F4F6` | `#141418` |
-| `--bg-elevated` | `#EAECEF` | `#1F1F26` |
-| `--border-hairline` | `#E5E7EB` | `#26262E` |
+| `--bg-surface` | `#F7F7F8` | `#141418` |
+| `--bg-elevated` | `#F2F2F2` | `#1F1F26` |
+| `--border-hairline` | `#E8E9EB` | `#26262E` |
 | `--text-primary` | `#0F0F0F` | `#F4F4F6` |
 | `--text-secondary` | `#606060` | `#9CA3AF` |
 | `--text-muted` | `#909090` | `#6B7280` |

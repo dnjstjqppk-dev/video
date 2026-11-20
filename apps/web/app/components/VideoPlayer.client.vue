@@ -42,6 +42,7 @@ const emit = defineEmits<{
 
 const appStore = useAppStore()
 const api = useApi()
+const config = useRuntimeConfig()
 
 const playerContainerRef = ref<HTMLElement | null>(null)
 const videoRef = ref<HTMLVideoElement | null>(null)
@@ -280,6 +281,12 @@ function skipAd() {
   finishAdAndStartVideo()
 }
 
+function onAdError() {
+  // A broken ad asset must never brick playback: fall through to content.
+  if (adCountdownInterval) clearInterval(adCountdownInterval)
+  finishAdAndStartVideo()
+}
+
 function onAdComplete() {
   if (adCountdownInterval) clearInterval(adCountdownInterval)
   if (adCampaignId.value) {
@@ -380,12 +387,33 @@ async function initShakaPlayer() {
     currentTime.value = savedSeconds
   }
 
+  // Signed playback token: lets Shaka fetch gated HLS through the
+  // gateway without Authorization headers (falls back to the bare URL).
+  let streamUrl = props.hlsMasterUrl
+  let drmKeys: Record<string, string> | null = null
+  try {
+    const pb = await api.getPlaybackInfo(props.videoId)
+    if (pb.playbackToken && streamUrl) {
+      streamUrl += (streamUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(pb.playbackToken)
+    }
+    if (pb.drm?.keyId && pb.drm?.key) {
+      drmKeys = { [pb.drm.keyId]: pb.drm.key }
+    }
+  } catch {
+    // Public content or offline playback info: use the bare URL.
+  }
+
   try {
     const shakaModule = await import('shaka-player')
     const shaka = shakaModule.default || shakaModule
     shaka.polyfill.installAll()
     if (shaka.Player.isBrowserSupported()) {
       shakaInstance = new shaka.Player(videoEl)
+      const drmServers: Record<string, string> = {}
+      const widevineUrl = (config.public.widevineLicenseUrl as string) || ''
+      const fairplayUrl = (config.public.fairplayLicenseUrl as string) || ''
+      if (widevineUrl) drmServers['com.widevine.alpha'] = widevineUrl
+      if (fairplayUrl) drmServers['com.apple.fps'] = fairplayUrl
       shakaInstance.configure({
         abr: {
           enabled: true,
@@ -394,19 +422,30 @@ async function initShakaPlayer() {
         streaming: {
           bufferingGoal: 30,
           rebufferingGoal: 2
+        },
+        drm: {
+          servers: drmServers,
+          ...(drmKeys ? { clearKeys: drmKeys } : {})
         }
       })
-      if (props.hlsMasterUrl) {
-        await shakaInstance.load(props.hlsMasterUrl)
+      if (streamUrl) {
+        await shakaInstance.load(streamUrl)
       }
-    } else if (props.hlsMasterUrl) {
-      videoEl.src = props.hlsMasterUrl
+    } else if (streamUrl) {
+      videoEl.src = streamUrl
     }
   } catch {
     // Fallback to native HTML5 video if Shaka cannot load stream in sandboxed test environment
-    if (props.hlsMasterUrl) {
-      videoEl.src = props.hlsMasterUrl
+    if (streamUrl) {
+      videoEl.src = streamUrl
     }
+  }
+
+  // Autoplay-next arrivals (and explicit ?autoplay=1 links) start playing
+  // once the stream is attached; a rejected play() just leaves the video
+  // paused under the browser's autoplay policy.
+  if (props.autoplay) {
+    videoEl.play().catch(() => {})
   }
 }
 
@@ -754,6 +793,7 @@ defineExpose({
             playsinline
             class="h-full w-full object-contain"
             @ended="onAdComplete"
+            @error="onAdError"
           />
 
           <!-- Top Ad Info Bar -->
@@ -814,6 +854,7 @@ defineExpose({
         <!-- HTML5 / Shaka Video Surface -->
         <video
           ref="videoRef"
+          data-testid="main-video"
           :poster="posterUrl"
           class="h-full w-full object-contain"
           playsinline

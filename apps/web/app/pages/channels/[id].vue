@@ -62,7 +62,7 @@ const channelLive = computed(() => liveData.value || [])
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1600px] bg-[var(--gvp-surface)] pb-12 text-[var(--gvp-text)]">
+  <div class="mx-auto max-w-[1600px] bg-[var(--gvp-canvas)] pb-12 text-[var(--gvp-text)]">
     <div v-if="channelPending" class="animate-pulse">
       <div class="h-44 w-full bg-[var(--gvp-elevated)] sm:h-60" />
       <div class="mx-4 mt-6 h-8 w-1/3 rounded-md bg-[var(--gvp-elevated)] sm:mx-8" />
@@ -128,7 +128,7 @@ const channelLive = computed(() => liveData.value || [])
       </div>
 
       <!-- Tab Content: Videos -->
-      <p v-if="activeTab === 'videos' && channelVideos.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
+      <p v-if="activeTab === 'videos' && channelVideos.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? '업로드된 동영상이 없습니다.' : 'No videos uploaded yet.' }}
       </p>
       <div v-if="activeTab === 'videos' && channelVideos.length" class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -150,7 +150,7 @@ const channelLive = computed(() => liveData.value || [])
       </div>
 
       <!-- Tab Content: Shorts -->
-      <p v-else-if="activeTab === 'shorts' && channelShorts.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
+      <p v-else-if="activeTab === 'shorts' && channelShorts.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? '업로드된 쇼츠가 없습니다.' : 'No Shorts uploaded yet.' }}
       </p>
       <div v-else-if="activeTab === 'shorts'" class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -169,7 +169,7 @@ const channelLive = computed(() => liveData.value || [])
       </div>
 
       <!-- Tab Content: Live -->
-      <p v-else-if="activeTab === 'live' && channelLive.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
+      <p v-else-if="activeTab === 'live' && channelLive.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? '현재 진행 중인 라이브가 없습니다.' : 'This channel is not live right now.' }}
       </p>
       <div v-else-if="activeTab === 'live'" class="mt-6 space-y-4">
@@ -189,7 +189,7 @@ const channelLive = computed(() => liveData.value || [])
       </div>
 
       <!-- Tab Content: Playlists -->
-      <div v-else-if="activeTab === 'playlists'" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
+      <div v-else-if="activeTab === 'playlists'" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8 text-center text-xs text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? '재생목록 연동 준비 중입니다.' : 'Playlist browsing is coming soon.' }}
       </div>
 

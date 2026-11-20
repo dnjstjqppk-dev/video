@@ -35,6 +35,13 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 	for _, v := range videos {
 		s.Videos[v.ID] = v
 	}
+	series, err := s.DB.LoadSeries(ctx)
+	if err != nil {
+		return fmt.Errorf("hydrate series: %w", err)
+	}
+	for _, sr := range series {
+		s.Series[sr.ID] = sr
+	}
 	txs, err := s.DB.LoadTransactions(ctx)
 	if err != nil {
 		return fmt.Errorf("hydrate transactions: %w", err)
@@ -58,7 +65,8 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 	}
 	slog.Info("Memory store hydrated from PostgreSQL",
 		"users", len(users), "channels", len(channels),
-		"videos", len(videos), "transactions", len(txs), "jobs", len(jobs),
+		"videos", len(videos), "series", len(series),
+		"transactions", len(txs), "jobs", len(jobs),
 		"hourly_buckets", len(buckets))
 	return nil
 }

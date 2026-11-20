@@ -1,4 +1,4 @@
-/** Console theme: dark cinema default + light + system, persisted. */
+/** Console theme: light daytime default + dark + system, persisted. */
 export type ConsoleThemePreference = 'light' | 'dark' | 'system'
 const KEY = 'gvp_console_theme'
 
@@ -7,10 +7,10 @@ function resolveSystem(): 'light' | 'dark' {
 }
 
 export function useConsoleTheme() {
-  const preference = useState<ConsoleThemePreference>('console-theme', () => 'dark')
+  const preference = useState<ConsoleThemePreference>('console-theme', () => 'light')
   const mode = computed<'light' | 'dark'>(() =>
     preference.value === 'system'
-      ? (import.meta.client ? resolveSystem() : 'dark')
+      ? (import.meta.client ? resolveSystem() : 'light')
       : preference.value,
   )
 
@@ -30,8 +30,8 @@ export function useConsoleTheme() {
   onMounted(() => {
     try {
       const saved = localStorage.getItem(KEY)
-      apply(saved === 'light' || saved === 'system' ? saved : 'dark')
-    } catch { apply('dark') }
+      apply(saved === 'dark' || saved === 'system' ? saved : 'light')
+    } catch { apply('light') }
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (preference.value === 'system') apply('system')
     })

@@ -23,7 +23,10 @@ import type {
   AnalyticsPlaybackEvent,
   StudioEditDecisionList,
   StudioEditJob,
-  NotificationItem
+  NotificationItem,
+  Series,
+  SeriesDetail,
+  SeriesEpisode
 } from '@gvp/shared-types';
 import {
   toCamelDeep,
@@ -35,6 +38,8 @@ import {
   mapComment,
   mapVideoCaption,
   mapVideoElement,
+  mapSeries,
+  mapSeriesDetail,
   mapLiveStream,
   mapNotification,
   mapAdCreative,
@@ -73,6 +78,16 @@ function readCsrfCookie(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)gvp_csrf=([^;]*)/);
   const value = match?.[1];
   return value ? decodeURIComponent(value) : null;
+}
+
+/**
+ * Client-side login signal: the login endpoints set gvp_csrf next to the
+ * httpOnly session cookie and logout deletes it. Always false during SSR,
+ * so server callers must keep their own behavior and only skip when the
+ * DOM is available to prove the visitor logged out.
+ */
+export function hasLoginCookie(): boolean {
+  return readCsrfCookie() !== null;
 }
 
 export class ApiClient {
@@ -239,6 +254,7 @@ export class ApiClient {
     mimeType: string;
     videoType?: string;
     tags?: string[];
+    drmProtected?: boolean;
   }): Promise<{
     uploadId: string;
     videoId: string;
@@ -352,6 +368,99 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ videoId, action }),
     });
+  }
+
+  // --- AI Originals & Series ---
+  async getOriginals(options: { type?: 'all' | 'videos' | 'series'; videoType?: string; page?: number; limit?: number } = {}): Promise<{
+    videos: { items: Video[]; total: number };
+    series: { items: Series[]; total: number };
+  }> {
+    const params = new URLSearchParams({
+      type: options.type || 'all',
+      page: String(options.page || 1),
+      limit: String(options.limit || 24),
+      ...(options.videoType ? { video_type: options.videoType } : {})
+    });
+    const raw = await this.request<{ videos: { items: unknown[]; total: number }; series: { items: unknown[]; total: number } }>(`/v1/ai-originals?${params.toString()}`);
+    return {
+      videos: { items: (raw.videos?.items || []).map(mapVideo), total: raw.videos?.total || 0 },
+      series: { items: (raw.series?.items || []).map(mapSeries), total: raw.series?.total || 0 }
+    };
+  }
+
+  async listSeries(channelId?: string, page = 1, limit = 24): Promise<{ items: Series[]; total: number }> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (channelId) params.set('channel_id', channelId);
+    const raw = await this.request<{ items: unknown[]; total: number }>(`/v1/series/?${params.toString()}`);
+    return { items: (raw.items || []).map(mapSeries), total: raw.total || 0 };
+  }
+
+  async getSeries(id: string): Promise<SeriesDetail> {
+    const raw = await this.request<unknown>(`/v1/series/${id}`);
+    return mapSeriesDetail(raw);
+  }
+
+  async createSeries(data: { channelId: string; title: string; description?: string; coverUrl?: string; status?: 'ongoing' | 'completed' }): Promise<SeriesDetail> {
+    const raw = await this.request<unknown>('/v1/series/', {
+      method: 'POST',
+      body: JSON.stringify({ channel_id: data.channelId, title: data.title, description: data.description, cover_url: data.coverUrl, status: data.status }),
+    });
+    return mapSeriesDetail(raw);
+  }
+
+  async updateSeries(id: string, data: { title?: string; description?: string; coverUrl?: string; status?: 'ongoing' | 'completed' }): Promise<SeriesDetail> {
+    const raw = await this.request<unknown>(`/v1/series/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return mapSeriesDetail(raw);
+  }
+
+  async deleteSeries(id: string): Promise<void> {
+    return this.request(`/v1/series/${id}`, { method: 'DELETE' });
+  }
+
+  async attachEpisode(seriesId: string, data: { videoId: string; seasonNo: number; episodeNo: number }): Promise<SeriesDetail> {
+    const raw = await this.request<unknown>(`/v1/series/${seriesId}/episodes`, {
+      method: 'POST',
+      body: JSON.stringify({ video_id: data.videoId, season_no: data.seasonNo, episode_no: data.episodeNo }),
+    });
+    return mapSeriesDetail(raw);
+  }
+
+  async detachEpisode(seriesId: string, videoId: string): Promise<SeriesDetail> {
+    const raw = await this.request<unknown>(`/v1/series/${seriesId}/episodes/${videoId}`, { method: 'DELETE' });
+    return mapSeriesDetail(raw);
+  }
+
+  async submitAIReview(videoId: string): Promise<Video> {
+    const raw = await this.request<unknown>(`/v1/videos/${videoId}/ai-submit`, { method: 'POST' });
+    return mapVideo(raw);
+  }
+
+  async reviewAI(videoId: string, decision: 'approved' | 'rejected', note?: string): Promise<Video> {
+    const raw = await this.request<unknown>(`/v1/videos/${videoId}/ai-review`, {
+      method: 'POST',
+      body: JSON.stringify({ decision, note }),
+    });
+    return mapVideo(raw);
+  }
+
+  async listAIReviews(page = 1, limit = 24): Promise<{ items: Array<{ video: Video; channelName?: string; channelHandle?: string; seriesId?: string; seriesTitle?: string }>; total: number }> {
+    const raw = await this.request<{ items: unknown[]; total: number }>(`/v1/admin/ai-reviews?page=${page}&limit=${limit}`);
+    return {
+      items: (raw.items || []).map((entry) => {
+        const e = toCamelDeep<Record<string, any>>(entry as Record<string, any>);
+        return {
+          video: mapVideo(e.video),
+          channelName: e.channelName,
+          channelHandle: e.channelHandle,
+          seriesId: e.seriesId,
+          seriesTitle: e.seriesTitle
+        };
+      }),
+      total: raw.total || 0
+    };
   }
 
   // --- Comments ---

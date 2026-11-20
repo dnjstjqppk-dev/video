@@ -556,13 +556,13 @@ onUnmounted(() => {
 
         <!-- Comments Feed -->
         <div class="mt-3 flex-1 space-y-3 overflow-y-auto pr-1 text-xs">
-          <p v-if="shortComments.length === 0" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-4 text-center text-xs text-[var(--gvp-text-secondary)]">
+          <p v-if="shortComments.length === 0" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-4 text-center text-xs text-[var(--gvp-text-secondary)]">
             {{ appStore.locale === 'ko' ? '아직 댓글이 없습니다.' : 'No comments yet.' }}
           </p>
           <div
             v-for="cmt in shortComments"
             :key="cmt.id"
-            class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-3"
+            class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-3"
           >
             <div class="flex items-center justify-between">
               <span class="font-semibold text-[var(--gvp-brand-hover)]">{{ cmt.user }}</span>

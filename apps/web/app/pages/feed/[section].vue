@@ -48,7 +48,7 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
 </script>
 
 <template>
-  <section class="mx-auto max-w-6xl bg-[var(--gvp-surface)] px-4 py-8 text-[var(--gvp-text)] sm:px-8">
+  <section class="mx-auto max-w-6xl bg-[var(--gvp-canvas)] px-4 py-8 text-[var(--gvp-text)] sm:px-8">
     <div class="flex flex-wrap items-start justify-between gap-5 border-b border-[var(--gvp-border)] pb-6">
       <div>
         <h1 class="text-2xl font-bold text-[var(--gvp-text)] sm:text-3xl">{{ titles[section] }}</h1>
@@ -125,7 +125,7 @@ useSeoMeta({ title: () => titles[section.value] || '보관함' })
       </button>
     </div>
 
-    <div v-else-if="!videos.length" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] py-20 text-center">
+    <div v-else-if="!videos.length" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] py-20 text-center">
       <h2 class="text-lg font-bold text-[var(--gvp-text)]">{{ query ? '검색 결과가 없습니다' : '아직 동영상이 없습니다' }}</h2>
       <p class="mt-2 text-sm text-[var(--gvp-text-secondary)]">
         {{ section === 'saved' ? '동영상 메뉴에서 나중에 보기를 선택해 보세요.' : section === 'subscriptions' ? '좋아하는 채널을 구독하면 새로운 동영상을 모아 볼 수 있습니다.' : section === 'liked' ? '마음에 드는 동영상에 좋아요를 눌러 보세요.' : section === 'trending' ? '아직 집계된 인기 동영상이 없습니다.' : '이 카테고리에 표시할 동영상이 아직 없습니다.' }}

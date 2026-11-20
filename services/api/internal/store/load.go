@@ -97,7 +97,11 @@ func (p *PostgresStore) LoadVideos(ctx context.Context) ([]*Video, error) {
 		duration_seconds, COALESCE(thumbnail_url, ''), COALESCE(custom_thumbnail_url, ''),
 		COALESCE(auto_frame_urls, '{}'), COALESCE(hls_master_url, ''),
 		view_count, like_count, dislike_count, comment_count, tags, category,
-		COALESCE(elements, '[]'), published_at, scheduled_at, created_at FROM videos`)
+		COALESCE(elements, '[]'), published_at, scheduled_at,
+		COALESCE(drm_protected, false), COALESCE(drm_key_id, ''), COALESCE(drm_key_hex, ''),
+		COALESCE(ai_generated, false), COALESCE(ai_tool, ''), COALESCE(ai_review_status, ''),
+		COALESCE(ai_review_note, ''), series_id, COALESCE(season_no, 0), COALESCE(episode_no, 0),
+		created_at FROM videos`)
 	if err != nil {
 		return nil, fmt.Errorf("load videos: %w", err)
 	}
@@ -106,16 +110,21 @@ func (p *PostgresStore) LoadVideos(ctx context.Context) ([]*Video, error) {
 	for rows.Next() {
 		var v Video
 		var published, scheduled sql.NullTime
+		var seriesID sql.NullString
 		var elementsJSON []byte
 		if err := rows.Scan(
 			&v.ID, &v.ChannelID, &v.Title, &v.Description, &v.VideoType, &v.Visibility, &v.Status,
 			&v.DurationSeconds, &v.ThumbnailURL, &v.CustomThumbnailURL,
 			pq.Array(&v.AutoFrameURLs), &v.HlsMasterURL,
 			&v.ViewCount, &v.LikeCount, &v.DislikeCount, &v.CommentCount,
-			pq.Array(&v.Tags), &v.Category, &elementsJSON, &published, &scheduled, &v.CreatedAt,
+			pq.Array(&v.Tags), &v.Category, &elementsJSON, &published, &scheduled,
+			&v.DrmProtected, &v.DrmKeyID, &v.DrmKeyHex,
+			&v.AiGenerated, &v.AiTool, &v.AiReviewStatus, &v.AiReviewNote,
+			&seriesID, &v.SeasonNo, &v.EpisodeNo, &v.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan video: %w", err)
 		}
+		v.SeriesID = seriesID.String
 		if published.Valid {
 			v.PublishedAt = published.Time
 		}
@@ -128,6 +137,30 @@ func (p *PostgresStore) LoadVideos(ctx context.Context) ([]*Video, error) {
 			}
 		}
 		out = append(out, &v)
+	}
+	return out, rows.Err()
+}
+
+// LoadSeries reads all series rows from PostgreSQL.
+func (p *PostgresStore) LoadSeries(ctx context.Context) ([]*Series, error) {
+	rows, err := p.DB.QueryContext(ctx, `SELECT
+		id, channel_id, title, COALESCE(description, ''), COALESCE(cover_url, ''),
+		status, COALESCE(ai_original, false), created_at, updated_at
+		FROM series`)
+	if err != nil {
+		return nil, fmt.Errorf("load series: %w", err)
+	}
+	defer rows.Close()
+	var out []*Series
+	for rows.Next() {
+		var s Series
+		if err := rows.Scan(
+			&s.ID, &s.ChannelID, &s.Title, &s.Description, &s.CoverURL,
+			&s.Status, &s.AiOriginal, &s.CreatedAt, &s.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan series: %w", err)
+		}
+		out = append(out, &s)
 	}
 	return out, rows.Err()
 }

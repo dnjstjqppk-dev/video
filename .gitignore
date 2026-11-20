@@ -37,6 +37,8 @@ vendor/
 tmp/
 .temp/
 tests/test-results/
+services/api/test-results/
+services/api/var/
 playwright-report/
 .DS_Store
 Thumbs.db
@@ -50,4 +52,9 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+
+# Local media toolchain (ffmpeg, S3, live)
+tools/data/
+tools/bin/*.zip
 

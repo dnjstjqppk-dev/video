@@ -13,6 +13,7 @@ const navLinks = [
   { path: '/ads', label: '광고 송출 진단 (Ad Delivery)', icon: 'M3 20h18M6 16v-4m4 4V8m4 8v-6m4 6V4' },
   { path: '/users', label: '사용자 & RBAC 거버넌스 (Users)', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m8-10a4 4 0 100-8 4 4 0 000 8z' },
   { path: '/moderation', label: '신뢰 및 안전 큐 (Moderation)', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+  { path: '/ai-reviews', label: 'AI Originals 심사 (AI Reviews)', icon: 'M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7L12 2z' },
   { path: '/finance', label: '정산 승인 & 유닛 이코노믹스 (Finance)', icon: 'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
   { path: '/policies', label: '정책 버전 & 킬스위치 (Policies)', icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' },
   { path: '/infrastructure', label: '멀티 리전 K8s & DR 관제 (Infra)', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9' }

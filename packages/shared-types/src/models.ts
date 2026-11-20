@@ -124,6 +124,61 @@ export interface Video {
   scheduledAt?: string;
   createdAt: string;
   updatedAt: string;
+  // AI home ground: AI provenance + Originals review state + series slot.
+  aiGenerated?: boolean;
+  aiTool?: string;
+  aiReviewStatus?: '' | 'pending' | 'approved' | 'rejected';
+  aiReviewNote?: string;
+  seriesId?: string;
+  seasonNo?: number;
+  episodeNo?: number;
+  seriesContext?: SeriesContext;
+}
+
+export type AiReviewStatus = '' | 'pending' | 'approved' | 'rejected';
+
+export interface Series {
+  id: string;
+  channelId: string;
+  title: string;
+  description?: string;
+  coverUrl?: string;
+  status: 'ongoing' | 'completed';
+  aiOriginal: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SeriesEpisode {
+  videoId: string;
+  title: string;
+  thumbnailUrl: string;
+  durationSeconds: number;
+  seasonNo: number;
+  episodeNo: number;
+  viewCount: number;
+  visibility: string;
+  status: string;
+  aiGenerated: boolean;
+  aiTool?: string;
+}
+
+export interface SeriesDetail {
+  series: Series;
+  episodes: SeriesEpisode[];
+  episodeCount: number;
+}
+
+export interface SeriesContext {
+  id: string;
+  title: string;
+  status: string;
+  aiOriginal: boolean;
+  episodeTotal: number;
+  episodeIndex?: number;
+  seasonNo: number;
+  episodeNo: number;
+  nextEpisode?: SeriesEpisode;
 }
 
 export interface PlaybackInfo {
@@ -138,6 +193,9 @@ export interface PlaybackInfo {
   adBreakPoints: number[]; // timestamps in seconds for midrolls
   isMembersOnly: boolean;
   hasAccess: boolean;
+  drmProtected: boolean;
+  drm?: { keyId: string; key: string };
+  series?: SeriesContext;
 }
 
 export interface Comment {

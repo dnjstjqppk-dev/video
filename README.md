@@ -21,9 +21,9 @@ and Cloudflare R2 / Stream**.
   Signal `#FF3B30` reserved for live, Studio Cobalt `#2563EB` for
   vravra studio. Sources: `tokens.css`, `brand.ts`.
   Full spec: [docs/BRAND_GUIDELINES.md](docs/BRAND_GUIDELINES.md).
-- **Themes:** every surface defaults to True OLED Dark cinema with a
-  daytime Light mode and a persisted light/dark/system toggle; colors
-  are CSS variables, never hard-coded in components.
+- **Themes:** every surface defaults to daytime Light (white) with a
+  True OLED Dark cinema mode and a persisted light/dark/system toggle;
+  colors are CSS variables, never hard-coded in components.
 - **Shell:** glass sticky header, autocomplete search, `+ Create` menu, tabbed
   notification center, workspace switcher, 240px/72px drawer, mobile bottom tabs.
 - **Modules:** every new or touched component stays within 50-80 lines and

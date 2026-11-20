@@ -43,7 +43,7 @@ apps/web/app/
 ```
 
 Studio, partners and admin share the same pattern with `useStudioApi`,
-`usePartnerApi`, `useAdminApi` and `useConsoleTheme` (dark default,
+`usePartnerApi`, `useAdminApi` and `useConsoleTheme` (light default,
 light/dark/system toggle).
 
 ## 3. State management

@@ -47,7 +47,7 @@ async function loginWithDevToken() {
 </script>
 
 <template>
-  <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center bg-[var(--gvp-surface)] px-4 py-8 text-[var(--gvp-text)]">
+  <div class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center bg-[var(--gvp-canvas)] px-4 py-8 text-[var(--gvp-text)]">
     <div class="w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8">
       <VravraLogo size="md" animate show-tagline />
       <h1 class="mt-4 text-xl font-bold text-[var(--gvp-text)]">로그인</h1>

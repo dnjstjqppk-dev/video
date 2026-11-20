@@ -76,37 +76,54 @@ type VideoElement struct {
 }
 
 type Video struct {
-	ID                     string         `json:"id"`
-	ChannelID              string         `json:"channel_id"`
-	ChannelName            string         `json:"channel_name,omitempty"`
-	ChannelHandle          string         `json:"channel_handle,omitempty"`
-	ChannelAvatar          string         `json:"channel_avatar_url,omitempty"`
-	ChannelSubscriberCount int64          `json:"channel_subscriber_count,omitempty"`
-	ChannelVideoCount      int            `json:"channel_video_count,omitempty"`
-	ChannelIsVerified      bool           `json:"channel_is_verified,omitempty"`
-	Title                  string         `json:"title"`
-	Description            string         `json:"description"`
-	VideoType              string         `json:"video_type"` // standard, shorts, live_vod
-	Visibility             string         `json:"visibility"` // public, unlisted, private, members_only, scheduled
-	Status                 string         `json:"status"`     // CREATED, PROCESSING, READY, FAILED
-	DurationSeconds        int            `json:"duration_seconds"`
-	ThumbnailURL           string         `json:"thumbnail_url"`
-	CustomThumbnailURL     string         `json:"custom_thumbnail_url,omitempty"`
-	AutoFrameURLs          []string       `json:"auto_frame_urls,omitempty"`
-	HlsMasterURL           string         `json:"hls_master_url"`
-	ViewCount              int64          `json:"view_count"`
-	LikeCount              int64          `json:"like_count"`
-	DislikeCount           int64          `json:"dislike_count"`
-	CommentCount           int64          `json:"comment_count"`
-	Tags                   []string       `json:"tags"`
-	Category               string         `json:"category"`
-	Sources                []VideoSource  `json:"sources"`
-	Chapters               []VideoChapter `json:"chapters"`
-	Captions               []VideoCaption `json:"captions"`
-	Elements               []VideoElement `json:"elements,omitempty"`
-	PublishedAt            time.Time      `json:"published_at"`
-	ScheduledAt            *time.Time     `json:"scheduled_at,omitempty"`
-	CreatedAt              time.Time      `json:"created_at"`
+	ID                     string `json:"id"`
+	ChannelID              string `json:"channel_id"`
+	ChannelName            string `json:"channel_name,omitempty"`
+	ChannelHandle          string `json:"channel_handle,omitempty"`
+	ChannelAvatar          string `json:"channel_avatar_url,omitempty"`
+	ChannelSubscriberCount int64  `json:"channel_subscriber_count,omitempty"`
+	ChannelVideoCount      int    `json:"channel_video_count,omitempty"`
+	ChannelIsVerified      bool   `json:"channel_is_verified,omitempty"`
+	DrmProtected           bool   `json:"drm_protected"`
+	DrmKeyID               string `json:"drm_key_id,omitempty"`
+	DrmKeyHex              string `json:"drm_key_hex,omitempty"`
+	// AI home ground: AiGenerated marks AI-made content; AiReviewStatus
+	// ("", pending, approved, rejected) gates the Originals shelf only.
+	// SeriesID/SeasonNo/EpisodeNo denormalize the one series a video may
+	// belong to so feeds and playback enrich without joins.
+	AiGenerated    bool   `json:"ai_generated"`
+	AiTool         string `json:"ai_tool,omitempty"`
+	AiReviewStatus string `json:"ai_review_status,omitempty"`
+	AiReviewNote   string `json:"ai_review_note,omitempty"`
+	SeriesID       string `json:"series_id,omitempty"`
+	SeasonNo       int    `json:"season_no,omitempty"`
+	EpisodeNo      int    `json:"episode_no,omitempty"`
+	// SeriesContext is enriched per-request (detail/playback only), never
+	// persisted: series meta + next episode for binge autoplay.
+	SeriesContext      map[string]interface{} `json:"series_context,omitempty"`
+	Title              string                 `json:"title"`
+	Description        string                 `json:"description"`
+	VideoType          string                 `json:"video_type"` // standard, shorts, live_vod
+	Visibility         string                 `json:"visibility"` // public, unlisted, private, members_only, scheduled
+	Status             string                 `json:"status"`     // CREATED, PROCESSING, READY, FAILED
+	DurationSeconds    int                    `json:"duration_seconds"`
+	ThumbnailURL       string                 `json:"thumbnail_url"`
+	CustomThumbnailURL string                 `json:"custom_thumbnail_url,omitempty"`
+	AutoFrameURLs      []string               `json:"auto_frame_urls,omitempty"`
+	HlsMasterURL       string                 `json:"hls_master_url"`
+	ViewCount          int64                  `json:"view_count"`
+	LikeCount          int64                  `json:"like_count"`
+	DislikeCount       int64                  `json:"dislike_count"`
+	CommentCount       int64                  `json:"comment_count"`
+	Tags               []string               `json:"tags"`
+	Category           string                 `json:"category"`
+	Sources            []VideoSource          `json:"sources"`
+	Chapters           []VideoChapter         `json:"chapters"`
+	Captions           []VideoCaption         `json:"captions"`
+	Elements           []VideoElement         `json:"elements,omitempty"`
+	PublishedAt        time.Time              `json:"published_at"`
+	ScheduledAt        *time.Time             `json:"scheduled_at,omitempty"`
+	CreatedAt          time.Time              `json:"created_at"`
 }
 
 type Comment struct {
@@ -410,6 +427,36 @@ type Playlist struct {
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
+// Series is one AI Originals (or general) series: seasons of episodes for
+// binge viewing. Episodes are videos pointing back via SeriesID.
+type Series struct {
+	ID          string    `json:"id"`
+	ChannelID   string    `json:"channel_id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	CoverURL    string    `json:"cover_url"`
+	Status      string    `json:"status"` // ongoing, completed
+	AiOriginal  bool      `json:"ai_original"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// SeriesEpisode is one entry of a series episode list (ordered by
+// season, then episode number).
+type SeriesEpisode struct {
+	VideoID      string `json:"video_id"`
+	Title        string `json:"title"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	DurationSec  int    `json:"duration_seconds"`
+	SeasonNo     int    `json:"season_no"`
+	EpisodeNo    int    `json:"episode_no"`
+	ViewCount    int64  `json:"view_count"`
+	Visibility   string `json:"visibility"`
+	Status       string `json:"status"`
+	AiGenerated  bool   `json:"ai_generated"`
+	AiTool       string `json:"ai_tool,omitempty"`
+}
+
 type LedgerEntry struct {
 	ID            string    `json:"id"`
 	TransactionID string    `json:"transaction_id"`
@@ -483,6 +530,7 @@ type MemoryStore struct {
 	DMCANotices     map[string]*DMCATakedownNotice
 	Moderation      map[string]*ModerationCase
 	Playlists       map[string]*Playlist
+	Series          map[string]*Series
 	Transactions    map[string]*PaymentTransaction
 	IdempotencyKeys map[string]string // idempotencyKey -> transactionID
 	Ledger          []LedgerEntry
@@ -525,6 +573,7 @@ func NewMemoryStoreWithDB(db *PostgresStore) *MemoryStore {
 		DMCANotices:     make(map[string]*DMCATakedownNotice),
 		Moderation:      make(map[string]*ModerationCase),
 		Playlists:       make(map[string]*Playlist),
+		Series:          make(map[string]*Series),
 		Transactions:    make(map[string]*PaymentTransaction),
 		IdempotencyKeys: make(map[string]string),
 		Ledger:          make([]LedgerEntry, 0),
@@ -730,6 +779,118 @@ func (s *MemoryStore) seedDefaults() {
 	}
 	s.Videos[videoShort.ID] = videoShort
 
+	// AI home ground seeds: one AI drama channel, one approved series with
+	// three episodes, and one AI short still pending Originals review.
+	aiCreator := &User{
+		ID:               "77777777-7777-7777-7777-777777777777",
+		Email:            "neodrama@brand.com",
+		Username:         "neodrama_ai",
+		Role:             "creator",
+		SubscriptionTier: "free",
+		IsVerified:       true,
+		IsActive:         true,
+		DisplayName:      "NeoDrama AI",
+		Bio:              "AI-generated drama series. Every frame rendered, every line directed.",
+		AvatarURL:        "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150",
+		CreatedAt:        now,
+	}
+	s.Users[aiCreator.ID] = aiCreator
+
+	aiChannel := &Channel{
+		ID:                  "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		OwnerID:             aiCreator.ID,
+		Handle:              "@neodrama",
+		Name:                "NeoDrama AI",
+		Description:         "AI film & drama studio. Originals, series, and behind-the-prompt cuts.",
+		AvatarURL:           "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=200",
+		BannerURL:           "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=1200",
+		SubscriberCount:     128000,
+		VideoCount:          4,
+		IsVerified:          true,
+		MonetizationEnabled: true,
+		CreatedAt:           now,
+	}
+	s.Channels[aiChannel.ID] = aiChannel
+
+	aiSeries := &Series{
+		ID:          "5e5e5e5e-5e5e-4e5e-8e5e-5e5e5e5e5e5e",
+		ChannelID:   aiChannel.ID,
+		Title:       "Seoul 2099",
+		Description: "A six-part AI drama about the last human projectionist in a city of screens.",
+		CoverURL:    "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=800",
+		Status:      "ongoing",
+		AiOriginal:  true,
+		CreatedAt:   now.Add(-72 * time.Hour),
+		UpdatedAt:   now.Add(-24 * time.Hour),
+	}
+	s.Series[aiSeries.ID] = aiSeries
+
+	aiEpisodes := []struct {
+		id, title, thumb string
+		ep, views, likes int
+		dur              int
+		age              time.Duration
+	}{
+		{"00000000-0000-0000-0000-0000000000a1", "Seoul 2099 — E1. The Last Reel", "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800", 1, 96400, 7200, 612, 72 * time.Hour},
+		{"00000000-0000-0000-0000-0000000000a2", "Seoul 2099 — E2. Static Bloom", "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=800", 2, 61200, 5100, 588, 48 * time.Hour},
+		{"00000000-0000-0000-0000-0000000000a3", "Seoul 2099 — E3. Marquee Ghosts", "https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?w=800", 3, 38700, 3400, 634, 24 * time.Hour},
+	}
+	for _, ep := range aiEpisodes {
+		s.Videos[ep.id] = &Video{
+			ID:              ep.id,
+			ChannelID:       aiChannel.ID,
+			ChannelName:     aiChannel.Name,
+			ChannelHandle:   aiChannel.Handle,
+			ChannelAvatar:   aiChannel.AvatarURL,
+			Title:           ep.title,
+			Description:     "An AI Originals drama series. Rendered with generative video; directed, cut, and scored by humans.",
+			VideoType:       "standard",
+			Visibility:      "public",
+			Status:          "READY",
+			DurationSeconds: ep.dur,
+			ThumbnailURL:    ep.thumb,
+			HlsMasterURL:    "https://media.gvp.media/hls/" + ep.id + "/master.m3u8",
+			ViewCount:       int64(ep.views),
+			LikeCount:       int64(ep.likes),
+			CommentCount:    128,
+			Tags:            []string{"ai drama", "ai originals", "scifi", "series"},
+			Category:        "Film",
+			AiGenerated:     true,
+			AiTool:          "Generative video + human edit",
+			AiReviewStatus:  "approved",
+			SeriesID:        aiSeries.ID,
+			SeasonNo:        1,
+			EpisodeNo:       ep.ep,
+			PublishedAt:     now.Add(-ep.age),
+			CreatedAt:       now.Add(-ep.age),
+		}
+	}
+	s.Videos["00000000-0000-0000-0000-0000000000a4"] = &Video{
+		ID:              "00000000-0000-0000-0000-0000000000a4",
+		ChannelID:       aiChannel.ID,
+		ChannelName:     aiChannel.Name,
+		ChannelHandle:   aiChannel.Handle,
+		ChannelAvatar:   aiChannel.AvatarURL,
+		Title:           "Neon Han River — 60s AI short (review pending)",
+		Description:     "A one-minute AI short awaiting Originals review. Visible normally; not on the Originals shelf yet.",
+		VideoType:       "shorts",
+		Visibility:      "public",
+		Status:          "READY",
+		DurationSeconds: 58,
+		ThumbnailURL:    "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600",
+		HlsMasterURL:    "https://media.gvp.media/hls/00000000-0000-0000-0000-0000000000a4/master.m3u8",
+		ViewCount:       9200,
+		LikeCount:       640,
+		CommentCount:    21,
+		Tags:            []string{"ai short", "seoul", "neon"},
+		Category:        "Film",
+		AiGenerated:     true,
+		AiTool:          "Generative video",
+		AiReviewStatus:  "pending",
+		PublishedAt:     now.Add(-6 * time.Hour),
+		CreatedAt:       now.Add(-6 * time.Hour),
+	}
+
 	s.Comments[video1.ID] = []*Comment{
 		{
 			ID:          "comm-1",
@@ -792,7 +953,7 @@ func (s *MemoryStore) seedDefaults() {
 		ID:                "creative-preroll-001",
 		CampaignID:        camp1.ID,
 		Format:            "preroll",
-		MediaURL:          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+		MediaURL:          "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
 		ThumbnailURL:      "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800",
 		Headline:          "Next-Gen Edge Cloud Infrastructure for Streaming",
 		Description:       "Deploy ultra-low latency applications globally in seconds with Acme Edge Cloud.",

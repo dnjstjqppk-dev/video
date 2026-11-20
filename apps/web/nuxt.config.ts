@@ -33,13 +33,15 @@ export default defineNuxtConfig({
       studioUrl: process.env.NUXT_PUBLIC_STUDIO_URL || 'https://global-video-platform-studio.dnjstjq0824.workers.dev',
       partnersUrl: process.env.NUXT_PUBLIC_PARTNERS_URL || 'https://global-video-platform-partners.dnjstjq0824.workers.dev',
       adminUrl: process.env.NUXT_PUBLIC_ADMIN_URL || 'https://global-video-platform-admin.dnjstjq0824.workers.dev',
-      brandName: 'vravra'
+      brandName: 'vravra',
+      widevineLicenseUrl: process.env.NUXT_PUBLIC_WIDEVINE_LICENSE_URL || '',
+      fairplayLicenseUrl: process.env.NUXT_PUBLIC_FAIRPLAY_LICENSE_URL || ''
     }
   },
   colorMode: {
     classSuffix: '',
-    preference: 'dark',
-    fallback: 'dark'
+    preference: 'light',
+    fallback: 'light'
   },
   i18n: {
     locales: [

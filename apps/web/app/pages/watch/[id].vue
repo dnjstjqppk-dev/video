@@ -18,7 +18,7 @@ const autoplayNext = ref(true)
 
 const { data: video, pending: videoPending, error: videoError } = await useAsyncData(`video-${videoId.value}`, async () => {
   return await api.getVideo(videoId.value)
-})
+}, { watch: [videoId] })
 
 // The template v-if guards on video; the assertion keeps bindings typed.
 const activeVideo = computed(() => video.value as Video)
@@ -147,9 +147,10 @@ const { data: commentsList } = await useAsyncData(`comments-${videoId.value}`, a
     commentsError.value = e instanceof Error ? e.message : 'Failed to load comments'
     return []
   }
-})
+}, { watch: [videoId] })
 
 const comments = ref<Comment[]>(commentsList.value || [])
+watch(commentsList, (list) => { comments.value = list || [] })
 const isDisliked = ref(false)
 const commentSort = ref<'top' | 'newest'>('top')
 const expandedReplies = ref<Record<string, boolean>>({})
@@ -204,16 +205,33 @@ const { data: relatedData } = await useAsyncData(`related-${videoId.value}`, asy
   if (!video.value?.channelId) return []
   try {
     const res = await api.getChannelVideos(video.value.channelId, 1, 10)
-    return (res.items || []).filter(v => v.id !== videoId.value).slice(0, 6)
+    return (res.items || []).filter(v => v.id !== videoId.value && v.status === 'READY').slice(0, 6)
   } catch {
     return []
   }
-})
+}, { watch: [video] })
 const relatedVideos = computed(() => relatedData.value || [])
+
+// Series binge: full episode list for the panel; the next episode wins the
+// up-next slot so a series plays straight through.
+const seriesId = computed(() => video.value?.seriesId || null)
+const { data: seriesData } = await useAsyncData(`series-${videoId.value}`, async () => {
+  const sid = video.value?.seriesId
+  if (!sid) return null
+  try {
+    return await api.getSeries(sid)
+  } catch {
+    return null
+  }
+}, { watch: [seriesId] })
+const seriesNext = computed(() => {
+  const next = video.value?.seriesContext?.nextEpisode
+  return next ? { id: next.videoId, title: next.title } : null
+})
 const library = useLibraryStore()
 const upNext = computed(() => {
   library.hydrate()
-  return library.queue[0] || relatedVideos.value[0] || null
+  return library.queue[0] || seriesNext.value || relatedVideos.value[0] || null
 })
 
 function openShare() {
@@ -223,11 +241,11 @@ function openShare() {
 
 function playNext() {
   const next = library.shiftQueue() || upNext.value
-  if (next) navigateTo(`/watch/${next.id}`)
+  if (next) navigateTo({ path: `/watch/${next.id}`, query: { autoplay: '1' } })
 }
 
 function onPlayerEnded() {
-  if (autoplayNext.value && upNext.value) navigateTo(`/watch/${upNext.value.id}`)
+  if (autoplayNext.value && upNext.value) navigateTo({ path: `/watch/${upNext.value.id}`, query: { autoplay: '1' } })
 }
 
 function toggleAutoplayNext() {
@@ -331,7 +349,7 @@ async function removeComment(commentId: string, parentId?: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1720px] bg-[var(--gvp-surface)] px-4 py-5 text-[var(--gvp-text)] lg:px-8">
+  <div class="mx-auto max-w-[1720px] bg-[var(--gvp-canvas)] px-4 py-5 text-[var(--gvp-text)] lg:px-8">
     <div v-if="videoPending" class="animate-pulse">
       <div class="aspect-video w-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-elevated)]" />
       <div class="mt-4 h-6 w-2/3 rounded-md bg-[var(--gvp-elevated)]" />
@@ -348,6 +366,8 @@ async function removeComment(commentId: string, parentId?: string) {
         <ClientOnly>
           <VideoPlayer
             ref="playerRef"
+            :key="videoId"
+            :autoplay="route.query.autoplay === '1'"
             :video-id="activeVideo.id"
             :channel-id="activeVideo.channelId"
             :title="activeVideo.title"
@@ -375,6 +395,22 @@ async function removeComment(commentId: string, parentId?: string) {
         <h1 class="vravra-watch-title mt-4 text-[var(--gvp-text)]">
           {{ activeVideo.title }}
         </h1>
+        <div v-if="activeVideo.aiGenerated" class="mt-2 flex flex-wrap items-center gap-2">
+          <AiBadge size="sm" :tool="activeVideo.aiTool" :approved="activeVideo.aiReviewStatus === 'approved'" />
+          <span class="text-xs font-semibold text-[var(--gvp-text-secondary)]">
+            {{ activeVideo.aiReviewStatus === 'approved'
+              ? (appStore.locale === 'ko' ? 'AI Originals 선정작' : 'AI Originals pick')
+              : (appStore.locale === 'ko' ? 'AI 제작 영상' : 'AI-made video') }}
+          </span>
+          <span v-if="activeVideo.aiTool" class="text-xs text-[var(--gvp-text-secondary)]">· {{ activeVideo.aiTool }}</span>
+        </div>
+        <NuxtLink
+          v-if="activeVideo.seriesContext"
+          :to="`/series/${activeVideo.seriesContext.id}`"
+          class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[var(--gvp-elevated)] px-3 py-1 text-xs font-semibold text-[var(--gvp-text)] hover:bg-[var(--gvp-border-strong)]"
+        >
+          {{ activeVideo.seriesContext.title }} · S{{ activeVideo.seriesContext.seasonNo }}E{{ activeVideo.seriesContext.episodeNo }}
+        </NuxtLink>
         <p v-if="actionError" class="mt-2 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
           {{ actionError }}
         </p>
@@ -464,7 +500,7 @@ async function removeComment(commentId: string, parentId?: string) {
         </div>
 
         <!-- Expandable Description & Interactive Chapters -->
-        <div class="mt-4 rounded-xl bg-[var(--gvp-canvas)] p-4 text-sm">
+        <div class="mt-4 rounded-xl bg-[var(--gvp-surface)] p-4 text-sm">
           <div class="flex flex-wrap items-center gap-2.5 font-semibold text-[var(--gvp-text)] tabular-nums">
             <span>{{ activeVideo.viewCount.toLocaleString() }} views</span>
             <span class="text-[var(--gvp-text-muted)]">•</span>
@@ -575,7 +611,7 @@ async function removeComment(commentId: string, parentId?: string) {
           <p v-if="commentsError" class="mt-4 rounded-md border border-[var(--gvp-live)] bg-[var(--gvp-live-soft)] p-2 text-xs font-semibold text-[var(--gvp-live)]" role="alert">
             {{ commentsError }}
           </p>
-          <div v-if="sortedComments.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-8 text-center">
+          <div v-if="sortedComments.length === 0" class="mt-6 rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-8 text-center">
             <p class="text-sm font-semibold text-[var(--gvp-text-secondary)]">
               {{ appStore.locale === 'ko' ? '아직 댓글이 없습니다. 첫 댓글을 남겨보세요.' : 'No comments yet. Start the conversation.' }}
             </p>
@@ -757,9 +793,16 @@ async function removeComment(commentId: string, parentId?: string) {
         </section>
       </div>
 
-      <!-- Right Sidebar: Related & Up Next Videos -->
-      <aside v-if="!theater && relatedVideos.length">
-        <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
+      <!-- Right Sidebar: Series, Related & Up Next Videos -->
+      <aside v-if="!theater && (seriesData || relatedVideos.length)">
+        <WatchSeriesPanel
+          v-if="seriesData"
+          :detail="seriesData"
+          :current-video-id="videoId"
+          :locale="appStore.locale"
+          class="mb-6"
+        />
+        <h2 v-if="relatedVideos.length" class="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--gvp-text-secondary)]">
           {{ appStore.locale === 'ko' ? '같은 채널의 다른 동영상' : 'More from this channel' }}
         </h2>
         <div class="flex flex-col gap-3">

@@ -289,6 +289,27 @@ func (c S3Config) signHeaderRequest(req *http.Request, payloadHash string, now t
 		c.AccessKey, credentialScope, signedHeaders, signature))
 }
 
+// GetObject streams one object back to the caller, which must close the body.
+// Used by the HLS gateway so playback never needs public buckets.
+func (c S3Config) GetObject(ctx context.Context, bucket, key string) (*http.Response, error) {
+	target := strings.TrimSuffix(c.Endpoint, "/") + "/" + bucket + "/" + encodeS3Path(key)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.signHeaderRequest(req, sha256Hex(nil), time.Now())
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("s3 GET %s: status %d", key, resp.StatusCode)
+	}
+	return resp, nil
+}
+
 func (c S3Config) doSigned(ctx context.Context, method, rawURL string, body []byte, contentType string) (*http.Response, []byte, error) {
 	payloadHash := sha256Hex(body)
 	req, err := http.NewRequestWithContext(ctx, method, rawURL, bytes.NewReader(body))

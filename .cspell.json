@@ -65,6 +65,7 @@
     "extm",
     "fairplay",
     "fanout",
+    "faststart",
     "ffprobe",
     "financev",
     "ftyp",
@@ -140,11 +141,13 @@
     "midroll",
     "midrolls",
     "minmax",
+    "movflags",
     "miniplayer",
     "minjun",
     "modcount",
     "moderationv",
     "natsdata",
+    "neodrama",
     "networkidle",
     "neue",
     "newchannel",
@@ -212,6 +215,7 @@
     "sarahchen",
     "scamlink",
     "sched",
+    "scifi",
     "scrapy",
     "segoe",
     "seoyeon",
@@ -301,6 +305,8 @@
     "apps/mobile/build/**",
     "**/*.pb.go",
     "**/vendor/**",
-    "coverage/**"
+    "coverage/**",
+    "tools/bin/**",
+    "tools/data/**"
   ]
 }

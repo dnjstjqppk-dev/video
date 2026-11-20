@@ -25,10 +25,12 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 
 	r.Get("/{id}", h.GetVideo)
 	r.Get("/{id}/playback", h.GetPlayback)
+	r.With(auth.RequireRole("super_admin", "platform_admin", "moderator")).Post("/{id}/ai-review", h.ReviewAI)
 
 	r.Group(func(pr chi.Router) {
 		pr.Use(auth.RequireAuth)
 		pr.Patch("/{id}", h.UpdateVideo)
+		pr.Post("/{id}/ai-submit", h.SubmitAIReview)
 		pr.Delete("/{id}", h.DeleteVideo)
 		pr.Post("/{id}/like", h.LikeVideo)
 		pr.Delete("/{id}/like", h.UnlikeVideo)
@@ -67,6 +69,7 @@ func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 		enriched.ChannelVideoCount = ch.VideoCount
 		enriched.ChannelIsVerified = ch.IsVerified
 	}
+	enriched.SeriesContext = h.Store.SeriesContext(video)
 	identity.WriteJSON(w, http.StatusOK, &enriched)
 }
 
@@ -119,6 +122,17 @@ func (h *Handler) GetPlayback(w http.ResponseWriter, r *http.Request) {
 		"ad_break_points":  []int{180, 420}, // Ad cues in seconds
 		"is_members_only":  video.Visibility == "members_only",
 		"has_access":       true,
+		"drm_protected":    video.DrmProtected,
+		"series":           h.Store.SeriesContext(video),
+	}
+	// ClearKey delivery: the caller already passed visibility gating, so an
+	// authorized player may receive this video's content key. Production
+	// Widevine/FairPlay clients use license servers instead (see docs).
+	if video.DrmProtected && video.DrmKeyID != "" && video.DrmKeyHex != "" {
+		playback["drm"] = map[string]interface{}{
+			"key_id": video.DrmKeyID,
+			"key":    video.DrmKeyHex,
+		}
 	}
 
 	identity.WriteJSON(w, http.StatusOK, playback)
@@ -145,6 +159,10 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 		Tags           *[]string `json:"tags"`
 		ScheduledAt    string    `json:"scheduled_at"`
 		ScheduledAtAlt string    `json:"scheduledAt"`
+		AiGenerated    *bool     `json:"ai_generated"`
+		AiTool         *string   `json:"ai_tool"`
+		AiGeneratedAlt *bool     `json:"aiGenerated"`
+		AiToolAlt      *string   `json:"aiTool"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -203,6 +221,32 @@ func (h *Handler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 	}
 	if video.Visibility != "scheduled" && payload.Visibility != "" {
 		video.ScheduledAt = nil
+	}
+	// AI metadata: flagging a video as AI-made (re)queues it for Originals
+	// review; unflagging clears the review trail with the flag.
+	// camelCase alternates serve the TS client (scheduledAt precedent).
+	aiFlag := payload.AiGenerated
+	if aiFlag == nil {
+		aiFlag = payload.AiGeneratedAlt
+	}
+	aiTool := payload.AiTool
+	if aiTool == nil {
+		aiTool = payload.AiToolAlt
+	}
+	if aiFlag != nil {
+		if *aiFlag && !video.AiGenerated {
+			video.AiGenerated = true
+			video.AiReviewStatus = ""
+			video.AiReviewNote = ""
+		} else if !*aiFlag && video.AiGenerated {
+			video.AiGenerated = false
+			video.AiTool = ""
+			video.AiReviewStatus = ""
+			video.AiReviewNote = ""
+		}
+	}
+	if aiTool != nil {
+		video.AiTool = security.SanitizeUserText(*aiTool, 255)
 	}
 	h.Store.PersistVideo(video)
 

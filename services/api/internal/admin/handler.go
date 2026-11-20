@@ -25,6 +25,7 @@ func (h *Handler) Routes(auth *identity.AuthMiddleware) http.Handler {
 	r.With(auth.RequireRole("super_admin", "platform_admin", "finance_admin", "moderator", "support_agent")).Get("/dashboard", h.GetDashboard)
 	r.With(auth.RequireRole("super_admin", "platform_admin", "finance_admin", "moderator", "support_agent")).Get("/users", h.ListUsers)
 	r.With(auth.RequireRole("super_admin", "platform_admin", "finance_admin", "moderator", "support_agent")).Get("/audit-logs", h.GetAuditLogs)
+	r.With(auth.RequireRole("super_admin", "platform_admin", "moderator")).Get("/ai-reviews", h.ListAIReviews)
 
 	// Mutations: platform operators only.
 	r.With(auth.RequireRole("super_admin", "platform_admin")).Patch("/users/{id}/status", h.UpdateUserStatus)

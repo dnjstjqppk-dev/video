@@ -2,14 +2,14 @@
 .gvp-glass {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  background: color-mix(in srgb, var(--gvp-surface) 82%, transparent);
+  background: color-mix(in srgb, var(--gvp-canvas) 86%, transparent);
   border-bottom: 1px solid var(--gvp-border);
 }
 
 .gvp-elevated {
   background: var(--gvp-elevated);
   border: 1px solid var(--gvp-border);
-  box-shadow: 0 20px 48px -12px rgba(2, 6, 18, 0.55);
+  box-shadow: 0 8px 28px -12px rgba(15, 15, 16, 0.18);
 }
 
 .gvp-dropdown {

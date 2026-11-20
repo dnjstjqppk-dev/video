@@ -1,6 +1,6 @@
 # API Route Census (generated, chi.Walk verified)
 
-Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 155 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
+Source: `chi.Walk` dump of `services/api/cmd/server` (2026-11-17, 167 registrations). Generator: `python docs/generate_route_census.py` ??do not hand-edit.
 
 Auth legend: **Public** serves visitors · **Auth** needs a session · **Role(...)** needs the role ·
 **HOLE** is public but must be guarded (P0). `/v1/*/` in chi output is the users-router mount artifact
@@ -49,7 +49,7 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/channels/` | Auth | trailing-slash route |
 | `POST` | `/v1/channels/{id}/subscribe` | Auth |  |
 
-## videos (17)
+## videos (19)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
@@ -64,6 +64,8 @@ for real paths `/v1/me...`.
 | `GET` | `/v1/videos/{id}/frames` | Auth |  |
 | `GET` | `/v1/videos/{id}/playback` | Public |  |
 | `PATCH` | `/v1/videos/{id}` | Auth |  |
+| `POST` | `/v1/videos/{id}/ai-review` | Auth |  |
+| `POST` | `/v1/videos/{id}/ai-submit` | Auth |  |
 | `POST` | `/v1/videos/{id}/captions` | Auth |  |
 | `POST` | `/v1/videos/{id}/comments` | Auth |  |
 | `POST` | `/v1/videos/{id}/elements` | Auth |  |
@@ -197,11 +199,12 @@ for real paths `/v1/me...`.
 | `POST` | `/v1/advertiser/events` | Public |  |
 | `POST` | `/v1/advertiser/preview` | Role(advertiser, partner_manager, platform_admin) |  |
 
-## admin (13)
+## admin (14)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/admin/ads/delivery-diagnostics` | Role(super_admin, platform_admin) |  |
+| `GET` | `/v1/admin/ai-reviews` | Role(super_admin, platform_admin) |  |
 | `GET` | `/v1/admin/audit-logs` | Role(super_admin, platform_admin, finance_admin, moderator, support_agent) |  |
 | `GET` | `/v1/admin/dashboard` | Role(super_admin, platform_admin, finance_admin, moderator, support_agent) |  |
 | `GET` | `/v1/admin/finance/settlements` | Role(super_admin, platform_admin, finance_admin) |  |
@@ -254,9 +257,33 @@ for real paths `/v1/me...`.
 | :--- | :--- | :--- | :--- |
 | `POST` | `/v1/events/analytics` | Public |  |
 
+## ai-originals (1)
+
+| Method | Path | Auth | Notes |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/v1/ai-originals` | Auth |  |
+
+## hls (1)
+
+| Method | Path | Auth | Notes |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/v1/hls/{videoID}/*` | Auth |  |
+
 ## notifications (2)
 
 | Method | Path | Auth | Notes |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/v1/notifications/` | Auth | trailing-slash route |
 | `POST` | `/v1/notifications/{id}/read` | Auth |  |
+
+## series (7)
+
+| Method | Path | Auth | Notes |
+| :--- | :--- | :--- | :--- |
+| `DELETE` | `/v1/series/{id}` | Auth |  |
+| `DELETE` | `/v1/series/{id}/episodes/{videoId}` | Auth |  |
+| `GET` | `/v1/series/` | Auth | trailing-slash route |
+| `GET` | `/v1/series/{id}` | Auth |  |
+| `PATCH` | `/v1/series/{id}` | Auth |  |
+| `POST` | `/v1/series/` | Auth | trailing-slash route |
+| `POST` | `/v1/series/{id}/episodes` | Auth |  |

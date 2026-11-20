@@ -50,9 +50,10 @@ func NewPostgresStore(connStr string) (*PostgresStore, error) {
 var requiredTables = []string{
 	"roles", "users", "user_profiles", "channels", "videos",
 	"payment_transactions", "ledger_accounts", "ledger_entries", "media_jobs",
+	"series",
 }
 
-// VerifySchema checks that the migrated schema (db/migrations, incl. 00012)
+// VerifySchema checks that the migrated schema (db/migrations, incl. 00013)
 // is present. It creates nothing; operators apply migrations out of band.
 func (p *PostgresStore) VerifySchema(ctx context.Context) error {
 	var missing []string
@@ -108,6 +109,26 @@ func (p *PostgresStore) VerifySchema(ctx context.Context) error {
 	}
 	if !hourlyExists {
 		missing = append(missing, "table channel_hourly_views (apply db/migrations/00012)")
+	}
+	var drmColExists bool
+	err = p.DB.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'videos' AND column_name = 'drm_key_id')`,
+	).Scan(&drmColExists)
+	if err != nil {
+		return fmt.Errorf("schema check failed for videos.drm_key_id: %w", err)
+	}
+	if !drmColExists {
+		missing = append(missing, "column videos.drm_key_id (apply db/migrations/00013)")
+	}
+	var aiColExists bool
+	err = p.DB.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'videos' AND column_name = 'ai_review_status')`,
+	).Scan(&aiColExists)
+	if err != nil {
+		return fmt.Errorf("schema check failed for videos.ai_review_status: %w", err)
+	}
+	if !aiColExists {
+		missing = append(missing, "column videos.ai_review_status (apply db/migrations/00014)")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("postgres schema incomplete, run db/migrations against DATABASE_URL: %s", strings.Join(missing, ", "))
@@ -223,6 +244,9 @@ func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 	if !validUUID(v.ChannelID) {
 		return fmt.Errorf("video channel id %q is not a UUID", v.ChannelID)
 	}
+	if v.SeriesID != "" && !validUUID(v.SeriesID) {
+		return fmt.Errorf("video series id %q is not a UUID", v.SeriesID)
+	}
 	tags := v.Tags
 	if tags == nil {
 		tags = []string{}
@@ -240,8 +264,9 @@ func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 		duration_seconds, thumbnail_url, custom_thumbnail_url, auto_frame_urls,
 		hls_master_url, view_count, like_count,
 		dislike_count, comment_count, tags, category, elements, published_at,
-		scheduled_at, created_at, updated_at
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW())
+		scheduled_at, drm_protected, drm_key_id, drm_key_hex, ai_generated, ai_tool,
+		ai_review_status, ai_review_note, series_id, season_no, episode_no, created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, NOW())
 	ON CONFLICT (id) DO UPDATE SET
 		title = EXCLUDED.title,
 		description = EXCLUDED.description,
@@ -262,15 +287,71 @@ func (p *PostgresStore) SaveVideo(ctx context.Context, v *Video) error {
 		elements = EXCLUDED.elements,
 		published_at = EXCLUDED.published_at,
 		scheduled_at = EXCLUDED.scheduled_at,
+		drm_protected = EXCLUDED.drm_protected,
+		drm_key_id = EXCLUDED.drm_key_id,
+		drm_key_hex = EXCLUDED.drm_key_hex,
+		ai_generated = EXCLUDED.ai_generated,
+		ai_tool = EXCLUDED.ai_tool,
+		ai_review_status = EXCLUDED.ai_review_status,
+		ai_review_note = EXCLUDED.ai_review_note,
+		series_id = EXCLUDED.series_id,
+		season_no = EXCLUDED.season_no,
+		episode_no = EXCLUDED.episode_no,
 		updated_at = NOW();`,
 		v.ID, v.ChannelID, v.Title, nullIfEmpty(v.Description), v.VideoType, v.Visibility, v.Status,
 		v.DurationSeconds, nullIfEmpty(v.ThumbnailURL), nullIfEmpty(v.CustomThumbnailURL),
 		pq.Array(frames), nullIfEmpty(v.HlsMasterURL),
 		v.ViewCount, v.LikeCount, v.DislikeCount, v.CommentCount,
-		pq.Array(tags), v.Category, elements, nullTime(v.PublishedAt), nullTimePtr(v.ScheduledAt), v.CreatedAt,
+		pq.Array(tags), v.Category, elements, nullTime(v.PublishedAt), nullTimePtr(v.ScheduledAt),
+		v.DrmProtected, nullIfEmpty(v.DrmKeyID), nullIfEmpty(v.DrmKeyHex),
+		v.AiGenerated, nullIfEmpty(v.AiTool), v.AiReviewStatus, nullIfEmpty(v.AiReviewNote),
+		nullIfEmpty(v.SeriesID), v.SeasonNo, v.EpisodeNo, v.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert videos: %w", err)
+	}
+	return nil
+}
+
+// SaveSeries inserts or updates a series row in PostgreSQL.
+func (p *PostgresStore) SaveSeries(ctx context.Context, s *Series) error {
+	if s == nil {
+		return fmt.Errorf("nil series")
+	}
+	if !validUUID(s.ID) {
+		return fmt.Errorf("series id %q is not a UUID", s.ID)
+	}
+	if !validUUID(s.ChannelID) {
+		return fmt.Errorf("series channel id %q is not a UUID", s.ChannelID)
+	}
+	_, err := p.DB.ExecContext(ctx, `INSERT INTO series (
+		id, channel_id, title, description, cover_url, status, ai_original,
+		created_at, updated_at
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+	ON CONFLICT (id) DO UPDATE SET
+		title = EXCLUDED.title,
+		description = EXCLUDED.description,
+		cover_url = EXCLUDED.cover_url,
+		status = EXCLUDED.status,
+		ai_original = EXCLUDED.ai_original,
+		updated_at = NOW();`,
+		s.ID, s.ChannelID, s.Title, nullIfEmpty(s.Description),
+		nullIfEmpty(s.CoverURL), s.Status, s.AiOriginal, s.CreatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert series: %w", err)
+	}
+	return nil
+}
+
+// DeleteSeries removes a series row; episodes are detached first by the
+// caller via SaveVideo so no FK-bearing rows dangle.
+func (p *PostgresStore) DeleteSeries(ctx context.Context, id string) error {
+	if !validUUID(id) {
+		return fmt.Errorf("series id %q is not a UUID", id)
+	}
+	if _, err := p.DB.ExecContext(ctx, `DELETE FROM series WHERE id = $1`, id); err != nil {
+		return fmt.Errorf("delete series: %w", err)
 	}
 	return nil
 }

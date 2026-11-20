@@ -144,9 +144,9 @@ function formatViews(count: number): string {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1720px] bg-[var(--gvp-surface)] px-4 py-4 text-[var(--gvp-text)] sm:px-6">
+  <div class="mx-auto max-w-[1720px] bg-[var(--gvp-canvas)] px-4 py-4 text-[var(--gvp-text)] sm:px-6">
     <!-- Category Filter Chips -->
-    <div class="sticky top-14 z-10 -mx-4 mb-6 flex items-center gap-1 border-b border-[var(--gvp-border)] bg-[var(--gvp-surface)] px-2 py-3 sm:-mx-6 sm:px-4">
+    <div class="sticky top-14 z-10 -mx-4 mb-6 flex items-center gap-1 border-b border-[var(--gvp-border)] bg-[var(--gvp-canvas)] px-2 py-3 sm:-mx-6 sm:px-4">
       <button type="button" aria-label="카테고리 왼쪽으로 스크롤" class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--gvp-text-secondary)] hover:bg-[var(--gvp-elevated)] sm:inline-flex" @click="scrollChips(-1)">‹</button>
       <div ref="chipRail" class="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto" style="mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);">
         <button
@@ -186,7 +186,7 @@ function formatViews(count: number): string {
     <!-- Sponsored Native Ad Slot Banner (Real Ad Decision Loop - ARTICLE 7) -->
     <section
       v-if="feedAd?.ad_available && feedAd?.creative"
-      class="mb-8 overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-5 transition hover:bg-[var(--gvp-surface)]"
+      class="mb-8 overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5 transition hover:bg-[var(--gvp-surface)]"
     >
       <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div class="flex items-center gap-4">
@@ -222,7 +222,7 @@ function formatViews(count: number): string {
         </button>
       </div>
     </section>
-    <section v-else class="mb-8 overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-5">
+    <section v-else class="mb-8 overflow-hidden rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-5">
       <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
           <div class="mb-1.5 flex items-center gap-2">
@@ -292,13 +292,13 @@ function formatViews(count: number): string {
           <p class="tabular-nums mt-1 text-xs text-[var(--gvp-text-secondary)]">시청자 {{ stream.viewerCount.toLocaleString() }}명</p>
         </div>
       </NuxtLink>
-      <div v-if="!liveNowCards.length" class="col-span-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+      <div v-if="!liveNowCards.length" class="col-span-full rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-12 text-center">
         <p class="text-base font-semibold text-[var(--gvp-text-secondary)]">지금 라이브 중인 방송이 없습니다.</p>
       </div>
     </section>
 
     <!-- Empty State -->
-    <div v-else-if="visibleVideos.length === 0" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-12 text-center">
+    <div v-else-if="visibleVideos.length === 0" class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-12 text-center">
       <p class="text-base font-semibold text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? '선택한 카테고리에 표시할 동영상이 없습니다.' : 'No videos match the selected category.' }}
       </p>
@@ -396,7 +396,7 @@ function formatViews(count: number): string {
           </div>
         </NuxtLink>
       </div>
-      <p v-else class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-canvas)] p-6 text-center text-xs text-[var(--gvp-text-secondary)]">
+      <p v-else class="rounded-lg border border-[var(--gvp-border)] bg-[var(--gvp-surface)] p-6 text-center text-xs text-[var(--gvp-text-secondary)]">
         {{ appStore.locale === 'ko' ? '표시할 쇼츠가 없습니다.' : 'No Shorts to show yet.' }}
       </p>
     </section>

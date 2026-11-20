@@ -33,7 +33,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      htmlAttrs: { lang: 'ko', 'data-theme': 'dark', class: 'dark' },
+      htmlAttrs: { lang: 'ko', 'data-theme': 'light', class: 'light' },
       titleTemplate: '%s — vravra Super Admin Governance Console',
       meta: [
         { charset: 'utf-8' },
