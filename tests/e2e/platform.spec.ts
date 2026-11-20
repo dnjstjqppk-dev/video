@@ -224,9 +224,9 @@ test.describe('Global Video Platform — Section 22 End-to-End Release Gate Suit
     const chRes = await request.get(`${API_BASE_URL}/partners/channels`, { headers });
     expect(chRes.status()).toBe(200);
 
-    // 3.3 Submit Content ID Copyright Claim
+    // 3.3 Submit Content ID Copyright Claim (filing requires a rights-holder role or operator)
     const claimRes = await request.post(`${API_BASE_URL}/partners/rights/claims`, {
-      headers,
+      headers: { Authorization: 'Bearer admin-token' },
       data: {
         videoId: '00000000-0000-0000-0000-000000000001',
         assetId: 'asset-music-001',
