@@ -17,9 +17,10 @@ browser -> console workers (web/studio/partners/admin)
 
 - `Start-GvpApi.ps1` — starts SeaweedFS S3 + API + media worker (idempotent;
   logs under `%LOCALAPPDATA%\gvp\logs`).
-- `Start-GvpTunnel.ps1` — starts the tunnel, waits for its URL, updates the
-  api-proxy `API_UPSTREAM` secret. Reads the Cloudflare API token from
-  `%APPDATA%\gvp\cf_api_token.txt` (operator-created, never in the repo).
+- `Start-GvpTunnel.ps1` — stops previous runs, starts the tunnel, waits for
+  its URL, updates the api-proxy `API_UPSTREAM` secret. Reads the Cloudflare
+  API token from `%APPDATA%\gvp\cf_api_token.txt` (operator-created, never in
+  the repo).
 - `Register-GvpTasks.ps1` — registers `GVP-API` + `GVP-Tunnel` scheduled tasks
   (ONLOGON, current user) and starts both immediately.
 

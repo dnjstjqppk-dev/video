@@ -15,6 +15,16 @@ $repoRoot = 'C:\Users\dnjst\Desktop\project\video'
 $cloudflared = 'C:\Program Files (x86)\cloudflared\cloudflared.exe'
 if (-not (Test-Path $cloudflared)) { $cloudflared = (Get-Command cloudflared -ErrorAction Stop).Source }
 
+# Stop tunnels from previous runs first: they hold the log files open below
+# (delete/redirect would fail) and would otherwise linger as duplicates.
+# Only our exact args match; unrelated tunnels are left alone.
+Get-CimInstance Win32_Process -Filter "Name='cloudflared.exe'" -ErrorAction SilentlyContinue | ForEach-Object {
+  if ($_.CommandLine -like '*tunnel*--url http://localhost:18092*') {
+    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+}
+Start-Sleep -Seconds 2
+
 $tunnelLog = Join-Path $logs 'gvp-tunnel.out.log'
 if (Test-Path $tunnelLog) { Remove-Item $tunnelLog -Force }
 $tunnelErr = Join-Path $logs 'gvp-tunnel.err.log'
