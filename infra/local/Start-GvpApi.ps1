@@ -37,6 +37,21 @@ if (-not (Test-Listening 18092)) {
   $env:GVP_ALLOW_DEV_TOKENS = 'true'
   $env:GVP_LOCAL_MEDIA_DIR = $media
   $env:MEDIA_WORKER_URL = 'http://localhost:8081'
+  # Pin chunk relay: browsers cannot reach the loopback SeaweedFS endpoint
+  # that presigned S3 PUTs would target, so uploads relay through the API
+  # while publishing still goes to the HLS bucket.
+  $env:UPLOAD_MODE = 'local'
+  # Object storage: the API only publishes artifacts when R2 keys are set
+  # explicitly, so read the local SeaweedFS identities (untracked,
+  # operator-local; endpoints default to localhost:9002).
+  $s3cfgPath = Join-Path $toolsBin 's3config.json'
+  if (Test-Path $s3cfgPath) {
+    $s3ident = (Get-Content $s3cfgPath -Raw | ConvertFrom-Json).identities[0].credentials[0]
+    if ($s3ident.accessKey -and $s3ident.secretKey) {
+      $env:R2_ACCESS_KEY_ID = $s3ident.accessKey
+      $env:R2_SECRET_ACCESS_KEY = $s3ident.secretKey
+    }
+  }
   Start-Process -FilePath (Join-Path $bin 'gvp-api.exe') -WorkingDirectory $bin `
     -RedirectStandardOutput (Join-Path $logs 'gvp-api.out.log') `
     -RedirectStandardError (Join-Path $logs 'gvp-api.err.log') `
