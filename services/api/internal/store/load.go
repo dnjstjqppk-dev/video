@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -282,6 +283,76 @@ func (p *PostgresStore) loadLedgerEntries(ctx context.Context, txID string) ([]L
 			e.AmountCents = credit
 		}
 		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// scanDecision maps one ad_delivery_decisions row, restoring non-UUID memory
+// IDs from metadata refs when the UUID columns are NULL. The Creative blob
+// is memory-only and stays nil; event validation needs Status/CampaignID.
+func scanDecision(row interface{ Scan(...interface{}) error }) (*AdDeliveryDecision, error) {
+	var dec AdDeliveryDecision
+	var campaignID, creativeID, userID sql.NullString
+	var meta string
+	if err := row.Scan(&dec.DecisionID, &dec.SlotID, &campaignID, &creativeID, &userID,
+		&dec.DecidedAt, &dec.Status, &dec.Reason, &dec.BidCpmCents, &meta); err != nil {
+		return nil, err
+	}
+	dec.CampaignID, dec.CreativeID, dec.UserID = campaignID.String, creativeID.String, userID.String
+	if meta != "" {
+		var refs map[string]string
+		if err := json.Unmarshal([]byte(meta), &refs); err == nil {
+			if dec.CampaignID == "" {
+				dec.CampaignID = refs[decisionCampaignRefKey]
+			}
+			if dec.CreativeID == "" {
+				dec.CreativeID = refs[decisionCreativeRefKey]
+			}
+			if dec.UserID == "" {
+				dec.UserID = refs[decisionUserRefKey]
+			}
+		}
+	}
+	return &dec, nil
+}
+
+const decisionColumns = `decision_id, slot_id, campaign_id, creative_id, user_id,
+	decided_at, status, reason, bid_cpm_cents, metadata`
+
+// LoadDecision reads one ad delivery decision by id. It returns (nil, nil)
+// when no row exists so callers can fail closed on unknown decisions.
+func (p *PostgresStore) LoadDecision(ctx context.Context, id string) (*AdDeliveryDecision, error) {
+	dec, err := scanDecision(p.DB.QueryRowContext(ctx,
+		`SELECT `+decisionColumns+` FROM ad_delivery_decisions WHERE decision_id = $1`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load decision %s: %w", id, err)
+	}
+	return dec, nil
+}
+
+// LoadRecentDecisions reads the newest decisions since the cutoff for boot
+// hydration. A non-positive limit selects the default cap.
+func (p *PostgresStore) LoadRecentDecisions(ctx context.Context, since time.Time, limit int) ([]*AdDeliveryDecision, error) {
+	if limit <= 0 {
+		limit = 5000
+	}
+	rows, err := p.DB.QueryContext(ctx,
+		`SELECT `+decisionColumns+` FROM ad_delivery_decisions WHERE decided_at >= $1 ORDER BY decided_at DESC LIMIT $2`,
+		since, limit)
+	if err != nil {
+		return nil, fmt.Errorf("load recent decisions: %w", err)
+	}
+	defer rows.Close()
+	var out []*AdDeliveryDecision
+	for rows.Next() {
+		dec, err := scanDecision(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan decision: %w", err)
+		}
+		out = append(out, dec)
 	}
 	return out, rows.Err()
 }

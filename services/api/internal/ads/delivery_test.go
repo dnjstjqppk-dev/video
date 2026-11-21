@@ -2,10 +2,13 @@ package ads
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+	"time"
 
 	"globalvideoplatform/services/api/internal/identity"
 	"globalvideoplatform/services/api/internal/store"
@@ -172,5 +175,43 @@ func TestFrequencyCapExcludesCampaign(t *testing.T) {
 	}
 	if lastReason != "FREQUENCY_CAPPED" {
 		t.Fatalf("expected FREQUENCY_CAPPED after cap, got %q", lastReason)
+	}
+}
+
+// P26: billing events stay valid across API restarts once decisions persist.
+// Simulates a restart by dropping the in-memory decision map; the event must
+// still validate against the persisted decision instead of 400 UNKNOWN_DECISION.
+func TestAdEventSurvivesRestart(t *testing.T) {
+	t.Setenv("GVP_ENV", "test")
+	t.Setenv("GVP_ALLOW_DEV_TOKENS", "true")
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL unset; skipping decision persistence test")
+	}
+	pg, err := store.NewPostgresStore(dsn)
+	if err != nil {
+		t.Fatalf("connect test postgres: %v", err)
+	}
+	t.Cleanup(func() { _ = pg.Close() })
+	s := store.NewMemoryStoreWithDB(pg)
+	router := adsRouter(s)
+	decisionID, campaignID := decide(t, router, "user-restart-1")
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if _, err := pg.DB.ExecContext(ctx, "DELETE FROM ad_delivery_decisions WHERE decision_id = $1", decisionID); err != nil {
+			t.Errorf("cleanup decision %s: %v", decisionID, err)
+		}
+	})
+
+	// Simulate an API restart: memory is reseeded, decisions are gone.
+	s.AdDecisions = map[string]*store.AdDeliveryDecision{}
+
+	rec := postAds(t, router, "/events", "", map[string]interface{}{
+		"event_id": "evt-restart-1", "decision_id": decisionID,
+		"campaign_id": campaignID, "event_type": "impression",
+	})
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202 for persisted decision after restart, got %d (%s)", rec.Code, rec.Body.String())
 	}
 }

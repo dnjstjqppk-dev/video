@@ -50,7 +50,7 @@ func NewPostgresStore(connStr string) (*PostgresStore, error) {
 var requiredTables = []string{
 	"roles", "users", "user_profiles", "channels", "videos",
 	"payment_transactions", "ledger_accounts", "ledger_entries", "media_jobs",
-	"series",
+	"series", "ad_delivery_decisions",
 }
 
 // VerifySchema checks that the migrated schema (db/migrations, incl. 00014)
@@ -535,6 +535,76 @@ func (p *PostgresStore) SaveMediaJob(ctx context.Context, job *MediaJob) error {
 	)
 	if err != nil {
 		return fmt.Errorf("upsert media_jobs: %w", err)
+	}
+	return nil
+}
+
+// decisionRefKeys stash non-UUID memory IDs in the decisions metadata JSONB
+// so PG fallback restores the exact campaign/creative/user binding the
+// fail-closed event checks compare against.
+const (
+	decisionCampaignRefKey = "campaign_ref"
+	decisionCreativeRefKey = "creative_ref"
+	decisionUserRefKey     = "user_ref"
+)
+
+// nullableUUID maps a memory ID to its UUID column: real UUIDs pass through,
+// legacy prefixed IDs become NULL (never coerced) with the raw value kept in
+// metadata by the caller.
+func nullableUUID(s string) sql.NullString {
+	if validUUID(s) {
+		return sql.NullString{String: s, Valid: true}
+	}
+	return sql.NullString{}
+}
+
+// SaveDecision inserts or updates an ad delivery decision in PostgreSQL.
+// Seed-style campaign/creative/user IDs are not UUIDs, so they persist as
+// NULL columns plus raw refs in metadata; LoadDecision restores both.
+func (p *PostgresStore) SaveDecision(ctx context.Context, dec *AdDeliveryDecision) error {
+	if dec == nil {
+		return fmt.Errorf("nil decision")
+	}
+	if dec.DecisionID == "" {
+		return fmt.Errorf("decision id is required")
+	}
+	if dec.SlotID == "" {
+		return fmt.Errorf("decision slot id is required")
+	}
+	refs := map[string]string{}
+	if dec.CampaignID != "" && !validUUID(dec.CampaignID) {
+		refs[decisionCampaignRefKey] = dec.CampaignID
+	}
+	if dec.CreativeID != "" && !validUUID(dec.CreativeID) {
+		refs[decisionCreativeRefKey] = dec.CreativeID
+	}
+	if dec.UserID != "" && !validUUID(dec.UserID) {
+		refs[decisionUserRefKey] = dec.UserID
+	}
+	meta, err := json.Marshal(refs)
+	if err != nil {
+		return fmt.Errorf("encode decision metadata: %w", err)
+	}
+	_, err = p.DB.ExecContext(ctx, `INSERT INTO ad_delivery_decisions (
+		decision_id, slot_id, campaign_id, creative_id, user_id,
+		decided_at, status, reason, bid_cpm_cents, metadata
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	ON CONFLICT (decision_id) DO UPDATE SET
+		slot_id = EXCLUDED.slot_id,
+		campaign_id = EXCLUDED.campaign_id,
+		creative_id = EXCLUDED.creative_id,
+		user_id = EXCLUDED.user_id,
+		decided_at = EXCLUDED.decided_at,
+		status = EXCLUDED.status,
+		reason = EXCLUDED.reason,
+		bid_cpm_cents = EXCLUDED.bid_cpm_cents,
+		metadata = EXCLUDED.metadata;`,
+		dec.DecisionID, dec.SlotID,
+		nullableUUID(dec.CampaignID), nullableUUID(dec.CreativeID), nullableUUID(dec.UserID),
+		dec.DecidedAt, dec.Status, dec.Reason, dec.BidCpmCents, string(meta),
+	)
+	if err != nil {
+		return fmt.Errorf("upsert ad_delivery_decisions: %w", err)
 	}
 	return nil
 }

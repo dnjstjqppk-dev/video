@@ -385,6 +385,7 @@ func (h *Handler) recordDecision(id, slotID, campaignID, creativeID, userID, sta
 		Creative:    creative,
 	}
 	h.Store.AdDecisions[id] = dec
+	h.Store.PersistDecision(dec)
 }
 
 // -----------------------------------------------------------------------------
@@ -421,7 +422,7 @@ func (h *Handler) RecordAdEvent(w http.ResponseWriter, r *http.Request) {
 			identity.WriteError(w, r, http.StatusBadRequest, "DECISION_REQUIRED", "Billing events require a decision_id")
 			return
 		}
-		dec, ok := h.Store.AdDecisions[payload.DecisionID]
+		dec, ok := h.Store.FindDecision(payload.DecisionID)
 		if !ok || dec.Status != "SERVED" {
 			identity.WriteError(w, r, http.StatusBadRequest, "UNKNOWN_DECISION", "Decision does not exist or was not served")
 			return
@@ -432,7 +433,7 @@ func (h *Handler) RecordAdEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		if payload.DecisionID != "" {
-			dec, ok := h.Store.AdDecisions[payload.DecisionID]
+			dec, ok := h.Store.FindDecision(payload.DecisionID)
 			if !ok {
 				identity.WriteError(w, r, http.StatusBadRequest, "UNKNOWN_DECISION", "Decision does not exist")
 				return

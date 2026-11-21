@@ -217,6 +217,47 @@ func (s *MemoryStore) PersistMediaJob(job *MediaJob) {
 	}
 }
 
+// PersistDecision writes an ad delivery decision through to PostgreSQL (best
+// effort). Decisions for unknown slots are skipped: they cannot satisfy the
+// ad_slots FK and carry no delivery telemetry.
+func (s *MemoryStore) PersistDecision(dec *AdDeliveryDecision) {
+	if !s.persistEnabled() || dec == nil {
+		return
+	}
+	if _, ok := s.AdSlots[dec.SlotID]; !ok {
+		return
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	if err := s.DB.SaveDecision(ctx, dec); err != nil {
+		slog.Warn("Decision write-through failed", "decision_id", dec.DecisionID, "error", err)
+	}
+}
+
+// FindDecision returns the in-memory decision, falling back to PostgreSQL on
+// a miss (and backfilling the map) so billing events validate across
+// restarts. Unknown IDs still report false: event checks stay fail-closed.
+func (s *MemoryStore) FindDecision(id string) (*AdDeliveryDecision, bool) {
+	if dec, ok := s.AdDecisions[id]; ok && dec != nil {
+		return dec, true
+	}
+	if !s.persistEnabled() {
+		return nil, false
+	}
+	ctx, cancel := persistCtx()
+	defer cancel()
+	dec, err := s.DB.LoadDecision(ctx, id)
+	if err != nil {
+		slog.Warn("Decision fallback lookup failed", "decision_id", id, "error", err)
+		return nil, false
+	}
+	if dec == nil {
+		return nil, false
+	}
+	s.AdDecisions[id] = dec
+	return dec, true
+}
+
 // PersistTransaction writes a payment transaction and its ledger entries
 // through to PostgreSQL (best effort). The in-memory copy remains the
 // source of truth for the request lifecycle.

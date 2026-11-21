@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -422,4 +424,129 @@ func TestPostgresAIVideoSeriesRoundTrip(t *testing.T) {
 		[3]string{"channels", "id", chID},
 		[3]string{"users", "id", ownerID},
 	)
+}
+
+// P26: ad decisions persist with both UUID columns and legacy prefixed refs.
+func TestPostgresDecisionRoundTrip(t *testing.T) {
+	pg := pgTestStore(t)
+	ctx, cancel := pgCtx()
+	defer cancel()
+
+	ownerID := uuid.NewString()
+	if err := pg.SaveUser(ctx, &User{
+		ID: ownerID, Email: "dec-" + ownerID[:8] + "@test.local", Username: "dec" + ownerID[:8],
+		Role: "registered_user", SubscriptionTier: "free", IsActive: true, DisplayName: "Dec",
+		CreatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+	decID := "dec-" + uuid.NewString()
+	dec := &AdDeliveryDecision{
+		DecisionID: decID, SlotID: "watch_preroll",
+		CampaignID: "camp-cloud-001", CreativeID: "creative-preroll-001",
+		UserID: ownerID, DecidedAt: time.Now().UTC().Truncate(time.Second),
+		Status: "SERVED", Reason: "MATCHED", BidCpmCents: 5500,
+	}
+	pgCleanup(t, pg,
+		[3]string{"ad_delivery_decisions", "decision_id", decID},
+		[3]string{"users", "id", ownerID},
+	)
+	if err := pg.SaveDecision(ctx, dec); err != nil {
+		t.Fatalf("SaveDecision: %v", err)
+	}
+	got, err := pg.LoadDecision(ctx, decID)
+	if err != nil {
+		t.Fatalf("LoadDecision: %v", err)
+	}
+	if got == nil {
+		t.Fatal("LoadDecision returned nil for saved decision")
+	}
+	if got.CampaignID != dec.CampaignID || got.CreativeID != dec.CreativeID || got.UserID != dec.UserID {
+		t.Fatalf("refs not restored: got %+v", got)
+	}
+	if got.Status != "SERVED" || got.Reason != "MATCHED" || got.BidCpmCents != 5500 || got.SlotID != "watch_preroll" {
+		t.Fatalf("fields not restored: got %+v", got)
+	}
+	// UUID user lands in the column (FK holds); prefixed refs land in metadata.
+	var userCol, campCol sql.NullString
+	var meta string
+	if err := pg.DB.QueryRowContext(ctx, `SELECT user_id, campaign_id, metadata FROM ad_delivery_decisions WHERE decision_id = $1`, decID).Scan(&userCol, &campCol, &meta); err != nil {
+		t.Fatalf("inspect row: %v", err)
+	}
+	if !userCol.Valid || userCol.String != ownerID {
+		t.Fatalf("uuid user should persist in column, got %+v", userCol)
+	}
+	if campCol.Valid {
+		t.Fatalf("prefixed campaign should persist as NULL column, got %q", campCol.String)
+	}
+	if !strings.Contains(meta, "camp-cloud-001") || !strings.Contains(meta, "creative-preroll-001") {
+		t.Fatalf("prefixed refs missing from metadata: %s", meta)
+	}
+	// Misses report (nil, nil) so event checks fail closed.
+	missing, err := pg.LoadDecision(ctx, "dec-does-not-exist")
+	if err != nil || missing != nil {
+		t.Fatalf("LoadDecision miss = (%v, %v), want (nil, nil)", missing, err)
+	}
+	recent, err := pg.LoadRecentDecisions(ctx, time.Now().Add(-time.Hour), 10)
+	if err != nil {
+		t.Fatalf("LoadRecentDecisions: %v", err)
+	}
+	found := false
+	for _, d := range recent {
+		if d.DecisionID == decID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("saved decision missing from recent decisions")
+	}
+}
+
+func TestSaveDecisionValidation(t *testing.T) {
+	pg := &PostgresStore{}
+	if err := pg.SaveDecision(context.Background(), nil); err == nil {
+		t.Fatal("expected error for nil decision")
+	}
+	if err := pg.SaveDecision(context.Background(), &AdDeliveryDecision{}); err == nil {
+		t.Fatal("expected error for empty decision id")
+	}
+	if err := pg.SaveDecision(context.Background(), &AdDeliveryDecision{DecisionID: "dec-x"}); err == nil {
+		t.Fatal("expected error for empty slot id")
+	}
+}
+
+// P26: FindDecision serves memory first, restores persisted decisions on a
+// miss, and still reports false for unknown IDs (fail-closed).
+func TestFindDecisionFallback(t *testing.T) {
+	s := NewMemoryStore()
+	if _, ok := s.FindDecision("dec-nope"); ok {
+		t.Fatal("memory-only miss should report false")
+	}
+	pg := pgTestStore(t)
+	s2 := NewMemoryStoreWithDB(pg)
+	decID := "dec-" + uuid.NewString()
+	dec := &AdDeliveryDecision{
+		DecisionID: decID, SlotID: "watch_preroll",
+		CampaignID: "camp-cloud-001", CreativeID: "creative-preroll-001",
+		UserID: "user-fb-1", DecidedAt: time.Now().UTC(),
+		Status: "SERVED", Reason: "MATCHED", BidCpmCents: 5500,
+	}
+	pgCleanup(t, pg, [3]string{"ad_delivery_decisions", "decision_id", decID})
+	s2.PersistDecision(dec)
+	if _, ok := s2.AdDecisions[decID]; ok {
+		t.Fatal("precondition: decision should not be in memory")
+	}
+	got, ok := s2.FindDecision(decID)
+	if !ok || got == nil {
+		t.Fatal("fallback should restore persisted decision")
+	}
+	if got.CampaignID != "camp-cloud-001" || got.UserID != "user-fb-1" {
+		t.Fatalf("refs not restored: %+v", got)
+	}
+	if _, ok := s2.AdDecisions[decID]; !ok {
+		t.Fatal("fallback should backfill the memory map")
+	}
+	if _, ok := s2.FindDecision("dec-nope"); ok {
+		t.Fatal("unknown id should report false even with DB")
+	}
 }

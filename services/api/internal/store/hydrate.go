@@ -60,6 +60,13 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 	for _, job := range jobs {
 		s.MediaJobs[job.ID] = job
 	}
+	decisions, err := s.DB.LoadRecentDecisions(ctx, time.Now().Add(-24*time.Hour), 5000)
+	if err != nil {
+		return fmt.Errorf("hydrate decisions: %w", err)
+	}
+	for _, dec := range decisions {
+		s.AdDecisions[dec.DecisionID] = dec
+	}
 	buckets, err := s.DB.LoadHourlyViews(ctx, time.Now().Add(-48*time.Hour))
 	if err != nil {
 		return fmt.Errorf("hydrate hourly views: %w", err)
@@ -71,7 +78,7 @@ func (s *MemoryStore) Hydrate(ctx context.Context) error {
 		"users", len(users), "channels", len(channels),
 		"videos", len(videos), "series", len(series),
 		"transactions", len(txs), "jobs", len(jobs),
-		"hourly_buckets", len(buckets))
+		"decisions", len(decisions), "hourly_buckets", len(buckets))
 	return nil
 }
 
