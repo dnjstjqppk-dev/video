@@ -136,3 +136,19 @@ func TestShortsFeed_ExcludesAIShorts(t *testing.T) {
 		t.Fatal("pending AI short must not appear in the shorts feed")
 	}
 }
+
+// Shorts shelf serves every public non-AI short.
+func TestShortsFeedServesPublicShorts(t *testing.T) {
+	router, _ := newRecomRouter()
+	body := getJSON(t, router, "/feed/shorts")
+	ids := itemIDs(t, body, "items")
+	for _, want := range []string{
+		"00000000-0000-0000-0000-000000000004",
+		"00000000-0000-0000-0000-000000000006",
+		"00000000-0000-0000-0000-000000000007",
+	} {
+		if !contains(ids, want) {
+			t.Fatalf("shorts feed missing %s (got %v)", want, ids)
+		}
+	}
+}

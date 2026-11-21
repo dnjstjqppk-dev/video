@@ -57,6 +57,9 @@ type TranscodeJob struct {
 	SourceURL   string
 	Attempt     int
 	MaxAttempts int
+	// VideoType carries the dispatcher intent (standard, shorts) so intake
+	// can enforce type-specific profile rules before encoding.
+	VideoType string
 	// DRM content protection: when DrmProtected, rungs are packaged with
 	// CENC cbcs using the provided raw key (dev ClearKey custody).
 	DrmProtected bool
@@ -225,6 +228,28 @@ func ValidateFFprobe(meta ProbeMetadata) error {
 	return nil
 }
 
+// shortsMaxDurationSeconds caps shorts length. MASTER_DIRECTIVE 3.5 lists
+// shorts features without numbers; 180s matches the modern short-form norm.
+// The API publish gate mirrors this rule (uploads/dispatch.go).
+const shortsMaxDurationSeconds = 180
+
+// ValidateShortsProfile enforces the shorts contract on probed media:
+// vertical or square, at most shortsMaxDurationSeconds. Non-shorts types
+// pass through untouched. Callers run ValidateFFprobe first so dimensions
+// and a positive duration are already established.
+func ValidateShortsProfile(videoType string, meta ProbeMetadata) error {
+	if videoType != "shorts" {
+		return nil
+	}
+	if meta.DurationSeconds > shortsMaxDurationSeconds {
+		return fmt.Errorf("shorts must be at most %d seconds, got %.0f", shortsMaxDurationSeconds, meta.DurationSeconds)
+	}
+	if meta.Height < meta.Width {
+		return fmt.Errorf("shorts must be vertical or square, got %dx%d", meta.Width, meta.Height)
+	}
+	return nil
+}
+
 // SelectABRLadder selects renditions up to the source height without upscaling.
 func SelectABRLadder(sourceHeight int) []RenditionProfile {
 	var selected []RenditionProfile
@@ -237,6 +262,38 @@ func SelectABRLadder(sourceHeight int) []RenditionProfile {
 		selected = append(selected, StandardLadder[0])
 	}
 	return selected
+}
+
+// TransposeLadder swaps every rung to portrait (360p 640x360 becomes 360x640)
+// without mutating its input. Names and bitrate values stay put: a vertical
+// 360p is still "360p", measured on the short side like landscape.
+func TransposeLadder(ladder []RenditionProfile) []RenditionProfile {
+	out := make([]RenditionProfile, len(ladder))
+	for i, r := range ladder {
+		r.Width, r.Height = r.Height, r.Width
+		out[i] = r
+	}
+	return out
+}
+
+// SelectABRLadderForSource follows source orientation: landscape and square
+// keep the height-capped ladder, vertical sources get width-capped rungs
+// transposed to portrait so 9:16 uploads encode full-height renditions
+// instead of shrinking into a landscape box.
+func SelectABRLadderForSource(sourceWidth, sourceHeight int) []RenditionProfile {
+	if sourceWidth <= 0 || sourceHeight <= sourceWidth {
+		return SelectABRLadder(sourceHeight)
+	}
+	var selected []RenditionProfile
+	for _, r := range StandardLadder {
+		if r.Width <= sourceWidth {
+			selected = append(selected, r)
+		}
+	}
+	if len(selected) == 0 {
+		selected = append(selected, StandardLadder[0])
+	}
+	return TransposeLadder(selected)
 }
 
 func parseBitrateToBps(bitrateStr string) int64 {
@@ -301,7 +358,7 @@ func BuildFrameArgs(inputPath, outputPath string, seconds float64) []string {
 func BuildStoryboardArgs(inputPath, outputPattern string) []string {
 	return []string{
 		"-hide_banner", "-y", "-i", inputPath,
-		"-vf", "fps=1/10,scale=160:90",
+		"-vf", "fps=1/10,scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2",
 		outputPattern,
 	}
 }
@@ -493,6 +550,11 @@ func (w *MediaWorker) processLegacy(job TranscodeJob, meta ProbeMetadata) error 
 		w.sendToDLQ(job)
 		return err
 	}
+	if err := ValidateShortsProfile(job.VideoType, meta); err != nil {
+		_ = w.Transition(job.VideoID, StateFailed)
+		w.sendToDLQ(job)
+		return err
+	}
 
 	if err := w.Transition(job.VideoID, StateQueued); err != nil {
 		return err
@@ -501,7 +563,7 @@ func (w *MediaWorker) processLegacy(job TranscodeJob, meta ProbeMetadata) error 
 		return err
 	}
 
-	ladder := SelectABRLadder(meta.Height)
+	ladder := SelectABRLadderForSource(meta.Width, meta.Height)
 	var uploadedArtifacts []string
 	uploadedArtifacts = append(uploadedArtifacts, fmt.Sprintf("hls/%s/master.m3u8", job.VideoID))
 	uploadedArtifacts = append(uploadedArtifacts, fmt.Sprintf("dash/%s/manifest.mpd", job.VideoID))
@@ -567,6 +629,9 @@ func (w *MediaWorker) processReal(job TranscodeJob) error {
 	if err != nil {
 		return fail(fmt.Errorf("probe failed: %w", err))
 	}
+	if err := ValidateShortsProfile(job.VideoType, meta); err != nil {
+		return fail(err)
+	}
 	w.setProbe(job.VideoID, meta)
 
 	if err := w.Transition(job.VideoID, StateQueued); err != nil {
@@ -576,7 +641,7 @@ func (w *MediaWorker) processReal(job TranscodeJob) error {
 		return err
 	}
 
-	ladder := configuredLadder(meta.Height)
+	ladder := configuredLadder(meta.Width, meta.Height)
 	outDir := filepath.Join(w.WorkDirRoot, job.VideoID)
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return fail(err)
@@ -618,9 +683,9 @@ func (w *MediaWorker) processReal(job TranscodeJob) error {
 	return w.Transition(job.VideoID, StateReady)
 }
 
-// configuredLadder filters the source-height ladder by FFMPEG_PROFILES when set.
-func configuredLadder(sourceHeight int) []RenditionProfile {
-	ladder := SelectABRLadder(sourceHeight)
+// configuredLadder filters the orientation-aware ladder by FFMPEG_PROFILES when set.
+func configuredLadder(sourceWidth, sourceHeight int) []RenditionProfile {
+	ladder := SelectABRLadderForSource(sourceWidth, sourceHeight)
 	raw := os.Getenv("FFMPEG_PROFILES")
 	if strings.TrimSpace(raw) == "" {
 		return ladder
@@ -675,7 +740,7 @@ func (w *MediaWorker) ProcessEditJob(job TranscodeJob, meta ProbeMetadata, edl E
 		fmt.Sprintf("dash/%s/edited/manifest.mpd", job.VideoID),
 		fmt.Sprintf("edl/%s/edit.json", job.VideoID),
 	}
-	ladder := SelectABRLadder(meta.Height)
+	ladder := SelectABRLadderForSource(meta.Width, meta.Height)
 	if meta.Height <= 0 {
 		ladder = SelectABRLadder(1080)
 	}
@@ -759,6 +824,7 @@ type transcodeIntakeRequest struct {
 	HasVideoStream  bool    `json:"hasVideoStream"`
 	Attempt         int     `json:"attempt"`
 	MaxAttempts     int     `json:"maxAttempts"`
+	VideoType       string  `json:"videoType"`
 }
 
 func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Request) {
@@ -786,6 +852,7 @@ func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Requ
 		SourceURL:   req.SourceURL,
 		Attempt:     req.Attempt,
 		MaxAttempts: maxAttempts,
+		VideoType:   req.VideoType,
 	}
 	// Dispatched metadata is a hint only; the worker probes the source itself.
 	meta := ProbeMetadata{

@@ -56,6 +56,7 @@ type transcodeDispatch struct {
 	SourceURL    string `json:"sourceUrl,omitempty"`
 	Attempt      int    `json:"attempt"`
 	MaxAttempts  int    `json:"maxAttempts"`
+	VideoType    string `json:"videoType,omitempty"`
 	DrmProtected bool   `json:"drmProtected,omitempty"`
 	DrmKeyID     string `json:"drmKeyId,omitempty"`
 	DrmKeyHex    string `json:"drmKeyHex,omitempty"`
@@ -132,6 +133,7 @@ func (h *Handler) dispatchTranscodeJob(job *store.MediaJob, video *store.Video, 
 		SourceR2Key:  session.R2Key,
 		SourceURL:    sourceURL,
 		MaxAttempts:  3,
+		VideoType:    video.VideoType,
 		DrmProtected: video.DrmProtected,
 		DrmKeyID:     video.DrmKeyID,
 		DrmKeyHex:    video.DrmKeyHex,
@@ -242,10 +244,38 @@ func sourceLocalPath(inputURI string) string {
 	return strings.TrimPrefix(inputURI, "file://")
 }
 
+// shortsMaxDurationSeconds mirrors the worker intake rule
+// (media-worker ValidateShortsProfile): shorts run at most 180 seconds,
+// vertical or square.
+const shortsMaxDurationSeconds = 180
+
+// validateShortsProbe re-checks the shorts contract on the worker probe
+// before anything publishes, so a non-conforming encode fails here even if
+// the worker predates the intake rule. Zero probes (legacy unprobed stacks)
+// carry nothing to judge and pass through.
+func validateShortsProbe(probe transcodeProbe) error {
+	if probe.DurationSeconds <= 0 && probe.Width <= 0 && probe.Height <= 0 {
+		return nil
+	}
+	if probe.DurationSeconds > shortsMaxDurationSeconds {
+		return fmt.Errorf("shorts must be at most %d seconds, got %.0f", shortsMaxDurationSeconds, probe.DurationSeconds)
+	}
+	if probe.Height < probe.Width {
+		return fmt.Errorf("shorts must be vertical or square, got %dx%d", probe.Width, probe.Height)
+	}
+	return nil
+}
+
 // publishReady fetches worker-staged artifacts, uploads them to the public
 // HLS bucket, and completes the video with real probe metadata and URLs.
 // Visibility is left untouched: READY never flips a private draft public.
 func (h *Handler) publishReady(job *store.MediaJob, video *store.Video, workerBase string, result *transcodeDispatchResult) {
+	if video.VideoType == "shorts" {
+		if err := validateShortsProbe(result.Probe); err != nil {
+			h.failJob(job, video, err.Error())
+			return
+		}
+	}
 	s3cfg := S3ConfigFromEnv()
 	if !s3cfg.Configured() {
 		h.failJob(job, video, "artifact storage unavailable: set R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY (or run MinIO) so encodes can publish")

@@ -786,6 +786,56 @@ func (s *MemoryStore) seedDefaults() {
 	}
 	s.Videos[videoShort.ID] = videoShort
 
+	videoShort2 := &Video{
+		ID:              "00000000-0000-0000-0000-000000000006",
+		ChannelID:       channel1.ID,
+		ChannelName:     channel1.Name,
+		ChannelHandle:   channel1.Handle,
+		ChannelAvatar:   channel1.AvatarURL,
+		Title:           "Docker Layers Explained in 40 Seconds #shorts",
+		Description:     "Every Dockerfile line is a cached layer — stack them right and builds fly.",
+		VideoType:       "shorts",
+		Visibility:      "public",
+		Status:          "READY",
+		DurationSeconds: 39,
+		ThumbnailURL:    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&h=900&fit=crop",
+		HlsMasterURL:    demoStreamURL,
+		ViewCount:       187400,
+		LikeCount:       12300,
+		DislikeCount:    88,
+		CommentCount:    214,
+		Tags:            []string{"docker", "shorts", "devops"},
+		Category:        "Technology",
+		PublishedAt:     now.Add(-12 * time.Hour),
+		CreatedAt:       now.Add(-12 * time.Hour),
+	}
+	s.Videos[videoShort2.ID] = videoShort2
+
+	videoShort3 := &Video{
+		ID:              "00000000-0000-0000-0000-000000000007",
+		ChannelID:       channel1.ID,
+		ChannelName:     channel1.Name,
+		ChannelHandle:   channel1.Handle,
+		ChannelAvatar:   channel1.AvatarURL,
+		Title:           "Kubernetes Pods vs Nodes in 60 Seconds #shorts",
+		Description:     "Pods die, nodes persist: the one mental model for your first cluster.",
+		VideoType:       "shorts",
+		Visibility:      "public",
+		Status:          "READY",
+		DurationSeconds: 74,
+		ThumbnailURL:    "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=900&fit=crop",
+		HlsMasterURL:    demoStreamURL,
+		ViewCount:       96300,
+		LikeCount:       8100,
+		DislikeCount:    45,
+		CommentCount:    132,
+		Tags:            []string{"kubernetes", "shorts", "devops"},
+		Category:        "Technology",
+		PublishedAt:     now.Add(-6 * time.Hour),
+		CreatedAt:       now.Add(-6 * time.Hour),
+	}
+	s.Videos[videoShort3.ID] = videoShort3
+
 	// AI home ground seeds: one AI drama channel, one approved series with
 	// three episodes, and one AI short still pending Originals review.
 	aiCreator := &User{
