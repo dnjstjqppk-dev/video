@@ -15,8 +15,8 @@ browser -> console workers (web/studio/partners/admin)
 
 ## Files
 
-- `Start-GvpApi.ps1` — starts API + media worker (idempotent; logs under
-  `%LOCALAPPDATA%\gvp\logs`).
+- `Start-GvpApi.ps1` — starts SeaweedFS S3 + API + media worker (idempotent;
+  logs under `%LOCALAPPDATA%\gvp\logs`).
 - `Start-GvpTunnel.ps1` — starts the tunnel, waits for its URL, updates the
   api-proxy `API_UPSTREAM` secret. Reads the Cloudflare API token from
   `%APPDATA%\gvp\cf_api_token.txt` (operator-created, never in the repo).
@@ -25,8 +25,9 @@ browser -> console workers (web/studio/partners/admin)
 
 ## Ports
 
-API `:18092`, media worker `:8081` (`MEDIA_WORKER_URL` default). Port 8080 on
-this machine belongs to another occupant and is intentionally avoided.
+API `:18092`, media worker `:8081` (`MEDIA_WORKER_URL` default), SeaweedFS S3
+`:9002` (master `:19333`, volume `:18083`). Port 8080 on this machine belongs
+to another occupant and is intentionally avoided.
 
 ## Tunnel URL rotation
 

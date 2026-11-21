@@ -6,10 +6,29 @@ $bin = Join-Path $env:LOCALAPPDATA 'gvp\bin'
 $logs = Join-Path $env:LOCALAPPDATA 'gvp\logs'
 $media = Join-Path $env:LOCALAPPDATA 'gvp\media'
 New-Item -ItemType Directory -Force $logs, $media | Out-Null
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$toolsBin = Join-Path $repoRoot 'tools\bin'
+$toolsData = Join-Path $repoRoot 'tools\data'
 
 function Test-Listening($port) {
   $c = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' -and $_.LocalPort -eq $port }
   return $null -ne $c
+}
+
+# SeaweedFS S3 (:9002) backs R2_ENDPOINT for uploads and HLS publishing.
+# Paths must be absolute: scheduled tasks start with no repo working directory.
+if (-not (Test-Listening 9002)) {
+  $env:debug = $null # weed parses $env:debug as bool; a stray value aborts boot
+  Start-Process -FilePath (Join-Path $toolsBin 'weed.exe') -ArgumentList (
+    'server -dir=' + (Join-Path $toolsData 'seaweed') +
+    ' -master.port=19333 -volume.port=18083 -s3 -s3.port=9002 -s3.config=' + (Join-Path $toolsBin 's3config.json')
+  ) -WorkingDirectory $repoRoot `
+    -RedirectStandardOutput (Join-Path $logs 'gvp-seaweed.out.log') `
+    -RedirectStandardError (Join-Path $logs 'gvp-seaweed.err.log') `
+    -WindowStyle Hidden
+  Write-Output 'seaweed starting on :9002'
+} else {
+  Write-Output 'seaweed already listening on :9002'
 }
 
 if (-not (Test-Listening 18092)) {
@@ -33,10 +52,9 @@ if (-not (Test-Listening 8081)) {
   # Transcode toolchain lives in the repo (tools/bin); the worker only falls
   # back to PATH, so pin the binaries explicitly (ffmpeg/ffprobe/packager are
   # not on PATH on the operator PC).
-  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-  $env:FFMPEG_BIN = Join-Path $repoRoot 'tools\bin\ffmpeg.exe'
-  $env:FFPROBE_BIN = Join-Path $repoRoot 'tools\bin\ffprobe.exe'
-  $env:PACKAGER_BIN = Join-Path $repoRoot 'tools\bin\packager.exe'
+  $env:FFMPEG_BIN = Join-Path $toolsBin 'ffmpeg.exe'
+  $env:FFPROBE_BIN = Join-Path $toolsBin 'ffprobe.exe'
+  $env:PACKAGER_BIN = Join-Path $toolsBin 'packager.exe'
   Start-Process -FilePath (Join-Path $bin 'gvp-media-worker.exe') -WorkingDirectory $bin `
     -RedirectStandardOutput (Join-Path $logs 'gvp-media-worker.out.log') `
     -RedirectStandardError (Join-Path $logs 'gvp-media-worker.err.log') `
