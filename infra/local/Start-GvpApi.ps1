@@ -30,6 +30,13 @@ if (-not (Test-Listening 18092)) {
 if (-not (Test-Listening 8081)) {
   # Children inherit this process env; re-point PORT at the worker.
   $env:PORT = '8081'
+  # Transcode toolchain lives in the repo (tools/bin); the worker only falls
+  # back to PATH, so pin the binaries explicitly (ffmpeg/ffprobe/packager are
+  # not on PATH on the operator PC).
+  $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+  $env:FFMPEG_BIN = Join-Path $repoRoot 'tools\bin\ffmpeg.exe'
+  $env:FFPROBE_BIN = Join-Path $repoRoot 'tools\bin\ffprobe.exe'
+  $env:PACKAGER_BIN = Join-Path $repoRoot 'tools\bin\packager.exe'
   Start-Process -FilePath (Join-Path $bin 'gvp-media-worker.exe') -WorkingDirectory $bin `
     -RedirectStandardOutput (Join-Path $logs 'gvp-media-worker.out.log') `
     -RedirectStandardError (Join-Path $logs 'gvp-media-worker.err.log') `
