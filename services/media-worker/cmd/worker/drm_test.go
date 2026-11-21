@@ -18,11 +18,14 @@ func TestPackagerArgs_EncryptedHLSLayout(t *testing.T) {
 		"stream=video", "playlist_name=360p/index.m3u8", "playlist_name=480p/index.m3u8",
 		"segment_$Number%05d$.m4s", "init_segment=360p/init.mp4",
 		"--enable_raw_key_encryption", "key_id=id1:key=key1",
-		"Widevine,FairPlay", "cbcs", "master.m3u8",
+		"Widevine", "cenc", "master.m3u8",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing %q in %v", want, args)
 		}
+	}
+	if strings.Contains(joined, "FairPlay") || strings.Contains(joined, "cbcs") {
+		t.Fatalf("cenc output must not reference FairPlay/cbcs: %v", args)
 	}
 }
 
@@ -35,5 +38,28 @@ func TestRungMP4Args_AudioOnlyFirst(t *testing.T) {
 	videoOnly := rungMP4Args("in.mp4", "out.mp4", RenditionProfile{Width: 640, Height: 360, VideoBitrate: "800k", AudioBitrate: "96k"}, false)
 	if !strings.Contains(strings.Join(videoOnly, " "), "-an") {
 		t.Fatalf("secondary rungs must drop audio: %v", videoOnly)
+	}
+}
+
+// Intake must forward dispatcher intent or protection silently drops: the API
+// sends drmProtected/drmKeyId/drmKeyHex/videoType and the packager path keys
+// off the job copy.
+func TestTranscodeJobFromRequestForwardsDrm(t *testing.T) {
+	job := transcodeJobFromRequest(transcodeIntakeRequest{
+		JobID: "job-drm-1", VideoID: "vid-drm-1", SourceR2Key: "raw/u/v.mp4",
+		VideoType: "standard", DrmProtected: true, DrmKeyID: "kid-1", DrmKeyHex: "aa11",
+	})
+	if !job.DrmProtected || job.DrmKeyID != "kid-1" || job.DrmKeyHex != "aa11" {
+		t.Fatalf("drm intent lost in mapping: %+v", job)
+	}
+	if job.VideoType != "standard" {
+		t.Fatalf("video type lost in mapping: %+v", job)
+	}
+	if job.MaxAttempts != 3 {
+		t.Fatalf("max attempts must default to 3, got %d", job.MaxAttempts)
+	}
+	plain := transcodeJobFromRequest(transcodeIntakeRequest{MaxAttempts: 5})
+	if plain.DrmProtected || plain.MaxAttempts != 5 {
+		t.Fatalf("plain mapping wrong: %+v", plain)
 	}
 }

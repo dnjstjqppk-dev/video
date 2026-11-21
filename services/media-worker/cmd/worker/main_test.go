@@ -79,7 +79,7 @@ func TestMediaWorkerPathTraversalAndDLQ(t *testing.T) {
 
 func TestGenerateHLSPlaylists(t *testing.T) {
 	ladder := SelectABRLadder(1080)
-	master, variants := GenerateHLSPlaylists("vid-abc", ladder, 120.0)
+	master, variants := GenerateHLSPlaylists("vid-abc", ladder, 120.0, false)
 
 	if !strings.HasPrefix(master, "#EXTM3U") {
 		t.Fatalf("master playlist missing EXTM3U header: %s", master)
@@ -87,12 +87,27 @@ func TestGenerateHLSPlaylists(t *testing.T) {
 	if !strings.Contains(master, "#EXT-X-STREAM-INF:BANDWIDTH=5192000,AVERAGE-BANDWIDTH=4776640,RESOLUTION=1920x1080") {
 		t.Fatalf("missing 1080p stream inf in master: %s", master)
 	}
+	if strings.Contains(master, "EXT-X-MEDIA") {
+		t.Fatalf("muxed master must not declare an audio group: %s", master)
+	}
 	if len(variants) != len(ladder) {
 		t.Fatalf("expected %d variant playlists, got %d", len(ladder), len(variants))
 	}
 	v1080 := variants["1080p"]
 	if !strings.Contains(v1080, "#EXT-X-TARGETDURATION:4") || !strings.Contains(v1080, "segment_00000.m4s") {
 		t.Fatalf("invalid variant playlist format: %s", v1080)
+	}
+}
+
+func TestGenerateHLSPlaylistsSeparateAudio(t *testing.T) {
+	ladder := SelectABRLadder(1080)
+	master, _ := GenerateHLSPlaylists("vid-abc", ladder, 120.0, true)
+
+	if !strings.Contains(master, "#EXT-X-MEDIA:TYPE=AUDIO") || !strings.Contains(master, `GROUP-ID="audio"`) || !strings.Contains(master, `URI="audio/index.m3u8"`) {
+		t.Fatalf("separate-audio master must declare the audio group: %s", master)
+	}
+	if !strings.Contains(master, `,AUDIO="audio"`) {
+		t.Fatalf("variants must link the audio group: %s", master)
 	}
 }
 

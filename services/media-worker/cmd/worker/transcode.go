@@ -144,7 +144,7 @@ func runClearLadder(ctx context.Context, inputPath, outDir string, ladder []Rend
 	return nil
 }
 
-// runDrmLadder encodes renditions to mp4, then packages them into CENC cbcs
+// runDrmLadder encodes renditions to mp4, then packages them into CENC cenc
 // HLS with shaka-packager using the per-video raw key.
 func runDrmLadder(ctx context.Context, inputPath, outDir string, ladder []RenditionProfile, drm *DrmParams, addFile func(key, path, contentType string) error) error {
 	mp4dir := filepath.Join(outDir, "mp4tmp")
@@ -213,7 +213,9 @@ func rungMP4Args(inputPath, outPath string, profile RenditionProfile, withAudio 
 }
 
 // packagerArgs builds one shaka-packager run: per-rung video, one shared
-// audio group, CENC cbcs with raw keys, HLS master + variants.
+// audio group, CENC cenc with raw keys, HLS master + variants. cenc (not
+// cbcs) because Chrome ClearKey/Widevine cannot play cbcs; FairPlay dual
+// output is a separate follow-up.
 func packagerArgs(mp4s map[string]string, audioMP4 string, ladder []RenditionProfile, drm *DrmParams) []string {
 	args := []string{
 		fmt.Sprintf("in=%s,stream=audio,init_segment=audio/init.mp4,segment_template=audio/segment_$Number%%05d$.m4s,playlist_name=audio/index.m3u8,hls_group_id=audio,hls_name=ENGLISH", audioMP4),
@@ -224,8 +226,8 @@ func packagerArgs(mp4s map[string]string, audioMP4 string, ladder []RenditionPro
 	return append(args,
 		"--enable_raw_key_encryption",
 		"--keys", "label=:key_id="+drm.KeyID+":key="+drm.Key,
-		"--protection_systems", "Widevine,FairPlay",
-		"--protection_scheme", "cbcs",
+		"--protection_systems", "Widevine",
+		"--protection_scheme", "cenc",
 		"--hls_master_playlist_output", "master.m3u8",
 	)
 }

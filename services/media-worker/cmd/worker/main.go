@@ -61,7 +61,7 @@ type TranscodeJob struct {
 	// can enforce type-specific profile rules before encoding.
 	VideoType string
 	// DRM content protection: when DrmProtected, rungs are packaged with
-	// CENC cbcs using the provided raw key (dev ClearKey custody).
+	// CENC cenc using the provided raw key (dev ClearKey custody).
 	DrmProtected bool
 	DrmKeyID     string
 	DrmKeyHex    string
@@ -378,11 +378,20 @@ func BuildAnimatedWebPArgs(inputPath, outputWebP string, startSec, durationSec f
 }
 
 // GenerateHLSPlaylists builds RFC 8216 compliant master and variant playlists (TASK-219).
-func GenerateHLSPlaylists(videoID string, ladder []RenditionProfile, durationSec float64) (string, map[string]string) {
+func GenerateHLSPlaylists(videoID string, ladder []RenditionProfile, durationSec float64, separateAudio bool) (string, map[string]string) {
 	var masterBuilder strings.Builder
 	masterBuilder.WriteString("#EXTM3U\n")
 	masterBuilder.WriteString("#EXT-X-VERSION:6\n")
 	masterBuilder.WriteString("#EXT-X-INDEPENDENT-SEGMENTS\n\n")
+
+	// Packaged (DRM) renditions carry video only; audio lives in its own
+	// group. Without this linkage players expect muxed audio and fail the
+	// variants. Muxed ffmpeg ladders keep the plain master.
+	audioAttr := ""
+	if separateAudio {
+		masterBuilder.WriteString("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",NAME=\"English\",DEFAULT=YES,AUTOSELECT=YES,URI=\"audio/index.m3u8\"\n\n")
+		audioAttr = ",AUDIO=\"audio\""
+	}
 
 	variants := make(map[string]string)
 
@@ -400,8 +409,8 @@ func GenerateHLSPlaylists(videoID string, ladder []RenditionProfile, durationSec
 		}
 
 		masterBuilder.WriteString(fmt.Sprintf(
-			"#EXT-X-STREAM-INF:BANDWIDTH=%d,AVERAGE-BANDWIDTH=%d,RESOLUTION=%dx%d,FRAME-RATE=%.3f,CODECS=\"%s\"\n%s/index.m3u8\n\n",
-			totalBandwidth, avgBandwidth, r.Width, r.Height, r.FrameRate, codec, r.Name,
+			"#EXT-X-STREAM-INF:BANDWIDTH=%d,AVERAGE-BANDWIDTH=%d,RESOLUTION=%dx%d,FRAME-RATE=%.3f,CODECS=\"%s\"%s\n%s/index.m3u8\n\n",
+			totalBandwidth, avgBandwidth, r.Width, r.Height, r.FrameRate, codec, audioAttr, r.Name,
 		))
 
 		// Build variant index.m3u8
@@ -657,7 +666,7 @@ func (w *MediaWorker) processReal(job TranscodeJob) error {
 	if err != nil {
 		return fail(err)
 	}
-	master, variants := GenerateHLSPlaylists(job.VideoID, ladder, meta.DurationSeconds)
+	master, variants := GenerateHLSPlaylists(job.VideoID, ladder, meta.DurationSeconds, drm != nil)
 	masterPath := filepath.Join(outDir, "master.m3u8")
 	if err := os.WriteFile(masterPath, []byte(master), 0o644); err != nil {
 		return fail(err)
@@ -825,6 +834,31 @@ type transcodeIntakeRequest struct {
 	Attempt         int     `json:"attempt"`
 	MaxAttempts     int     `json:"maxAttempts"`
 	VideoType       string  `json:"videoType"`
+	DrmProtected    bool    `json:"drmProtected"`
+	DrmKeyID        string  `json:"drmKeyId"`
+	DrmKeyHex       string  `json:"drmKeyHex"`
+}
+
+// transcodeJobFromRequest maps the dispatcher envelope onto the worker job.
+// Every intent field must be copied: anything dropped here (DRM keying,
+// video type) silently disables a downstream path.
+func transcodeJobFromRequest(req transcodeIntakeRequest) TranscodeJob {
+	maxAttempts := req.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 3
+	}
+	return TranscodeJob{
+		JobID:        req.JobID,
+		VideoID:      req.VideoID,
+		SourceR2Key:  req.SourceR2Key,
+		SourceURL:    req.SourceURL,
+		Attempt:      req.Attempt,
+		MaxAttempts:  maxAttempts,
+		VideoType:    req.VideoType,
+		DrmProtected: req.DrmProtected,
+		DrmKeyID:     req.DrmKeyID,
+		DrmKeyHex:    req.DrmKeyHex,
+	}
 }
 
 func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Request) {
@@ -841,19 +875,7 @@ func (h *healthServer) handleTranscodeIntake(w http.ResponseWriter, r *http.Requ
 		http.Error(w, `{"error":"videoId and sourceR2Key are required"}`, http.StatusBadRequest)
 		return
 	}
-	maxAttempts := req.MaxAttempts
-	if maxAttempts <= 0 {
-		maxAttempts = 3
-	}
-	job := TranscodeJob{
-		JobID:       req.JobID,
-		VideoID:     req.VideoID,
-		SourceR2Key: req.SourceR2Key,
-		SourceURL:   req.SourceURL,
-		Attempt:     req.Attempt,
-		MaxAttempts: maxAttempts,
-		VideoType:   req.VideoType,
-	}
+	job := transcodeJobFromRequest(req)
 	// Dispatched metadata is a hint only; the worker probes the source itself.
 	meta := ProbeMetadata{
 		Width:           req.Width,
