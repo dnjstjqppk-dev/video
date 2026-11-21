@@ -31,27 +31,36 @@ if (-not (Test-Listening 9002)) {
   Write-Output 'seaweed already listening on :9002'
 }
 
+# Shared service env. This MUST stay outside the listening guards below: a
+# guard that skips its service must not skip env another service inherits
+# (the worker needs GVP_LOCAL_MEDIA_DIR even when the API is already up).
+$env:GVP_ENV = 'test'
+$env:GVP_ALLOW_DEV_TOKENS = 'true'
+$env:GVP_LOCAL_MEDIA_DIR = $media
+$env:MEDIA_WORKER_URL = 'http://localhost:8081'
+# Pin chunk relay: browsers cannot reach the loopback SeaweedFS endpoint
+# that presigned S3 PUTs would target, so uploads relay through the API
+# while publishing still goes to the HLS bucket.
+$env:UPLOAD_MODE = 'local'
+# Publish player-facing HLS behind the stable api-proxy worker: absolute and
+# rotation-proof (no tunnel URL baked in), CORS-enabled for direct browser
+# fetches. The consoles' /api proxy 503s parallel multi-MB media, so media
+# bypasses it; consoles still proxy JSON APIs.
+$env:R2_PUBLIC_HLS_BASE = 'https://global-video-platform-api.dnjstjq0824.workers.dev/v1'
+# Object storage: the API only publishes artifacts when R2 keys are set
+# explicitly, so read the local SeaweedFS identities (untracked,
+# operator-local; endpoints default to localhost:9002).
+$s3cfgPath = Join-Path $toolsBin 's3config.json'
+if (Test-Path $s3cfgPath) {
+  $s3ident = (Get-Content $s3cfgPath -Raw | ConvertFrom-Json).identities[0].credentials[0]
+  if ($s3ident.accessKey -and $s3ident.secretKey) {
+    $env:R2_ACCESS_KEY_ID = $s3ident.accessKey
+    $env:R2_SECRET_ACCESS_KEY = $s3ident.secretKey
+  }
+}
+
 if (-not (Test-Listening 18092)) {
   $env:PORT = '18092'
-  $env:GVP_ENV = 'test'
-  $env:GVP_ALLOW_DEV_TOKENS = 'true'
-  $env:GVP_LOCAL_MEDIA_DIR = $media
-  $env:MEDIA_WORKER_URL = 'http://localhost:8081'
-  # Pin chunk relay: browsers cannot reach the loopback SeaweedFS endpoint
-  # that presigned S3 PUTs would target, so uploads relay through the API
-  # while publishing still goes to the HLS bucket.
-  $env:UPLOAD_MODE = 'local'
-  # Object storage: the API only publishes artifacts when R2 keys are set
-  # explicitly, so read the local SeaweedFS identities (untracked,
-  # operator-local; endpoints default to localhost:9002).
-  $s3cfgPath = Join-Path $toolsBin 's3config.json'
-  if (Test-Path $s3cfgPath) {
-    $s3ident = (Get-Content $s3cfgPath -Raw | ConvertFrom-Json).identities[0].credentials[0]
-    if ($s3ident.accessKey -and $s3ident.secretKey) {
-      $env:R2_ACCESS_KEY_ID = $s3ident.accessKey
-      $env:R2_SECRET_ACCESS_KEY = $s3ident.secretKey
-    }
-  }
   Start-Process -FilePath (Join-Path $bin 'gvp-api.exe') -WorkingDirectory $bin `
     -RedirectStandardOutput (Join-Path $logs 'gvp-api.out.log') `
     -RedirectStandardError (Join-Path $logs 'gvp-api.err.log') `

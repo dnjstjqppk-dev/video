@@ -91,7 +91,7 @@ browser -> console workers (web/studio/partners/admin, /api)
 - `GET /v1/videos/{id}/playback`: **FIXED 2026-11-17** — HMAC-SHA256 서명 토큰(`v1.<b64id>.<exp>.<sig>`, 1h, 영상 바인딩) 발급 + private(비소유 404)·members_only(미자격 403) 검사 (`videos/playback_token.go`, `videos/visibility.go`). 지역/연령 검사는 정책 데이터 부재로 잔여.
 - ~~조회수 중복 가산~~ **FIXED 2026-11-17 (P1-14):** 재생 허가·`valid_view`가 24h 시청자·영상 중복 제거(`store.CountView`)를 공유해 세션당 1회만 가산. 집계치는 P0-1 쓰루라이트로 PG에 영속.
 - **2026-11-19/20 HLS 게이트웨이:** `GET /v1/hls/{videoID}/*`가 터널 뒤 재생을 중계한다 (가시성 게이팅 + 썸네일 공개 + 서명 토큰 + m3u8 토큰 리라이트 + cross-origin CORP). 브라우저 E2E 그린.
-- **DRM PARTIAL (코드 완료·E2E 미실행):** 마이그레이션 00013, 업로드 `drmProtected`→키 발급, 디스패치 키 전달, 워커 packager(CENC cbcs/ClearKey), 재생 `drm` 블록, 플레이어 clearKeys+라이선스 URL 설정, 스튜디오 DRM 토글. 실라이선스 서버 연동·E2E는 잔여.
+- **DRM DONE 2026-11-21:** 마이그레이션 00013, 업로드 키 발급, 인테이크 키 전달 복구(드롭 버그 수정), packager CENC cenc/ClearKey, 오디오 그룹 마스터, 재생 `drm` 블록, Shaka clearKeys, 스튜디오 토글. E2E 실증: 암호화 구간 브라우저 재생 + 무키 복호 불가 대조. 잔여: 실라이선스 서버, FairPlay cbcs 듀얼 출력, clear_lead 5s 정책.
 
 ### 4.5 광고 (최상위 P0 비즈니스 요구) — PARTIAL
 

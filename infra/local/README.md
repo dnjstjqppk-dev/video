@@ -30,6 +30,13 @@ API `:18092`, media worker `:8081` (`MEDIA_WORKER_URL` default), SeaweedFS S3
 `:9002` (master `:19333`, volume `:18083`). Port 8080 on this machine belongs
 to another occupant and is intentionally avoided.
 
+## Media delivery
+
+Uploads publish `HlsMasterURL` behind the api-proxy worker (`R2_PUBLIC_HLS_BASE`,
+CORS-enabled): browsers fetch media direct, consoles proxy JSON APIs only.
+Absolute and rotation-proof; the consoles' `/api` proxy 503s parallel
+multi-MB media, so media bypasses it.
+
 ## Tunnel URL rotation
 
 Quick-tunnel URLs change whenever cloudflared restarts. Re-run

@@ -22,7 +22,7 @@
 2. **HLS Gating (implemented: in-app; edge: target)**:
    - `GET /v1/hls/{videoID}/*` enforces visibility + token in the API. Terraform WAF rules exist but there is no domain/Zone and the rule format is incompatible with the `v1.*` token — edge enforcement is a target, not live.
 3. **DRM (code complete, E2E pending)**:
-   - There is no `/v1/videos/{id}/key` endpoint: `GetPlayback` returns ClearKey material inline for development flow. Shaka is configured with clearKeys + license-server URLs; packager emits CENC/cbcs. Production needs KMS custody + licensed **Widevine/FairPlay** servers and an E2E run.
+   - There is no `/v1/videos/{id}/key` endpoint: `GetPlayback` returns ClearKey material inline for development flow. Shaka is configured with clearKeys + license-server URLs; packager emits CENC/cenc. Production needs KMS custody + licensed **Widevine/FairPlay** servers and an E2E run.
 
 ---
 
